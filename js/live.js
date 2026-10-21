@@ -52,7 +52,7 @@ async function liveWorldId() {
   liveOpen = false;
   return (liveWid = wid);
 }
-const liveCanPush = (inQueue = false) => !!cloudUser && !!cloudApi && !!cloudApi.update && !cloudOff() && cloudIsLeader() && cloudState === 'ok' && (inQueue || !cloudBusy);
+const liveCanPush = (inQueue = false) => !newerBlock && !!cloudUser && !!cloudApi && !!cloudApi.update && !cloudOff() && cloudIsLeader() && cloudState === 'ok' && (inQueue || !cloudBusy);
 // Änderungen seit dem letzten Mal schreiben (full: alles neu – beim Übernehmen der Führung, neuer Link)
 async function livePush(full = false, now = Date.now(), inQueue = false) {
   if (!liveCanPush(inQueue) || livePushing) return false;

@@ -159,7 +159,7 @@ function serialize() {
     game: 'fnymiland', v: 13, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], stardust: state.stardust || 0, sdGot: [...(state.sdGot || [])], sdSeen: !!state.sdSeen, treasury: state.treasury || null, dayWish: state.dayWish || null, sdItems: [...(state.sdItems || [])], sdShown: [...(state.sdShown || [])], sdNew: state.sdNew || null, sdOffers: state.sdOffers || null, seaFlatSeen: !!state.seaFlatSeen, sdWish: [...(state.sdWish || [])], sdWishNote: state.sdWishNote || 0, me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], stardust: state.stardust || 0, sdGot: [...(state.sdGot || [])], sdSeen: !!state.sdSeen, treasury: state.treasury || null, dayWish: state.dayWish || null, sdItems: [...(state.sdItems || [])], sdShown: [...(state.sdShown || [])], appVer: APP_VER || 0, sdNew: state.sdNew || null, sdOffers: state.sdOffers || null, seaFlatSeen: !!state.seaFlatSeen, sdWish: [...(state.sdWish || [])], sdWishNote: state.sdWishNote || 0, me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
     hills: [...(state.hills || [])].map(([k, h]) => [k, { w: h.w || 0, ...(h.h > 1 ? { h: h.h } : {}) }]),   // Anhöhen (Block 157)
     bruecken: [...(state.bruecken || [])].map(([k, b]) => [k, { ax: b.ax ? 1 : 0, n: b.n, art: b.art, ...(b.weg && b.weg.some(Boolean) ? { weg: b.weg.map(w => w || null) } : {}),
       ...(b.gleis && b.gleis.some(f => f != null) ? { gleis: b.gleis.map(f => f == null ? null : f) } : {}), ...brClean({ ...b, brm: null }) }]),   // Brücken (Block 160; Gleis 160b; Brückenfamilie 160c)
@@ -175,7 +175,7 @@ function batch(fn) {
 }
 function save(periodic) {
   if (!periodic && typeof glTouch === 'function') glTouch();            // Spielstand geändert: Standbild neu (Block 144)
-  if (!state || PROBE || BATCH || TESTWELT || VISIT || saveBlocked) return;
+  if (!state || PROBE || BATCH || TESTWELT || VISIT || saveBlocked || newerBlock) return;
   if (!document.hidden) state.last = Date.now();   // im Hintergrund zählt die Abwesenheit weiter
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(serialize()));
@@ -187,6 +187,7 @@ function parseSave(d) {
   if (!d || typeof d !== 'object' || typeof d.seed !== 'number' || !Array.isArray(d.tiles) || !Array.isArray(d.owned)) {
     throw new Error('Das ist kein Fnymiland-Spielstand.');
   }
+  if (APP_VER && Number.isInteger(+d.appVer) && +d.appVer > APP_VER && !newerBlock) { newerBlock = +d.appVer; setTimeout(() => showNewer(), 400); }
   // 28.09.2026: Straßen, Gartenwege und Pflaster werden zu Wegen; Gehwege an Kanten entfallen
   const ROAD_TO = { sand: 'sand', asphalt: 'asphalt', kopf: 'kopf', klinker: 'klinker' };
   const WEG_TO = { mulch: 'mulch', kies: 'sand', tritt: 'tritt', steg: 'sand', holz: 'sand', blueten: 'blueten', pastell: 'konfetti', mosaik: 'konfetti', schach: 'platten' };
@@ -433,7 +434,7 @@ function legacyUnlocks(d) {
 }
 
 // Unlesbare Stände nie überschreiben: Kopie aufbewahren und beim Start Bescheid sagen
-let loadFailure = null, saveBlocked = false;     // Kopie nicht möglich: nichts speichern, bis der Stand als Datei gesichert ist
+let loadFailure = null, saveBlocked = false, newerBlock = 0;   // newerBlock: Versionsnummer eines neueren Stands – nichts mehr speichern (showNewer)     // Kopie nicht möglich: nichts speichern, bis der Stand als Datei gesichert ist
 function load() {
   const raw = localStorage.getItem(SAVE_KEY);
   if (!raw) return null;
@@ -447,6 +448,15 @@ function load() {
 }
 
 // Einen anderen Stand übernehmen (Import): Zwischenspeicher leeren, alles neu zeichnen
+// Ein neuerer Stand ist da (anderes Gerät schon aktualisiert): nicht mehr speichern, neu laden lassen. Bleibt bis zum Neuladen
+function showNewer() {
+  if (typeof openModal !== 'function') return;
+  if (!$('modal').hidden && !$('modal-card').querySelector('#m-newer')) { setTimeout(showNewer, 1500); return; }
+  openModal(`<h2>🔄 Neue Version da</h2>
+    <p>Auf einem anderen Gerät läuft Fnymiland schon in einer neueren Version. Damit nichts verloren geht, speichert dieses Gerät erst wieder, wenn du die Seite neu lädst.</p>
+    <div class="row"><button class="btn" id="m-newer" style="flex:1">Jetzt neu laden</button></div>`);
+  $('m-newer').onclick = () => location.reload();
+}
 function adoptState(s) {
   resetUnlockWatch(); resetSales();
   const other = !state || state.seed !== s.seed;   // dieselbe Welt (Live-Spiegel, anderes Gerät): Bildchen behalten, sie erneuern sich selbst

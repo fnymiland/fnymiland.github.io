@@ -1269,8 +1269,10 @@ function undo() {
   sandCache.clear(); landCache.clear(); waterChanged(); previewCache = null;
   if (step.changes.some(c => c[0] === 'bruecken')) groundVersion++;       // Brücken (160b): bkFresh merkt sich die Objekte je Boden-Fassung – ↶ setzt neue ein
   if (typeof cloudTouched === 'function') cloudTouched();                // auch ↶ ist eine eigene Aktion (Online-Speicher; Anhöhen, Dächer, Brücken)
-  sfx('dig'); recalc(); save();
+  sfx('dig'); recalc();
+  const tw = typeof twUndo === 'function' && twUndo();                 // Tageswunsch wieder offen (meldet sich selbst)
+  save();
   if (panelLive && !$('panel').hidden) panelLive();             // offenes Fenster: Ding noch da? (sonst zu)
-  toast('↶ Rückgängig');
+  if (!tw) toast('↶ Rückgängig');
   return true;
 }

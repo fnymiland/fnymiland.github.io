@@ -46,7 +46,7 @@ const sdStar = (rnd = Math.random) => sdAdd(rnd() < SD.starRareP ? SD.starRare :
 // Heute gekauft: { day, n }; ein neuer Tag fängt von vorn an (nur vorwärts – Uhr zurückdrehen bringt nichts)
 function sdTreasury(today = sdDay()) {
   const t = state.treasury && Number.isInteger(state.treasury.day) ? state.treasury : { day: today, n: 0 };
-  if (today > t.day) return { day: today, n: 0 };
+  if (today > t.day || sdFuture(t.day, today)) return { day: today, n: 0 };
   return { day: t.day, n: Math.max(0, t.n | 0) };
 }
 const sdPrice = n => Math.round(SD_TREASURY.first * Math.pow(SD_TREASURY.step, n) / 1e5) * 1e5;   // das (n+1)-te ✨ des Tages
@@ -100,7 +100,7 @@ function sdWho(seed) {                                                    // ein
 // Der Wunsch von heute (neu am neuen Tag, nur vorwärts); null: noch nichts Passendes baubar
 function twToday(today = sdDay()) {
   const w = state.dayWish;
-  if (w && TW_BY_ID[w.id] && today <= w.day) return w;
+  if (w && TW_BY_ID[w.id] && today <= w.day && !sdFuture(w.day, today)) return w;
   const can = TW_LIST.filter(d => d.items.some(b => ITEMS[b] && available(b)));
   if (!can.length) return null;
   const h = sdHash(today + ':' + state.seed), d = can[h % can.length], who = sdWho(h >>> 8);
@@ -109,6 +109,17 @@ function twToday(today = sdDay()) {
   return state.dayWish;
 }
 const twGot = w => Math.max(0, TW_BY_ID[w.id].count() - w.base);
+// ↶ nach dem Erfüllen (Prüfung 19.10.: sonst blieb der Sternstaub, die Taler kamen zurück): Wunsch wieder offen, die ✨ zurück
+function twUndo(today = sdDay()) {
+  const w = state.dayWish;
+  if (!w || !w.done || w.day !== today || !TW_BY_ID[w.id] || twGot(w) >= TW_BY_ID[w.id].need) return 0;
+  w.done = false;
+  if (state.sdGot) state.sdGot.delete('wish:' + w.day);
+  const back = Math.min(SD.wish, state.stardust || 0);
+  state.stardust = (state.stardust || 0) - back;
+  toast(`💭 Tageswunsch wieder offen${back ? ` – ✨ −${back}` : ''}`);
+  return back;
+}
 let twAt = 0;
 function twTick(now = Date.now(), today = sdDay()) {                    // aus der Spielschleife, höchstens alle 3 s
   if (now - twAt < 3000 || (typeof viewOnly === 'function' && viewOnly())) return;
@@ -254,6 +265,7 @@ BIG_ART.sternenbasar = (cx, cy, z, now, x, y, lvl, t) => {
 const SD_SHOP = [];
 const sdShopItem = id => SD_SHOP.find(s => s.id === id);
 // Kalenderwoche ab Montag (Tageszahl seit 1970, der 1.1.1970 war ein Donnerstag) und Tage bis zum Wechsel
+const sdFuture = (day, today = sdDay()) => sdDayNum(day) > sdDayNum(today) + 1;   // falsche Uhr auf einem Gerät: übermorgen und später gilt nicht (Prüfung 19.10.)
 const sdDayNum = day => Math.round(Date.UTC(Math.floor(day / 10000), Math.floor(day / 100) % 100 - 1, day % 100) / 864e5);
 const sdWeek = day => Math.floor((sdDayNum(day) + 3) / 7);
 const sdWeekLeft = day => 7 - ((sdDayNum(day) + 3) % 7);
@@ -268,7 +280,7 @@ function basarOffers(today = sdDay()) {
   const known = ids => ids.length && ids.every(id => sdShopItem(id));
   const day = o && o.day === today && known(o.ids) ? o.ids.map(sdShopItem) : pick(pool.filter(s => !s.rare), 3, today);
   const rare = o && o.week === wk && o.rare && sdShopItem(o.rare) ? [sdShopItem(o.rare)] : pick(pool.filter(s => s.rare), 1, 'w' + wk);
-  if (!o || today > o.day) state.sdOffers = { day: today, ids: day.map(s => s.id), week: wk, rare: rare[0] ? rare[0].id : null };
+  if (!o || today > o.day || sdFuture(o.day, today)) state.sdOffers = { day: today, ids: day.map(s => s.id), week: wk, rare: rare[0] ? rare[0].id : null };
   return [...day, ...rare];
 }
 // 📖 Katalog (Animal-Crossing-Art, entschieden 18.10.2026): was der Basar schon einmal angeboten hat, gibt es jederzeit nach – zum

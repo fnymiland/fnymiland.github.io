@@ -122,7 +122,7 @@ async function cloudSyncNow(reason) {
 // Hochladen: erst die nächste Version beanspruchen (nur, wenn die Cloud noch auf der bekannten steht), dann den Stand schreiben.
 // Eine andere Welt (neue Insel, Datei geladen, früherer Stand) ersetzt die in der Cloud nie, ohne dass die vorher gesichert wird.
 async function cloudUploadNow(force, local, backedUp = false) {
-  if (!cloudUser || cloudState === 'konflikt' || cloudOff() || cloudWatching()) return false;   // nur das führende Gerät lädt hoch
+  if (!cloudUser || cloudState === 'konflikt' || cloudOff() || cloudWatching() || newerBlock) return false;   // nur das führende Gerät lädt hoch; neuere Version da: nie
   const m = cloudMeta(), uid = cloudUser.uid;
   if (!force && !cloudDirty(local, m)) return false;
   const sum = worldSum(local), acts0 = m.acts || 0;

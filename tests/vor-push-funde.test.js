@@ -53,3 +53,63 @@ describe('Gleisbrücke verlängern: ausgeschaltetes Licht wird mitbezahlt', () =
     expect(neu).toEqual(alt);
   });
 });
+
+describe('Neuere Version hat gespeichert: dieses Gerät sperrt das Speichern (Nutzer 21.10.2026)', () => {
+  afterEach(() => game('newerBlock = 0; APP_VER = 0; closeModal()'));
+  it('Stand einer neueren Version: kein Speichern, kein Hochladen, Fenster mit Neu laden', () => {
+    game('APP_VER = 100');
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    expect(d.appVer).toBe(100);
+    d.appVer = 101;
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game('newerBlock')).toBe(101);
+    game("localStorage.removeItem(SAVE_KEY); state.money = 4242; save()");
+    expect(game('localStorage.getItem(SAVE_KEY)')).toBe(null);
+    expect(game('liveCanPush(true)')).toBe(false);
+    game('showNewer()');
+    expect(game("document.getElementById('modal-card').textContent")).toMatch(/neuere[n]? Version/);
+  });
+  it('gleiche oder ältere Version und Stände ohne Nummer: alles wie immer', () => {
+    game('APP_VER = 100');
+    for (const v of [100, 99, undefined]) {
+      const d = game('JSON.parse(JSON.stringify(serialize()))'); if (v === undefined) delete d.appVer; else d.appVer = v;
+      game(`parseSave(${JSON.stringify(d)})`);
+      expect(game('newerBlock'), String(v)).toBe(0);
+    }
+  });
+});
+
+describe('Falsche Uhr auf einem Gerät: Tage aus der Zukunft gelten nicht', () => {
+  const fresh = "state.sdItems = new Set(); state.sdShown = new Set(); state.sdOffers = null; state.sdSeen = true; state.stardust = 1000";
+  it('Tageswunsch, Schatzkammer und gemerkte Angebote von übermorgen werden durch heute ersetzt', () => {
+    game(fresh);
+    const today = 20261021, future = 20261105;
+    game(`state.dayWish = { day: ${future}, id: TW_LIST[0].id, base: 0, done: true, who: 'X', icon: 'x' }; state.treasury = { day: ${future}, n: 30 }`);
+    game(`state.sdOffers = { day: ${future}, week: sdWeek(${future}), ids: basarOffers(${future}).slice(0, 3).map(s => s.id), rare: null }`);
+    const w = game(`(w => w && [w.day, w.done])(twToday(${today}))`);
+    if (w) expect(w).toEqual([today, false]);
+    expect(game(`sdTreasury(${today})`)).toEqual({ day: today, n: 0 });
+    game(`basarOffers(${today})`);
+    expect(game('state.sdOffers.day')).toBe(today);
+  });
+  it('morgen (Zeitzone, Mitternacht auf dem anderen Gerät) bleibt gültig', () => {
+    game(fresh);
+    game('state.treasury = { day: 20261022, n: 3 }');
+    expect(game('sdTreasury(20261021)')).toEqual({ day: 20261022, n: 3 });
+  });
+});
+
+describe('Tageswunsch per ↶: Rückgängig nimmt den Wunsch zurück', () => {
+  it('Wunsch erfüllt, dann ↶: wieder offen, die 25 ✨ sind weg, später erneut erfüllbar', () => {
+    game("for (let y = 0; y <= 20; y++) for (let x = 0; x <= 20; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.claimed.add(k); } recalc(); resetUndo(); state.sdSeen = true; state.stardust = 0; state.sdGot = new Set()");
+    const id = game("(TW_LIST.find(d => d.id === 'baum') || TW_LIST.find(d => d.items.some(b => ITEMS[b] && !ITEMS[b].small && available(b)))).id");
+    const today = game('sdDay()');
+    game(`state.dayWish = { day: ${today}, id: '${id}', base: TW_BY_ID['${id}'].count(), done: false, who: 'X', icon: 'x' }`);
+    const need = game(`TW_BY_ID['${id}'].need`), b = game(`TW_BY_ID['${id}'].items.find(b => ITEMS[b] && available(b))`), small = game(`!!ITEMS['${b}'].small`);
+    game(`undoable(() => { for (let i = 0; i < ${need}; i++) ${small ? `buildSmall('${b}', 2 + i, 2, 0)` : `build('${b}', 2 + i * 2, 2)`}; })`);
+    game('twAt = 0; twTick(Date.now() + 1e7)');
+    expect(game('[state.dayWish.done, state.stardust]')).toEqual([true, 25]);
+    expect(game('undo()')).toBe(true);
+    expect(game('[state.dayWish.done, state.stardust, state.sdGot.has("wish:" + state.dayWish.day)]')).toEqual([false, 0, false]);
+  });
+});

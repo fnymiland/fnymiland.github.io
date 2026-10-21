@@ -22,6 +22,9 @@ const MESS = new URLSearchParams(location.search).has('messen') ? { ms: 0, boden
 const TESTWELT = (new URLSearchParams(location.search).get('welt') || '').replace(/[^a-z0-9-]/g, '') || null;
 // Zu Besuch (Block 95): ?besuch=<Spiegel-Kennung> – fremde Insel live ansehen, nichts speichern, nichts bauen
 const VISIT = (new URLSearchParams(location.search).get('besuch') || '').replace(/[^a-z0-9]/g, '') || null;
+// Versionsnummer dieser App (?v=N aus index.html, npm run bump) – steht in jedem Spielstand (appVer). Hat eine neuere Version gespeichert,
+// speichert diese nicht mehr, bis neu geladen ist (newerBlock, Nutzer 21.10.2026: sonst wirft eine alte Version Neues weg). 0: unbekannt (Tests)
+let APP_VER = (() => { try { const m = /[?&]v=(\d+)/.exec((document.currentScript && document.currentScript.src) || ''); return m ? +m[1] : 0; } catch (e) { return 0; } })();
 
 // Gleis-Rampe (hills.js): die vier Formen ('a'–'d' = t.form). len Felder in Steigrichtung, die oberen cut davon liegen in der Anhöhe
 // (eingelassen), narrow: schmal wie das Gleis (Damm, schmaler Einschnitt), viadukt: auf Steinbögen, wall: Wand des Damms (sonst wie die

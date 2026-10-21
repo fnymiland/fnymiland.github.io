@@ -401,6 +401,8 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     **sternstaub*.js stehen in index.html VOR main.js** (main.js lädt den Spielstand beim Einlesen): sonst kennt parseSave die
     Sammlungs-Waren nicht und wirft Gekauftes weg (Generalprobe 19.10., tests/sternstaub-laden.test.js). Gilt für jede Datei, die
     ITEMS ergänzt oder Spielstand-Felder liest.
+    Jeder Spielstand trägt `appVer` (= ?v= aus index.html, `APP_VER`); ist ein gelesener Stand neuer, setzt parseSave `newerBlock`:
+    kein save, kein Hochladen, Fenster „Neue Version da“ (`showNewer`). Neue Schreibwege in die Cloud/den Speicher prüfen `newerBlock`.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

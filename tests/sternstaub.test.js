@@ -97,14 +97,15 @@ describe('Sternstaub im Lager (Handy: oben kein Platz)', () => {
 
 describe('Tageswunsch (161b)', () => {
   const land = () => game("for (let y = 0; y <= 20; y++) for (let x = 0; x <= 20; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); recalc()");
-  it('jeden Tag einer, auf allen Geräten derselbe (Tag + Spielstand), neuer Tag → neuer Wunsch; Uhr zurück: bleibt', () => {
+  it('jeden Tag einer, auf allen Geräten derselbe (Tag + Spielstand), neuer Tag → neuer Wunsch; Uhr einen Tag zurück: bleibt', () => {
     land(); game('state.dayWish = null');
     const a = game('twToday(20261016).id');
     game('state.dayWish = null');
     expect(game('twToday(20261016).id')).toBe(a);
     const w = game('twToday(20261017)');
     expect(w.day).toBe(20261017);
-    expect(game('twToday(20261015).day')).toBe(20261017);
+    expect(game('twToday(20261016).day')).toBe(20261017);                // Uhr einen Tag zurück (Zeitzone, Mitternacht): bleibt
+    expect(game('twToday(20261015).day')).toBe(20261015);                // weiter in der Zukunft: falsche Uhr – Wunsch für heute (sdFuture)
   });
   it('gezählt ab dem Stand beim Erscheinen: 3 Bänke am Wasser → 25 ✨ einmal', () => {
     land();
@@ -154,19 +155,21 @@ describe('Sternenbasar (161c)', () => {
   it('Angebote: gleicher Tag = gleiche, Ungekauftes zuerst; Kaufen kostet Sternstaub, schaltet frei, bleibt gespeichert', () => {
     game(`(() => { for (const id of ['sdtest_a', 'sdtest_b', 'sdtest_c', 'sdtest_d', 'sdtest_e']) ITEMS[id] = { cat: 'deko', name: id, sdShop: true, cost: 10, small: true };
       globalThis.__shop = SD_SHOP.slice(); SD_SHOP.length = 0; SD_SHOP.push({ id: 'sdtest_a', price: 40 }, { id: 'sdtest_b', price: 60 }, { id: 'sdtest_c', price: 80 }, { id: 'sdtest_d', price: 90 }, { id: 'sdtest_e', price: 300, rare: true }); })()`);
-    game('state.sdItems = new Set(); state.stardust = 100');
-    const o1 = game('basarOffers(20261017).map(s => s.id)');
+    game('state.sdItems = new Set(); state.sdOffers = null; state.stardust = 100');
+    const D = game('sdDay()'), D2 = game('(t => { t.setDate(t.getDate() + 1); return sdDay(t); })(new Date())');   // heute: Kaufen nur aus dem heutigen Angebot
+    const o1 = game(`basarOffers(${D}).map(s => s.id)`);
     expect(o1.length).toBe(4);
     expect(o1[3]).toBe('sdtest_e');
-    expect(game('basarOffers(20261017).map(s => s.id)')).toEqual(o1);
-    expect(game("available('sdtest_a')")).toBe(false);
-    expect(game("sdBuyItem('sdtest_a')")).toBe(true);
-    expect(game("[state.stardust, available('sdtest_a')]")).toEqual([60, true]);
+    expect(game(`basarOffers(${D}).map(s => s.id)`)).toEqual(o1);
+    const a = o1[0];                                                         // was heute im Angebot ist
+    expect(game(`available('${a}')`)).toBe(false);
+    expect(game(`sdBuyItem('${a}')`)).toBe(true);
+    expect(game(`[state.stardust, available('${a}')]`)).toEqual([100 - game(`sdShopItem('${a}').price`), true]);
     expect(game("sdBuyItem('sdtest_e')")).toBe(false);                   // zu wenig
-    expect(game('basarOffers(20261017).map(s => s.id)')).toEqual(o1);                     // gekauft: bleibt bis zum Wechsel stehen (161h)
-    expect(game('basarOffers(20261018).map(s => s.id)').slice(0, 3)).not.toContain('sdtest_a');   // neuer Tag: Ungekauftes zuerst
+    expect(game(`basarOffers(${D}).map(s => s.id)`)).toEqual(o1);                     // gekauft: bleibt bis zum Wechsel stehen (161h)
+    expect(game(`basarOffers(${D2}).map(s => s.id)`).slice(0, 3)).not.toContain(a);   // neuer Tag: Ungekauftes zuerst
     const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
-    expect([...d.sdItems]).toEqual(['sdtest_a']);
+    expect([...d.sdItems]).toEqual([a]);
     game("SD_SHOP.length = 0; SD_SHOP.push(...globalThis.__shop); for (const id of ['sdtest_a', 'sdtest_b', 'sdtest_c', 'sdtest_d', 'sdtest_e']) delete ITEMS[id]");
   });
 });
