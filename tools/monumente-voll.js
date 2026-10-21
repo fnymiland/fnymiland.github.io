@@ -599,7 +599,7 @@
   }
 
   // 2 · Triumphbogen: drei Bögen zwischen vier Säulen, Gesims rundum, Attika mit Inschrift, goldene Siegesfigur mit Flügeln
-  function triumphF(K, now = 0) {
+  function triumphF(K, now = 0, opt = {}) {
     const z = K.z, ST = '#efe7d6', STD = '#d9cdb4', ha = 0.3, hb = 0.9, H = 58;
     const F = (b, h) => K.P(ha + 0.001, b, h), Fo = (b, h) => K.P(ha + 0.035, b, h), S = (a, h) => K.P(a, hb + 0.001, h);
     const dark = lit() ? '#2c3554' : '#5f5646';
@@ -631,24 +631,38 @@
     for (const b of [-0.62, 0.62]) { poly(faceCircle(F, b, 37, 0.075), C(STD)); poly(faceCircle(F, b, 37, 0.058), C(GOLD)); const c = F(b, 37); star(c[0], c[1], 1.7 * z, C(GOLD_D)); }
     // Gesims rundum, Attika mit Inschrift
     K.block({ a: 0, b: 0, ha: ha + 0.03, hb: hb + 0.03, h: 4, lift: 48, wall: STD, type: 'flat', roof: '#e9e0cb' });
-    K.block({ a: 0, b: 0, ha: ha - 0.02, hb: hb - 0.02, h: 13, lift: H - 6, wall: ST, type: 'flat', roof: '#f6f0e2' });
+    K.block({ a: 0, b: 0, ha: ha + 0.002, hb: hb + 0.002, h: 13, lift: H - 6, wall: ST, type: 'flat', roof: '#f6f0e2' });   // Attika bündig mit dem Bogen
     K.block({ a: 0, b: 0, ha: ha + 0.01, hb: hb + 0.01, h: 2.5, lift: H + 7, wall: STD, type: 'flat', roof: '#e9e0cb' });
-    poly(faceRect((b, h) => K.P(ha - 0.019, b, h), -0.5, 0.5, H - 4, H + 5), C(GOLD));
-    for (let r = 0; r < 2; r++) L(C(GOLD_D), 0.6, z, [K.P(ha - 0.018, -0.42, H - 1 + r * 3), K.P(ha - 0.018, 0.42, H - 1 + r * 3)]);
-    // Siegesfigur: Gewand, Flügel, Kranz hoch – steht mitten auf dem Dach
-    const base = K.P(0, 0, H + 9.5);
-    box(base[0], base[1], 6 * z, 3 * z, 4 * z, GOLD_D, null, 0);
+    poly(faceRect((b, h) => K.P(ha + 0.003, b, h), -0.5, 0.5, H - 4, H + 5), C(GOLD));
+    for (let r = 0; r < 2; r++) L(C(GOLD_D), 0.6, z, [K.P(ha + 0.004, -0.42, H - 1 + r * 3), K.P(ha + 0.004, 0.42, H - 1 + r * 3)]);
+    // Aufsatz (keine Menschenfigur, Nutzer 21.10.2026): goldene Krone, großer Stern oder nur Fahnen
+    const base = K.P(0, 0, H + 9.5), top = opt.top || 'krone';
+    if (top !== 'fahnen') box(base[0], base[1], 7 * z, 3.5 * z, 4 * z, GOLD_D, null, 0);
     const ft = [base[0], base[1] - 4 * z];
-    for (const s of [-1, 1]) { g.fillStyle = C(s < 0 ? GOLD : GOLD_D); g.beginPath(); g.moveTo(ft[0] + s * 2 * z, ft[1] - 22 * z); g.quadraticCurveTo(ft[0] + s * 16 * z, ft[1] - 34 * z, ft[0] + s * 13 * z, ft[1] - 14 * z); g.quadraticCurveTo(ft[0] + s * 8 * z, ft[1] - 18 * z, ft[0] + s * 2 * z, ft[1] - 14 * z); g.fill();
-      for (let i = 1; i < 4; i++) L(C(s < 0 ? GOLD_D : '#a87a2a'), 0.5, z, [[ft[0] + s * 3.5 * z, ft[1] - (16 + i) * z], [ft[0] + s * (5 + i * 2) * z, ft[1] - (17 + i * 3) * z]]); }
-    robe(ft[0], ft[1], 5.5 * z, 3.4 * z, 20 * z, z, GOLD, GOLD_D, GOLD_L, -1 * z);
-    const sh = [ft[0], ft[1] - 20 * z];
-    limb2([sh[0] + 3 * z, sh[1] + 1 * z], [sh[0] + 6 * z, sh[1] - 9 * z], 1.4 * z, 1.1 * z, GOLD, GOLD_D);
-    circle(sh[0] + 6 * z, sh[1] - 9.6 * z, 1.3 * z, C(GOLD)); g.strokeStyle = C('#6fae5a'); g.lineWidth = 1.2 * z; g.beginPath(); g.arc(sh[0] + 6 * z, sh[1] - 11.6 * z, 2.6 * z, 0, Math.PI * 2); g.stroke();   // Kranz liegt in der Hand
-    circle(sh[0], sh[1] - 3.4 * z, 3 * z, C(GOLD)); ellipse(sh[0] + 1 * z, sh[1] - 3.2 * z, 1.6 * z, 2.6 * z, C(GOLD_D));
+    if (top === 'krone') {
+      const r = 10 * z, ry = r * 0.5, hgt = 6 * z, cy0 = ft[1] - 2 * z, n = 10;
+      const ring = (front) => { for (let i = 0; i < n; i++) { const a = (i + 0.5) / n * Math.PI * 2, isFront = Math.sin(a) > 0; if (isFront !== front) continue;
+        const x = ft[0] + Math.cos(a) * r, y = cy0 + Math.sin(a) * ry, h2 = (i % 2 ? 0.7 : 1.3) * hgt * (front ? 1 : 0.85);
+        poly([[x - 2.4 * z, y - hgt * 0.95], [x, y - hgt - h2], [x + 2.4 * z, y - hgt * 0.95]], C(front ? (Math.cos(a) < 0 ? GOLD_L : GOLD) : GOLD_D));
+        circle(x, y - hgt - h2 - 1 * z, 1.1 * z, C(front ? GOLD : GOLD_D)); } };
+      ring(false);
+      g.fillStyle = C('#9c3d4a'); g.beginPath(); g.ellipse(ft[0], cy0 - hgt, r * 0.94, ry * 0.94, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = C(GOLD); g.beginPath(); g.ellipse(ft[0], cy0, r, ry, 0, 0, Math.PI); g.lineTo(ft[0] - r, cy0 - hgt); g.ellipse(ft[0], cy0 - hgt, r, ry, 0, Math.PI, 0, true); g.closePath(); g.fill();
+      g.fillStyle = C(GOLD_D); g.beginPath(); g.ellipse(ft[0], cy0, r, ry, 0, 0, Math.PI / 2); g.lineTo(ft[0], cy0 - hgt + ry); g.ellipse(ft[0], cy0 - hgt, r, ry, 0, Math.PI / 2, 0, true); g.closePath(); g.fill();
+      for (const [t, col2] of [[-0.6, '#e8546f'], [0, '#5b8fd8'], [0.6, '#e8546f']]) { const a = Math.PI / 2 - t, x = ft[0] + Math.cos(a) * r * 0.98, y = cy0 + Math.sin(a) * ry - hgt * 0.5; ellipse(x, y, 1.5 * z, 1.8 * z, C(col2)); }
+      ring(true);
+      if (lit()) glowP([ft[0], cy0 - hgt], 26 * z);
+    } else if (top === 'stern') {
+      const R = 13 * z, c = [ft[0], ft[1] - R - 2 * z];
+      L(C(GOLD_D), 1.4, z, [[ft[0], ft[1]], [c[0], c[1]]]);
+      star(c[0], c[1] + 2.4 * z, R, C(GOLD_D)); star(c[0], c[1], R, lit() ? '#fff1a8' : C(GOLD)); star(c[0], c[1], R * 0.45, lit() ? '#ffffff' : C(GOLD_L));
+      if (lit()) glowP(c, 40 * z);
+    } else {
+      for (const b of [-0.45, 0, 0.45]) { const hgt = b ? 24 : 30, f = K.P(0, b, H + 9.5); L(C('#6b4f3a'), 0.9, z, [f, [f[0], f[1] - hgt * z]]); const w = Math.sin(now / 280 + b * 4) * 1.4 * z; poly([[f[0], f[1] - hgt * z], [f[0] + 9 * z, f[1] - (hgt - 3) * z + w], [f[0], f[1] - (hgt - 6) * z]], C(b ? '#5b8fd8' : '#e8546f')); }
+    }
     // Fahnen spiegelgleich an den vorderen Dachecken
     for (const b of [-(hb - 0.06), hb - 0.06]) { const f = K.P(ha - 0.03, b, H + 9.5); L(C('#6b4f3a'), 0.8, z, [f, [f[0], f[1] - 20 * z]]); const w = Math.sin(now / 280 + b * 3) * 1.4 * z; poly([[f[0], f[1] - 20 * z], [f[0] + 9 * z, f[1] - 17 * z + w], [f[0], f[1] - 14 * z]], C('#e8546f')); }
-    if (lit()) { glowP(F(0, 16), 24 * z); glowP(F(0, H + 1), 26 * z); glowP([ft[0], ft[1] - 16 * z], 34 * z); }
+    if (lit()) { glowP(F(0, 16), 24 * z); glowP(F(0, H + 1), 26 * z); }
   }
 
   // 3 · Deine Statue: hoher Sockel mit Stufen und lesbarem Schild, darauf deine Spielfigur in Gold
@@ -798,7 +812,7 @@
       for (const n of [0, 1]) {
         const pts = []; for (let k = 0; k <= 12; k++) pts.push(edge(n, -1 + k / 6));
         const t1 = n ? K.P(top, top, y + rh) : K.P(top, top, y + rh), t0 = n ? K.P(top, -top, y + rh) : K.P(-top, top, y + rh);
-        poly([...pts, t1, t0], C(n ? ROOF_D : ROOF));
+        poly([...pts, t1, t0], C(n ? ROOF_D : '#3a706a'));
         for (let k = 1; k < 6; k++) { const a0 = edge(n, -1 + k / 3), tt = n ? K.P(top, -top + 2 * top * k / 6, y + rh) : K.P(-top + 2 * top * k / 6, top, y + rh); L(C(n ? '#1d3b38' : '#264f4b'), 0.5, z, [a0, tt]); }   // Ziegelreihen
         g.strokeStyle = C(TRIM); g.lineWidth = 1.1 * z; g.beginPath(); pts.forEach((p, k) => k ? g.lineTo(...p) : g.moveTo(...p)); g.stroke();
       }
@@ -942,18 +956,75 @@
     const m = [tb[0], top - 28 * z];
     L(C(GOLD_D), 1.1, z, [[m[0], top - 19 * z], [m[0], m[1]]]);                                                  // Stange reicht bis in die Sternmitte
     star(m[0], m[1] + 0.4 * z, 6.4 * z, C(GOLD_D)); star(m[0], m[1], 6 * z, lit() ? '#fff1a8' : C(GOLD));
-    circle(m[0], m[1] + 3.4 * z, 1.5 * z, C(GOLD_D));                                                            // Fassung, in der der Stern auf der Stange steckt
     if (lit()) { glowP([tb[0], top + LH / 2], 95 * z); glowP([tb[0], top + LH / 2], 36 * z); }
   }
+  // 8 · Prachtbrunnen (dritte Fassung): achteckiges Becken, Säule mit großer und kleiner Schale, goldene Muschel oben als Quelle,
+  // Wasserweg sichtbar: Muschel → kleine Schale → große Schale → Becken; zwei goldene Delfine am Rand speien ins Becken
+  function brunnenF3(K, now = 0) {
+    const z = K.z, n = 8, R = 0.8, Hb = 7, wcol = lit() ? 'rgba(200,245,255,0.95)' : 'rgba(255,255,255,0.95)';
+    const pt = (i, r = R, h = 0) => { const ang = (i + 0.5) / n * Math.PI * 2; return K.P(Math.cos(ang) * r, Math.sin(ang) * r, h); };
+    const face = i => K.depth(Math.cos((i + 1) / n * Math.PI * 2), Math.sin((i + 1) / n * Math.PI * 2));
+    for (let i = 0; i < n; i++) if (face(i) <= 0) poly([pt(i), pt(i + 1), pt(i + 1, R, Hb), pt(i, R, Hb)], C('#cfc3a5'));
+    poly(Array.from({ length: n }, (_, i) => pt(i, R, Hb)), C('#efe7d6'));
+    poly(Array.from({ length: n }, (_, i) => pt(i, R * 0.88, Hb)), lit() ? '#2f9fb0' : C('#7fd0e2'));          // Wasser im Becken
+    if (lit()) glowP(K.P(0, 0, Hb), 50 * z, 'blue');
+    const c = K.P(0, 0, Hb), cx = c[0];
+    // Säule und Schalen (jede Schale sitzt auf einem Säulenstück, Unterseite dunkler, Rand, Wasser oben)
+    const bowl = (y, r, deep) => { g.fillStyle = C('#cfc3a5'); g.beginPath(); g.ellipse(cx, y, r, r * 0.42, 0, 0, Math.PI); g.lineTo(cx + r * 0.35, y + deep); g.lineTo(cx - r * 0.35, y + deep); g.closePath(); g.fill();   // Schalenbauch
+      g.fillStyle = C('#b8ac8c'); g.beginPath(); g.ellipse(cx, y, r, r * 0.42, 0, 0, Math.PI / 2); g.lineTo(cx + r * 0.35, y + deep); g.lineTo(cx, y + deep); g.closePath(); g.fill();
+      ellipse(cx, y, r, r * 0.42, C('#efe7d6')); ellipse(cx, y - 0.6 * z, r * 0.86, r * 0.36, lit() ? '#5fd0e0' : C('#a6e2f0')); };
+    const curtain = (yTop, r, yBot, rb) => { g.strokeStyle = wcol; g.lineWidth = 0.9 * z; for (let k = 0; k <= 10; k++) { const a = Math.PI * (0.05 + k * 0.09), x0 = cx + Math.cos(a) * r, y0 = yTop + Math.sin(a) * r * 0.42, x1 = cx + Math.cos(a) * rb, y1 = yBot + Math.sin(a) * rb * 0.42; g.beginPath(); g.moveTo(x0, y0); g.quadraticCurveTo(x0 + (x0 - cx) * 0.12, (y0 + y1) / 2, x1, y1); g.stroke(); } };   // Wasser fällt über den vorderen Rand
+    cyl(cx, c[1], 5 * z, 2.5 * z, 16 * z, '#e6dcc4');
+    const y1 = c[1] - 18 * z, r1 = 20 * z;
+    bowl(y1, r1, 7 * z);
+    cyl(cx, y1 - 0.6 * z, 3.4 * z, 1.7 * z, 12 * z, '#e6dcc4');
+    const y2 = y1 - 14 * z, r2 = 11 * z;
+    bowl(y2, r2, 5 * z);
+    // goldene Muschel oben: steht aufrecht in der kleinen Schale, Wasser quillt aus ihrer Öffnung
+    const sh = [cx, y2 - 3 * z], SR = 8 * z;
+    // Jakobsmuschel: Rippen laufen vom Schloss unten nach oben, Rand gewellt, Öhrchen am Schloss
+    const hinge = [sh[0], sh[1] + 1 * z], rad = SR * 1.15, nr = 9;
+    const edge = t => { const a = Math.PI * (1.08 + 0.84 * t); return [hinge[0] + Math.cos(a) * rad, hinge[1] + Math.sin(a) * rad * 1.05]; };
+    for (let k = 0; k < nr; k++) { const e0 = edge(k / nr), e1 = edge((k + 1) / nr), em = edge((k + 0.5) / nr);
+      const bump = [em[0] + (em[0] - hinge[0]) * 0.1, em[1] + (em[1] - hinge[1]) * 0.1];
+      g.fillStyle = C(k < nr / 2 ? GOLD : '#e2b23e'); g.beginPath(); g.moveTo(...hinge); g.lineTo(...e0); g.quadraticCurveTo(...bump, ...e1); g.closePath(); g.fill();
+      L(C(GOLD_D), 0.45, z, [hinge, e1]); }
+    poly([[hinge[0] - 2.6 * z, hinge[1] - 1 * z], [hinge[0] + 2.6 * z, hinge[1] - 1 * z], [hinge[0], hinge[1] + 1.6 * z]], C(GOLD_D));   // Schloss, schlicht
+    g.strokeStyle = wcol; g.lineWidth = 1.1 * z; for (const s2 of [-1, 1]) { g.beginPath(); g.moveTo(sh[0] + s2 * 1 * z, sh[1] + 0.5 * z); g.quadraticCurveTo(sh[0] + s2 * 7 * z, sh[1] - 3 * z, sh[0] + s2 * 8 * z, y2 + 1 * z); g.stroke(); }   // aus der Muschel in die kleine Schale
+    curtain(y2, r2 * 0.98, y1 - 0.5 * z, r2 * 1.15);                                                               // kleine Schale → große Schale
+    curtain(y1, r1 * 0.98, c[1] + 1 * z, r1 * 1.2);                                                               // große Schale → Becken
+    // vordere Beckenwand zuletzt
+    for (let i = 0; i < n; i++) if (face(i) > 0) { const m = (i + 1) / n * Math.PI * 2 - Math.PI / n, u = K.turn(Math.cos(m), Math.sin(m))[0] - K.turn(Math.cos(m), Math.sin(m))[1]; poly([pt(i), pt(i + 1), pt(i + 1, R, Hb), pt(i, R, Hb)], C(shade('#e6dcc4', u > 0.3 ? -0.12 : u < -0.3 ? 0.05 : -0.04))); }   // Licht von links: linke Flächen hell, rechte dunkel
+    for (let i = 0; i < n; i++) L(C('#efe7d6'), 1.4, z, [pt(i, R, Hb), pt(i + 1, R, Hb)]);
+    // Delfine (nach der vorderen Wand, oben auf dem Rand): aufgebogener Körper, gewölbte Stirn, lange Schnauze mit dem Strahl,
+    // Rückenfinne, waagerechte Fluke; der rechte liegt im Schatten
+    for (const [sa, sb] of [[-1, 1], [1, -1]]) {
+      const p = K.P(sa * 0.5, sb * 0.5, Hb), dir = Math.sign(cx - p[0]), x = p[0], y = p[1], body = dir > 0 ? GOLD : '#e2b23e', dark = GOLD_D;
+      g.fillStyle = C(body); g.beginPath(); g.moveTo(x - dir * 4 * z, y + 1 * z);
+      g.bezierCurveTo(x - dir * 6 * z, y - 6 * z, x - dir * 3 * z, y - 12 * z, x + dir * 2 * z, y - 12.5 * z);
+      g.quadraticCurveTo(x + dir * 4.6 * z, y - 12.4 * z, x + dir * 5 * z, y - 10.6 * z);
+      g.lineTo(x + dir * 9 * z, y - 9.6 * z); g.lineTo(x + dir * 9 * z, y - 8.8 * z); g.lineTo(x + dir * 4.6 * z, y - 8.6 * z);
+      g.bezierCurveTo(x + dir * 2 * z, y - 7 * z, x + dir * 1 * z, y - 3 * z, x + dir * 0.5 * z, y + 1 * z); g.closePath(); g.fill();
+      ellipse(x + dir * 1.6 * z, y - 7 * z, 2 * z, 3.4 * z, C(dir > 0 ? GOLD_L : GOLD));
+      poly([[x - dir * 3.6 * z, y - 9 * z], [x - dir * 6.4 * z, y - 11.6 * z], [x - dir * 4.6 * z, y - 7 * z]], C(dark));
+      poly([[x - dir * 1 * z, y - 6 * z], [x + dir * 1.8 * z, y - 4 * z], [x - dir * 0.2 * z, y - 4.6 * z]], C(dark));
+      ellipse(x - dir * 4 * z, y + 1.6 * z, 4.6 * z, 1.2 * z, C(dark));
+      circle(x + dir * 3.2 * z, y - 10.4 * z, 0.6 * z, C('#5a3a10'));
+      const sx = x + dir * 9 * z, sy = y - 9.2 * z, ex = x + dir * 19 * z, ey = y + 2 * z;
+      g.strokeStyle = wcol; g.lineWidth = 1.3 * z; g.beginPath(); g.moveTo(sx, sy); g.quadraticCurveTo((sx + ex) / 2 + dir * 2 * z, sy - 7 * z, ex, ey); g.stroke(); ellipse(ex, ey, 3 * z, 1 * z, wcol);
+    }
+    if (lit()) glowP(sh, 18 * z);
+  }
   window.STERNENLEUCHTE = sternenleuchteF;
+  window.BOGEN_TOP = [['Triumphbogen · Krone', (K, n) => triumphF(K, n, { top: 'krone' }), 2.8, 2], ['Triumphbogen · Stern', (K, n) => triumphF(K, n, { top: 'stern' }), 2.8, 2], ['Triumphbogen · nur Fahnen', (K, n) => triumphF(K, n, { top: 'fahnen' }), 2.8, 2]];
   window.PAGODEN = [
     ['A · rund geschwungen (bisher)', (K, n) => pagodeF(K, n, {}), 2.5, 2],
     ['B · gerade Traufe', (K, n) => pagodeF(K, n, { curve: 0, rh: 9 }), 2.5, 2],
     ['C · gerade, nur die Ecken hoch', (K, n) => pagodeF(K, n, { curve: 6, flick: true, rh: 9 }), 2.5, 2],
     ['D · flach und weit (japanisch)', (K, n) => pagodeF(K, n, { curve: 4, flick: true, rh: 6, over: 0.28 }), 2.5, 2],
     ['E · steil, schmal', (K, n) => pagodeF(K, n, { curve: 3, flick: true, rh: 13, over: 0.13 }), 2.5, 2]];
-  window.FINAL = [['1 · Obelisk der Sonnenbucht', obeliskF, 2.6, 2], ['2 · Hüterin des Hafens', hueterin, 2.3, 2, 'wasser'], ['3 · Triumphbogen', triumphF, 2.8, 2],
-    ['4 · Deine Statue', statueF, 3.0, 2], ['5 · Pagode', pagodeF, 2.5, 2], ['6 · Sternendenkmal', sternF, 2.8, 2], ['7 · Steinkreis', steinkreisF2, 2.9, 2], ['8 · Prachtbrunnen', brunnenF2, 2.9, 2]];
+  window.FINAL = [['1 · Obelisk der Sonnenbucht', obeliskF, 2.6, 2], ['2 · Sternenleuchte', sternenleuchteF, 2.4, 2, 'wasser'], ['3 · Triumphbogen', triumphF, 2.8, 2],
+    ['4 · Deine Statue', statueF, 3.0, 2], ['5 · Pagode', (K, n) => pagodeF(K, n, { curve: 0, rh: 9 }), 2.5, 2], ['6 · Sternendenkmal', sternF, 2.8, 2], ['7 · Prachtbrunnen', brunnenF3, 3.0, 2]];
   window.VOLL = [['Obelisk der Sonnenbucht', obelisk, 2.1], ['Koloss am Hafen', koloss, 1.62]];
   window.PAKET1 = [['Obelisk der Sonnenbucht (überarbeitet)', obelisk, 2.1], ['Triumphbogen', triumph, 2.0], ['Deine Statue', deineStatue, 2.1], ['Mondtor', mondtor, 2.0]];
   window.KOLOSS_NEU = [['Koloss A – breitbeinig, kräftig', kolossA, 1.75], ['Koloss B – Hüterin des Hafens', kolossB, 1.9]];
