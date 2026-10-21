@@ -99,10 +99,10 @@ function findGoal(kind, x, y) {
   return pick.length ? pick[Math.floor(Math.random() * pick.length)] : null;
 }
 // Unterwegs zu goal (kind, k); ohne Ziel oder Weg dorthin: ein Stück bummeln
-// Anhöhe (157j): Weg ab dem Feld, auf das man gerade zugeht (w.tx) – ab w.fx sprang man nach dem Bummeln vom schon gewählten Nachbarfeld schräg
-// aufs erste Feld des Wegs, an der Kante auch über Eck zur Treppe. Ohne Anhöhen wie vorher ab w.fx
+// Weg ab dem Feld, auf das man gerade zugeht (w.tx) – ab w.fx sprang man nach dem Bummeln vom schon gewählten Nachbarfeld schräg aufs erste
+// Feld des Wegs, an der Kante auch über Eck zur Treppe (157j nur mit Anhöhen; 157l, 22.10.2026: überall, Nutzer „ja für alle“)
 function setGoal(w, kind) {
-  const [sx, sy] = hillsOn() && w.tx != null ? [w.tx, w.ty] : [w.fx, w.fy];
+  const [sx, sy] = w.tx != null ? [w.tx, w.ty] : [w.fx, w.fy];
   const g = kind === 'home' ? { k: w.home } : findGoal(kind, sx, sy);
   const path = g && walkPath(sx, sy, g.tiles || doorsOf(g.k));
   if (path) { w.goal = { kind, k: g.k }; w.path = path; w.steps = null; return true; }
