@@ -130,3 +130,22 @@ describe('12 Vorschau beim Zaun-Ziehen oben (hillMarkEdge)', () => {
     game("setTool('look')");
   });
 });
+
+describe('9 Gleis-Rampe: Tunneleinfahrt direkt vor dem Fuß', () => {
+  it('verbindet sich mit der Rampe (Netz, kein Prellbock am Fuß); quer davor nicht', () => {
+    hills(block(10, 10, 13, 13));
+    game("rampNewForm = 'b'; build('huegelrampe', 11, 14); recalc()");
+    expect(game('rampAt(11, 16) && rampAt(11, 16).i')).toBe(0);                          // Fuß 11,16, hinauf nach −y
+    game("for (let y = 19; y <= 22; y++) state.tunnels.set('11,' + y, {}); recalc()");
+    expect(game("[placeRot('tunneleinfahrt', 11, 17), placeError('tunneleinfahrt', 11, 17)]")).toEqual([0, null]);   // so baut man sie auch
+    expect(game("build('tunneleinfahrt', 11, 17)")).toBe(true);
+    expect(game('einOf(11, 17) && [einOf(11, 17).A, einOf(11, 17).B]')).toEqual([[11, 17], [11, 18]]);
+    expect(game('[trackLink(11, 16, 11, 17), trackLink(11, 17, 11, 16)]')).toEqual([true, true]);
+    expect(game("rampLook(11, 16, rampAt(11, 16)).ef")).toBe(false);
+    expect(game("T.rail.comp.get('11,16') != null && T.rail.comp.get('11,16') === T.rail.comp.get('11,20')")).toBe(true);
+    // quer: Einfahrt neben dem Fuß (Achse x) verbindet nicht
+    game("state.tiles.delete('11,17'); state.tiles.set('12,16', { b: 'tunneleinfahrt', lvl: 1, rot: 3 }); for (let x = 14; x <= 16; x++) state.tunnels.set(x + ',16', {}); recalc()");
+    expect(game('[trackLink(11, 16, 12, 16), trackLink(12, 16, 11, 16)]')).toEqual([false, false]);
+    expect(game("rampLook(11, 16, rampAt(11, 16)).ef")).toBe(true);
+  });
+});

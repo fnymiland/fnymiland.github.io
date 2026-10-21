@@ -2223,7 +2223,7 @@ const sameXY = (p, x, y) => p[0] === x && p[1] === y;
 // Ein Ende einer Einfahrt: vorn an Schiene (Feld vor A), hinten an Tunnel (Feld hinter B), innen A ↔ B
 function einLinks(E, x, y, nx, ny) {
   if (sameXY(E.A, x, y) && sameXY(E.B, nx, ny) || sameXY(E.B, x, y) && sameXY(E.A, nx, ny)) return true;
-  if (sameXY(E.A, x, y)) return nx === x - E.d[0] && ny === y - E.d[1] && railTileAt(nx, ny);
+  if (sameXY(E.A, x, y)) return nx === x - E.d[0] && ny === y - E.d[1] && (railTileAt(nx, ny) || rampTrackAt(nx, ny));   // 157l: auch der Fuß einer Gleis-Rampe (längs: levelLink)
   if (sameXY(E.B, x, y)) return nx === x + E.d[0] && ny === y + E.d[1] && tunnelAt(nx, ny);
   return false;
 }

@@ -1459,9 +1459,10 @@ function rampLook(x, y, r, real = true) {
   const rail = [[fx - Du, fy - Dv], [tx + Du, ty + Dv]].map(([px, py]) => state.tiles.get(px + ',' + py)).find(t => t && t.b === 'schiene');
   // freies Ende (Prellbock wie am Ende eines Gleises): vor dem Fuß keine Schiene auf seiner Ebene, hinter dem oberen Feld keine eine Ebene höher
   const railOn = (px, py, lv) => { const t = state.tiles.get(px + ',' + py); return !!t && t.b === 'schiene' && L(px, py) === lv; };
+  const einOn = (px, py) => real && isEinfahrt(px, py) && trackLink(fx, fy, px, py);   // 157l (22.10.2026): Tunneleinfahrt direkt vor dem Fuß
   return { rot, len: r.len, i: r.i, form, cut, first: cut && !cutI(r.i - 1), narrow: !!Fm.narrow, viadukt: !!Fm.viadukt, kind, wall: Fm.wall || kind,
     m: side(-1), p: side(1), top: groundTopAt(x, y), rl: (DECO_LOOKS.schiene.forms[(rail && rail.form) || 0] || {}).id || 'schotter',
-    ef: r.i === 0 && !railOn(fx - Du, fy - Dv, L(fx, fy)), et: r.i === r.len - 1 && !railOn(tx + Du, ty + Dv, L(tx, ty) + 1) };
+    ef: r.i === 0 && !railOn(fx - Du, fy - Dv, L(fx, fy)) && !einOn(fx - Du, fy - Dv), et: r.i === r.len - 1 && !railOn(tx + Du, ty + Dv, L(tx, ty) + 1) };
 }
 const rampSig = o => 'G' + o.form + o.rot + o.len + o.i + '|' + o.kind + o.wall + '|' + o.m + o.p + '|' + o.top + '|' + o.rl + (o.ef ? 'f' : '') + (o.et ? 't' : '');
 // Gleis gerade über ein Rampenfeld von d0 bis d1 (längs; W(d, s) → Bildpunkt auf der Schräge), Farben und Maße wie drawRailBed (Bett ±RAIL_W
