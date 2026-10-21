@@ -893,42 +893,55 @@
   window.HUET_V = [['2A · Hüterin – Patina', { c: ['#6fae9a', '#4f8a78', '#9fd3c0'], hair: '#5c9a86' }], ['2B · Hüterin – Gold', { c: ['#e0b04a', '#b8862a', '#ffe08a'], hair: '#c9962a' }], ['2C · Hüterin – Marmor', { c: ['#ece8df', '#c9c2b3', '#ffffff'], hair: '#d6cfc0' }]].map(([l, pal]) => [l, (K, now) => { HUET = pal; hueterin(K, now); }, 2.3, 2, 'wasser']);
   // Sternenleuchte (Nutzer 21.10.2026, statt der Hüterin): Felseninsel, schlanker Turm mit Galerie, oben eine große goldene Laterne mit Sternen
   function sternenleuchteF(K, now = 0) {
-    const z = K.z, c = K.P(0, 0, 0);
+    const z = K.z;
     K.oval(0, 0, 0.92, C('#7d7568')); K.oval(-0.04, -0.04, 0.82, C('#9a9284')); K.oval(-0.08, -0.08, 0.66, C('#b3ab9c'));
     for (const [a, b, r] of [[0.62, 0.32, 0.14], [0.3, 0.66, 0.12], [-0.66, 0.24, 0.11], [0.56, -0.52, 0.11]]) { K.oval(a, b, r, C('#8a8274')); K.oval(a - 0.03, b - 0.03, r * 0.7, C('#a39b8c')); }
-    const base = K.P(0, 0, 4);
-    cyl(base[0], base[1], 30 * z, 15 * z, 9 * z, '#cfc6b2');                                                     // Sockel
-    for (let i = 0; i < 5; i++) { const t = -0.6 + i * 0.3; poly([[base[0] + Math.sin(t) * 26 * z - 2.6 * z, base[1] + 3 * z], [base[0] + Math.sin(t) * 26 * z + 2.6 * z, base[1] + 3 * z], [base[0] + Math.sin(t) * 26 * z + 2.6 * z, base[1] - 2 * z], [base[0] + Math.sin(t) * 26 * z - 2.6 * z, base[1] - 2 * z]], C('#b8af9b')); }   // Quader im Sockel
-    const tb = [base[0], base[1] - 9 * z], TH = 70;
-    cyl(tb[0], tb[1], 20 * z, 10 * z, TH * z, '#ede4cf');                                                      // Turm
-    for (const hh of [24, 48]) { const y = tb[1] - hh * z; g.fillStyle = C('#d9cdb4'); g.beginPath(); g.ellipse(tb[0], y, 21 * z, 10.5 * z, 0, 0, Math.PI); g.ellipse(tb[0], y - 2 * z, 21 * z, 10.5 * z, 0, Math.PI, 0, true); g.closePath(); g.fill(); }   // Gesimsbänder: nur der vordere Ring
-    for (const [hh, n] of [[14, 3], [36, 3], [58, 2]]) for (let i = 0; i < n; i++) { const t = (i - (n - 1) / 2) * 0.55, wx = tb[0] + Math.sin(t) * 15 * z, wy = tb[1] - hh * z + Math.cos(t) * 2.6 * z;
-      poly([[wx - 2 * z, wy], [wx + 2 * z, wy], [wx + 2 * z, wy - 7 * z], [wx, wy - 9.4 * z], [wx - 2 * z, wy - 7 * z]], lit() ? '#ffd27a' : C('#5d8fb8')); if (lit()) glowP([wx, wy - 4 * z], 9 * z); }
-    poly([[tb[0] - 3.6 * z, tb[1] + 9.4 * z], [tb[0] + 3.6 * z, tb[1] + 9.4 * z], [tb[0] + 3.6 * z, tb[1] - 1 * z], [tb[0], tb[1] - 4.4 * z], [tb[0] - 3.6 * z, tb[1] - 1 * z]], C('#8a5a3c'));   // Tür
-    // Galerie mit Geländer
-    const gy = tb[1] - TH * z;
-    cyl(tb[0], gy + 2 * z, 26 * z, 13 * z, 3 * z, '#d9cdb4');                                                   // Galerieboden (Stein)
-    for (let i = 0; i <= 16; i++) { const a = Math.PI * i / 16, x = tb[0] - Math.cos(a) * 24.5 * z, y = gy - 1 * z + Math.sin(a) * 12.2 * z; L(C('#8a6a2a'), 0.7, z, [[x, y], [x, y - 6 * z]]); }   // Geländerstäbe
-    g.strokeStyle = C(GOLD); g.lineWidth = 1.2 * z; g.beginPath(); g.ellipse(tb[0], gy - 7 * z, 24.5 * z, 12.2 * z, 0, 0, Math.PI); g.stroke();   // Handlauf
-    // Laterne: sechseckig, goldene Rahmen, Glas mit Stern in jedem Feld, Dach, Mondsichel obendrauf
+    // Punkt auf einem Zylindermantel: Mitte (cx, cy) am Fuß, Radius r, Höhe h, Winkel t (0 = vorn, + = rechts)
+    const cp = (cx, cy, r, t, h) => [cx + Math.sin(t) * r, cy + Math.cos(t) * r * 0.5 - h];
+    const onCyl = (cx, cy, r, t0, t1, h0, h1, arch, fill) => { if (Math.cos((t0 + t1) / 2) < 0.2) return; const pts = [], n = 8;
+      for (let i = 0; i <= n; i++) pts.push(cp(cx, cy, r, t0 + (t1 - t0) * i / n, h0));
+      for (let i = n; i >= 0; i--) { const t = t0 + (t1 - t0) * i / n; pts.push(cp(cx, cy, r, t, h1 + (arch ? arch * Math.sin(Math.PI * i / n) : 0))); }
+      poly(pts, fill); };
+    const base = K.P(0, 0, 4), SR = 30 * z, SH = 9 * z;
+    cyl(base[0], base[1], SR, SR / 2, SH, '#cfc6b2');                                                            // Sockel
+    for (const [h, off] of [[3, 0], [6, 0.5]]) {                                                                   // Steinfugen folgen der Rundung
+      g.strokeStyle = C('#b0a690'); g.lineWidth = 0.6 * z; g.beginPath(); for (let i = 0; i <= 20; i++) { const p = cp(base[0], base[1], SR, -Math.PI / 2 + Math.PI * i / 20, h * z); i ? g.lineTo(...p) : g.moveTo(...p); } g.stroke();
+      for (let k = -4; k <= 4; k++) { const t = (k + off) * 0.36; if (Math.abs(t) > 1.45) continue; L(C('#b0a690'), 0.6, z, [cp(base[0], base[1], SR, t, h * z - 3 * z), cp(base[0], base[1], SR, t, h * z)]); }
+    }
+    const tb = [base[0], base[1] - SH], TR = 20 * z, TH = 70;
+    cyl(tb[0], tb[1], TR, TR / 2, TH * z, '#ede4cf');                                                             // Turm
+    for (const hh of [24, 48]) { g.fillStyle = C('#d9cdb4'); g.beginPath(); for (let i = 0; i <= 20; i++) { const p = cp(tb[0], tb[1], TR + 0.6 * z, -Math.PI / 2 + Math.PI * i / 20, hh * z); i ? g.lineTo(...p) : g.moveTo(...p); } for (let i = 20; i >= 0; i--) g.lineTo(...cp(tb[0], tb[1], TR + 0.6 * z, -Math.PI / 2 + Math.PI * i / 20, hh * z + 2 * z)); g.closePath(); g.fill(); }   // Gesimsbänder
+    const winCol = lit() ? '#ffd27a' : C('#5d8fb8');
+    for (const [h0, ts] of [[30, [-0.75, 0, 0.75]], [54, [-0.75, 0, 0.75]]]) for (const t of ts) { onCyl(tb[0], tb[1], TR + 0.2 * z, t - 0.17, t + 0.17, h0 * z, (h0 + 8) * z, 2.6 * z, winCol); if (lit() && Math.cos(t) > 0.2) glowP(cp(tb[0], tb[1], TR, t, (h0 + 5) * z), 9 * z); }   // Bogenfenster auf der Rundung
+    onCyl(tb[0], tb[1], TR + 0.3 * z, -0.2, 0.2, 0, 11 * z, 3 * z, C('#8a5a3c'));                                // Tür steht auf dem Turmfuß
+    // Galerie: Boden, Geländer hinten, Laterne, Geländer vorn
+    const gy = tb[1] - TH * z, GR = 24.5 * z;
+    cyl(tb[0], gy + 2 * z, 26 * z, 13 * z, 3 * z, '#d9cdb4');
+    const rail = (front) => { const a0 = front ? 0 : Math.PI, posts = 18;
+      for (let i = 0; i <= posts; i++) { const a = a0 + Math.PI * i / posts, x = tb[0] - Math.cos(a) * GR, y = gy - 1 * z + Math.sin(a) * GR * 0.5; L(C('#8a6a2a'), 0.7, z, [[x, y], [x, y - 6 * z]]); }
+      g.strokeStyle = C(GOLD); g.lineWidth = 1.2 * z; g.beginPath(); g.ellipse(tb[0], gy - 7 * z, GR, GR * 0.5, 0, front ? 0 : Math.PI, front ? Math.PI : 2 * Math.PI); g.stroke(); };
+    rail(false);
     const lb = gy - 3 * z, LH = 30 * z, R = 15 * z, faces = [[Math.PI, Math.PI * 4 / 3], [Math.PI * 4 / 3, Math.PI * 5 / 3], [Math.PI * 5 / 3, Math.PI * 2]];
     const hx = (a, y) => [tb[0] + Math.cos(a) * R, y - Math.sin(a) * R * 0.5];
     cyl(tb[0], lb, R * 1.05, R * 0.52, 3 * z, GOLD_D);
     faces.forEach(([a0, a1], i) => {
       const p0 = hx(a0, lb - 3 * z), p1 = hx(a1, lb - 3 * z), q1 = [p1[0], p1[1] - LH], q0 = [p0[0], p0[1] - LH];
-      poly([p0, p1, q1, q0], lit() ? ['#fff1b0', '#ffe080', '#f2c25a'][i] : ['#fff3c4', '#ffe7a0', '#f6d27a'][i]);   // Glas, Licht von links
-      const m = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 - LH / 2];
-      star(m[0], m[1], 5.4 * z, lit() ? '#ffffff' : C(GOLD_D));                                                // Stern im Glas
+      poly([p0, p1, q1, q0], lit() ? ['#fff1b0', '#ffe080', '#f2c25a'][i] : ['#fff3c4', '#ffe7a0', '#f6d27a'][i]);
+      // Stern liegt in der Glasfläche: u längs der Fläche, v nach oben
+      const M = (u, v) => [p0[0] + (p1[0] - p0[0]) * (0.5 + u / 2), p0[1] + (p1[1] - p0[1]) * (0.5 + u / 2) - LH * (0.5 + v / 2)];
+      const st = []; for (let j = 0; j < 10; j++) { const ang = Math.PI / 2 + j * Math.PI / 5, rr = j % 2 ? 0.14 : 0.34; st.push(M(Math.cos(ang) * rr, Math.sin(ang) * rr * 0.62)); }
+      poly(st, lit() ? '#ffffff' : C(GOLD_D));
       L(C(GOLD_D), 1.4, z, [p0, q0]);
     });
-    L(C(GOLD_D), 1.4, z, [hx(Math.PI * 2, lb - 3 * z), [hx(Math.PI * 2, lb - 3 * z)[0], hx(Math.PI * 2, lb - 3 * z)[1] - LH]]);
+    { const e = hx(Math.PI * 2, lb - 3 * z); L(C(GOLD_D), 1.4, z, [e, [e[0], e[1] - LH]]); }
+    rail(true);
     const top = lb - 3 * z - LH;
     cyl(tb[0], top + 1 * z, R * 1.1, R * 0.55, 2.4 * z, GOLD);
     g.fillStyle = C(GOLD); g.beginPath(); g.moveTo(tb[0] - R * 1.1, top - 1.4 * z); g.lineTo(tb[0], top - 20 * z); g.lineTo(tb[0] + R * 1.1, top - 1.4 * z); g.ellipse(tb[0], top - 1.4 * z, R * 1.1, R * 0.55, 0, 0, Math.PI); g.fill();
     g.fillStyle = C(GOLD_D); g.beginPath(); g.moveTo(tb[0], top - 20 * z); g.lineTo(tb[0] + R * 1.1, top - 1.4 * z); g.ellipse(tb[0], top - 1.4 * z, R * 1.1, R * 0.55, 0, 0, Math.PI / 2); g.lineTo(tb[0], top - 1.4 * z); g.fill();
     const m = [tb[0], top - 28 * z];
     L(C(GOLD_D), 1.1, z, [[m[0], top - 20 * z], [m[0], m[1] + 5 * z]]);
-    star(m[0], m[1] + 0.4 * z, 6.4 * z, C(GOLD_D)); star(m[0], m[1], 6 * z, lit() ? '#fff1a8' : C(GOLD));   // goldener Stern obendrauf
+    star(m[0], m[1] + 0.4 * z, 6.4 * z, C(GOLD_D)); star(m[0], m[1], 6 * z, lit() ? '#fff1a8' : C(GOLD));
     if (lit()) { glowP([tb[0], top + LH / 2], 95 * z); glowP([tb[0], top + LH / 2], 36 * z); }
   }
   window.STERNENLEUCHTE = sternenleuchteF;
