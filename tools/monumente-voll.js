@@ -1008,7 +1008,7 @@
       g.strokeStyle = lit() ? 'rgba(230,250,255,0.5)' : 'rgba(255,255,255,0.55)'; g.lineWidth = 0.5 * z;
       for (let k = 2; k < N; k += 3) { g.beginPath(); g.moveTo(...T[k]); g.quadraticCurveTo(...M[k], ...B[k]); g.stroke(); }   // feine Fließspuren
       g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 1 * z; g.beginPath(); T.forEach((p, k) => k ? g.lineTo(...p) : g.moveTo(...p)); g.stroke();   // heller Wulst am Rand
-      for (let k = 1; k < N; k += 2) ellipse(B[k][0], B[k][1], 1.8 * z, 0.7 * z, 'rgba(255,255,255,0.85)'); };   // Schaum unten
+      for (let k = 2; k < N; k += 3) ellipse(B[k][0], B[k][1], 1.8 * z, 0.7 * z, 'rgba(255,255,255,0.85)'); };   // Schaum genau dort, wo die Fließspuren auftreffen
     cyl(cx, c[1], 5 * z, 2.5 * z, 16 * z, '#e6dcc4');
     const y1 = c[1] - 18 * z, r1 = 20 * z;
     bowl(y1, r1, 7 * z);
