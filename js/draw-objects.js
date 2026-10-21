@@ -1488,7 +1488,16 @@ function drawStand(type, cx, cy, z, now, x, y, t) {
     glowQuad([[p[0] - 1, p[1] - 1], [p[0] + 1, p[1] - 1], [p[0] + 1, p[1] + 1], [p[0] - 1, p[1] + 1]], 9 * z);
   }
 }
+// Welches Feld gerade gezeichnet wird (Block 164, Dachglitzer): K.block merkt sich dazu die Perlmutt-Dächer (ROOF_GEO, in Feldern),
+// damit die Funkel später auch über dem fertigen Bildchen an der richtigen Stelle liegen
+let DRAW_TILE = null;
+const ROOF_GEO = new WeakMap();
 function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
+  const prev = DRAW_TILE; DRAW_TILE = t || null;
+  if (t && PASS !== 'ground') ROOF_GEO.delete(t);                       // neu zeichnen = neue Dächer (Stufe, Aussehen)
+  try { return drawObject0(type, cx, cy, z, now, x, y, lvl, t); } finally { DRAW_TILE = prev; }
+}
+function drawObject0(type, cx, cy, z, now, x, y, lvl, t) {
   const rs = t && (t.wall != null || t.roof != null) && repaintOf(type);   // gewählte Farben (Block 72)
   if (!rs) { drawObjectAs(type, cx, cy, z, now, x, y, lvl, t); return; }
   const prev = REPAINT_MAP;

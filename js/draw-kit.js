@@ -40,6 +40,13 @@ function kit(cx, cy, z, rot) {
     for (const [o, c] of PEARL_STOPS) gr.addColorStop(o, C(c));
     return gr;
   };
+  // Dachglitzer (Block 164): Perlmutt-Dach des gerade gezeichneten Felds merken – Mitte, halbe Traufe, Traufhöhe, First (in Feldern/Einheiten)
+  const pearlNote = (a, b, ea, eb, top, peakUp, gable) => {
+    const t = typeof DRAW_TILE !== 'undefined' && DRAW_TILE;
+    if (!t) return;                                                     // immer merken: Glitzer lässt sich später einschalten, das Bildchen bleibt
+    let m = ROOF_GEO.get(t); if (!m) { m = new Map(); ROOF_GEO.set(t, m); }
+    m.set(a + ',' + b + ',' + top, { a, b, ea, eb, top, peakUp, gable, r });
+  };
   const pearlOver = (gr, pts) => { if (!gr) return; const ga = g.globalAlpha; g.globalAlpha = ga * PEARL_ALPHA; poly(pts, gr); g.globalAlpha = ga; };
 
   K.poly = (pts, fill, up = 0) => poly(pts.map(([a, b]) => P(a, b, up)), fill);
@@ -86,6 +93,7 @@ function kit(cx, cy, z, rot) {
         upper.push([[E2(1, -1), E2(1, 1), R2, R1], [1, 0]], [[E2(-1, 1), E2(-1, -1), R1, R2], [-1, 0]], [[E2(1, 1), E2(-1, 1), R2], [0, 1]], [[E2(-1, -1), E2(1, -1), R1], [0, -1]]);
       }
       const upCol = shade(roof, 0.1), pg = roof === ROOFS[ROOF_PEARL] ? pearlGrad(a, b, ea, eb, top, m + rh) : null;
+      if (pg) pearlNote(a, b, ea, eb, top, m + rh, null);
       for (const [pts, n] of lower) if (facing(...n) < 0) { poly(pts, roofCol(roof, n)); pearlOver(pg, pts); }
       for (const [pts, n] of upper) if (facing(...n) < 0) { poly(pts, roofCol(upCol, n)); pearlOver(pg, pts); }
       for (const [pts, n] of upper) if (facing(...n) >= 0) { poly(pts, roofCol(upCol, n)); pearlOver(pg, pts); }
@@ -145,6 +153,7 @@ function kit(cx, cy, z, rot) {
       }
       const back = slopes.filter(s => facing(...s[1]) < 0), front = slopes.filter(s => facing(...s[1]) >= 0);
       const pg = roof === ROOFS[ROOF_PEARL] ? pearlGrad(a, b, ea, eb, top, top + roofH) : null;
+      if (pg) pearlNote(a, b, ea, eb, top, top + roofH, type === 'gable' ? (alongA ? 'a' : 'b') : null);
       for (const [pts, n] of back) { poly(pts, roofCol(roof, n)); pearlOver(pg, pts); }
       for (const [pts, n] of gables) if (facing(...n) > 0.01) poly(pts, wallCol(wall, n));
       for (const [pts, n] of front) { poly(pts, roofCol(roof, n)); pearlOver(pg, pts); }

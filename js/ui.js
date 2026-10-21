@@ -123,6 +123,15 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   return c;
 }
 
+// ✨ Dachglitzer (Block 164, Nutzer 22.10.2026: „nur Perlmutt, wie bei den Wegen, nur Funkel“): auf Perlmutt-Dächern blitzen nah dran Funkel
+// auf – in den Glitzerfarben, die man als Wegmuster schon gekauft hat. Aus = kein t.rglitter
+const GLITTER_NAMES = { silber: 'Silber', gold: 'Gold', perl: 'Perl', regen: 'Regenbogen' };
+function roofGlitterHtml(t) {
+  const own = Object.keys(GLITTER).filter(k => wegMusterOk('glitzer_' + k));
+  if (!own.length) return '<div class="label">✨ Glitzer</div><div class="looks"><button class="look art-more" data-rglitmore="1">✨ Glitzer gibt es als ✦ Meisterstück in der Kunstakademie ›</button></div>';
+  const btn = (v, n) => `<button class="look${(t.rglitter || '') === v ? ' on' : ''}" data-rglit="${v}">${n}</button>`;
+  return `<div class="label">✨ Glitzer</div><div class="looks">${btn('', 'Aus')}${own.map(k => btn(k, GLITTER_NAMES[k])).join('')}</div>`;
+}
 // Schnellzugriff: die Werkzeuge, die man ständig braucht, ohne Umweg über die Kategorien (Tasten A, W, V, E)
 // 🧹 Abreißen ist nicht mehr in der Leiste (Block 155, Nutzer: „Auswählen und Löschen zusammenlegen“): ✋ Auswählen → 🗑️ Abreißen,
 // Aufgenommenes → 🗑️ Wegwerfen, im 👆-Fenster 🗑️, Wald/Fels über 👆 → Roden. Das Werkzeug 'abriss' gibt es intern weiter
@@ -1908,7 +1917,8 @@ function openInfo(x, y) {
       <div class="label">${wallName}</div>
       <div class="swatches">${bunt('wall')}${colorsOf('wall').map(([c, i]) => `<button class="sw${i === wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="${wallName}: Farbe ${i + 1}"></button>`).join('')}</div>
       ${roofName ? `<div class="label">${roofName}</div>
-      <div class="swatches">${bunt('roof')}${colorsOf('roof').map(([c, i]) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="${roofName}: Farbe ${i + 1}"></button>`).join('')}</div>` : ''}
+      <div class="swatches">${bunt('roof')}${colorsOf('roof').map(([c, i]) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="${roofName}: Farbe ${i + 1}"></button>`).join('')}</div>
+      ${t.roof === ROOF_PEARL ? roofGlitterHtml(t) : ''}` : ''}
       ${ITEMS[t.b].fl0 ? `<div class="label">Stockwerke</div><div class="row"><button class="btn ghost" data-fl="-1" aria-label="Ein Stockwerk weniger">−</button><b class="fl-n">${t.fl || ITEMS[t.b].fl0}</b><button class="btn ghost" data-fl="1" aria-label="Ein Stockwerk mehr">+</button></div>` : ''}
       ${ITEMS[t.b].fl0 || t.b === 'fz_schloss' ? `<div class="label">Fenster</div>
       <div class="swatches">${WIN_COLS.map((c, i) => winOk(i) || i === (t.win || 0) ? `<button class="sw${i === (t.win != null ? t.win : 0) ? ' on' : ''}" data-win="${i}" style="background:${c}" aria-label="Fensterfarbe ${i + 1}"></button>` : '').join('')}</div>` : ''}
@@ -2068,6 +2078,8 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
+  for (const b of el.querySelectorAll('[data-rglit]')) b.onclick = () => undoable(() => { const v = b.dataset.rglit; if (v) t.rglitter = v; else delete t.rglitter; sfx('deco'); save(); openInfo(x, y); });   // Dachglitzer (Block 164)
+  for (const b of el.querySelectorAll('[data-rglitmore]')) b.onclick = () => { openResearch('design'); artJump('Wegmuster'); };
   if (t.b === 'fz_schloss') wireCastle(el, t, x, y);
   if (t.b === 'weg') wireWegForm(el, t, x, y);
   if (el.querySelector('[data-lgrow]')) el.querySelector('[data-lgrow]').onclick = () => undoable(() => { const nk = growLighthouse(x + ',' + y); if (!nk) return; sfx('build'); recalc(); save(); startFireworks(keyXY(nk).map(v => v + 1)); openInfo(...keyXY(nk)); });   // Kap (Block 83)
@@ -3289,7 +3301,7 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 const NEWS_HISTORY = [
   { id: '2026-10-22-glitzer', date: '22. Oktober', title: 'Glitzerwege und Perlmutt', items: [
     '✨ <b>Glitzerwege:</b> Vier neue Meisterstücke in der Kunstakademie: Silber-, Gold-, Perl- und Regenbogenglitzer, je 150 ✨. Feine Pünktchen liegen im Weg, und wenn du nah heranzoomst, blitzen immer wieder kleine Funkel auf. Den Glitzer gibt es in jeder Wegfarbe.',
-    '🏠 <b>Perlmutt-Dach:</b> Eine schimmernde Dachfarbe in Rosa, Flieder, Mint und Himmelblau. Sie ist ein Meisterstück für 200 ✨.',
+    '🏠 <b>Perlmutt-Dach:</b> Eine schimmernde Dachfarbe in Rosa, Flieder, Mint und Himmelblau. Sie ist ein Meisterstück für 200 ✨. Unter „✨ Glitzer“ kannst du es außerdem funkeln lassen, in jedem Glitzer, den du für Wege schon hast.',
   ] },
   { id: '2026-10-21-belohnungen', date: '21. Oktober', title: 'Baupläne und Meisterstücke', items: [
     '📜 <b>Baupläne:</b> Truhen auf fernen Inseln bringen jetzt meistens ein geschenktes Stück aus der Kunstakademie, zum Beispiel eine Farbe oder ein Muster. Taler gibt es dazu nur noch ein wenig. Auch jeder dritte Erfolgsstern schenkt dir einen Bauplan.',

@@ -423,6 +423,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     pathArms/armUV). Kosten ~0,15 ms je Bild bei 40 Feldern. Nicht auf Anhöhen und Wasser-Wegbrücken (tileA malt darüber).
     Wandschmuck, der bis zur Wandoberkante reicht (Fachwerk), gehört in `K.block({ wallDeco })` – vor dem Dach, sonst ragt er über die Traufe
     (Fehler 22.10., auf Perlmutt gut zu sehen).
+    Dachglitzer: `t.rglitter` (silber/gold/perl/regen, nur wirksam bei `t.roof === ROOF_PEARL`, Auswahl = gekaufte Glitzerwege). Die Dachform
+    merkt sich K.block beim Zeichnen in `ROOF_GEO` (WeakMap je Feld, über `DRAW_TILE` aus drawObject); `roofSparks` malt direkt nach dem
+    Gebäude (Bildchen oder live) – so liegen Funkel unter allem, was davor steht.
 29e. **🏛️ Monumente** (Block 162, js/monumente.js, PLAN-162.md): Bilder in MON_ART (aus tools/monumente-voll.js übernommen – Änderungen
     zuerst dort zeigen, dann hierher). Wahrzeichen (`monPhases`) sind Baustellen wie die Wunderwerke, aber eigene Logik (monSite/monStep/
     monCost/monPaid), kein Eintrag in WONDERS (der hätte Wirkungen, „gibt es schon“ und das Rathaus). Gerüst gemeinsam über `siteScaffold`

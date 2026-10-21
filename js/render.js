@@ -121,12 +121,45 @@ function glitterSparks(visible, z, now) {
     for (const s of sp) {
       const a = sparkleAmp(s, now);
       if (a < 0.02) continue;
-      const x = cx + (s.u - s.v) * TW / 2 * z, y = cy + (s.u + s.v) * TH / 2 * z, L = s.L * z * (0.55 + 0.45 * a), w = L * 0.16;
-      const gr = g.createRadialGradient(x, y, 0, x, y, L * 1.4);
-      gr.addColorStop(0, `rgba(${s.glow},${Math.min(1, (s.strong ? 0.7 : 0.45) * a * boost)})`); gr.addColorStop(1, `rgba(${s.glow},0)`);
-      g.fillStyle = gr; g.beginPath(); g.arc(x, y, L * 1.4, 0, Math.PI * 2); g.fill();
-      poly([[x - L, y], [x - w, y - w], [x, y - L * 1.15], [x + w, y - w], [x + L, y], [x + w, y + w], [x, y + L * 1.15], [x - w, y + w]], `rgba(${s.spark},${a})`);
+      drawSpark(cx + (s.u - s.v) * TW / 2 * z, cy + (s.u + s.v) * TH / 2 * z, s.L * z, a, s.glow, s.spark, s.strong, boost);
     }
+  }
+}
+// Ein Funkel: weicher Schein und vier spitze Strahlen; a = Helligkeit (0–1), L = Strahl bei voller Helligkeit
+function drawSpark(x, y, L0, a, glow, spark, strong, boost = 1) {
+  const L = L0 * (0.55 + 0.45 * a), w = L * 0.16;
+  const gr = g.createRadialGradient(x, y, 0, x, y, L * 1.4);
+  gr.addColorStop(0, `rgba(${glow},${Math.min(1, (strong ? 0.7 : 0.45) * a * boost)})`); gr.addColorStop(1, `rgba(${glow},0)`);
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, L * 1.4, 0, Math.PI * 2); g.fill();
+  poly([[x - L, y], [x - w, y - w], [x, y - L * 1.15], [x + w, y - w], [x + L, y], [x + w, y + w], [x, y + L * 1.15], [x - w, y + w]], `rgba(${spark},${a})`);
+}
+// ✨ Dachglitzer (Block 164): Funkel auf der vorderen Hälfte der Perlmutt-Dächer (ROOF_GEO, beim Zeichnen gemerkt), direkt nach dem
+// Gebäude gezeichnet – was davor steht, deckt sie wieder zu. Plätze fest je Feld (hash), Takt wie die Glitzerwege
+const ROOF_SPARK_N = 4;
+function roofSparkSpots(t, ax, ay) {
+  const geo = ROOF_GEO.get(t), out = [];
+  if (!geo) return out;
+  let j = 0;
+  for (const R of geo.values()) for (let k = 0; k < ROOF_SPARK_N; k++, j++) {
+    const h = n => hash(ax * 31 + j, ay * 17 + k, 900 + n);
+    let u = (h(0) * 2 - 1) * R.ea * 0.85, v = (h(1) * 2 - 1) * R.eb * 0.85;
+    const turned = R.r === 0 ? [u, v] : R.r === 1 ? [-v, u] : R.r === 2 ? [-u, -v] : [v, -u];
+    if (turned[0] + turned[1] < 0) { u = -u; v = -v; }                    // zur Kamera gewandte Hälfte
+    const f = R.gable === 'a' ? 1 - Math.abs(v) / R.eb : R.gable === 'b' ? 1 - Math.abs(u) / R.ea : 1 - Math.max(Math.abs(u) / R.ea, Math.abs(v) / R.eb);
+    out.push({ a: R.a + u, b: R.b + v, up: R.top + (R.peakUp - R.top) * Math.max(0, f), T: 2500 + h(2) * 2500, off: h(3), L: 2 + h(4) * 1.2, j: j + Math.floor(h(5) * 7) });
+  }
+  return out;
+}
+function roofSparks(t, c, z, now, ax, ay) {
+  if (!t.rglitter || t.roof !== ROOF_PEARL || !glitterOn(z)) return;
+  const tone = GLITTER[t.rglitter];
+  if (!tone) return;
+  const K = kit(c.x, c.y, z, t.rot), boost = night > 0.15 ? 1.5 : 1;
+  for (const s of roofSparkSpots(t, ax, ay)) {
+    const a = sparkleAmp(s, now);
+    if (a < 0.02) continue;
+    const [x, y] = K.P(s.a, s.b, s.up);
+    drawSpark(x, y, s.L * z, a, tone.glow[s.j % tone.glow.length], tone.spark, !!tone.strong, boost);
   }
 }
 function liveFlatSet() {
@@ -2170,7 +2203,7 @@ function render(now) {
             if (an < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(an - 1, 3) + c1 * Math.pow(an - 1, 2)); }
           }
           const cut = oLift ? hillCutOf(ax, ay, w, h) : null;              // Anhöhe (Block 157j): an der Kante zugeschnitten
-          if (SPRITES_ON && sc === 1 && !hc && spriteTileOk(t) && spriteTile(t, ax, ay, c, z, now, w, h, !!oGround, cut)) return;   // weit weg: fertiges Bildchen (nah nur Ruhendes; oben samt flachen Teilen, Block 157j)
+          if (SPRITES_ON && sc === 1 && !hc && spriteTileOk(t) && spriteTile(t, ax, ay, c, z, now, w, h, !!oGround, cut)) { roofSparks(t, c, z, now, ax, ay); return; }   // ✨ Dachglitzer (Block 164)   // weit weg: fertiges Bildchen (nah nur Ruhendes; oben samt flachen Teilen, Block 157j)
           const ds = sc * decoScale(t.b);
           const one = pass => {
             g.save(); if (cut) hillCutClip(cut, c.x, c.y, z, pass === 'ground');
@@ -2183,7 +2216,7 @@ function render(now) {
             if (hc) { g.save(); g.translate(0, -oLift); try { for (const m of hc.sort((p, q) => (p.px + p.py) - (q.px + q.py))) drawMover(m, z, now); } finally { g.restore(); } }   // Zug in der Halle (157j)
             one('object');
           };
-          if (!GLPASS) return live();
+          if (!GLPASS) { live(); roofSparks(t, c, z, now, ax, ay); return; }
           const pad = SPRITE_PAD[t.b] || [0, 0], hw = ((w + h) * TW / 4 + 26 + pad[0]) * z * ds;   // Rahmen wie beim Bildchen, oben mehr Luft (Windräder)
           glLive(c.x, c.y, hw, spriteTop(t.b, w, h) * 1.3 * z * ds, hw, ((w + h) * TH / 4 + 12 + pad[1]) * z * ds, live);
         };

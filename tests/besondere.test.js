@@ -71,3 +71,37 @@ describe('Glitzerwege', () => {
     expect(game('glitterOn(1)')).toBe(true);
   });
 });
+
+describe('Dachglitzer auf Perlmutt (Nutzer 22.10.2026: „nur Perlmutt, wie bei den Wegen, nur Funkel“)', () => {
+  const haus = (roof, extra = '') => game(`(() => { state.design.add('roof:' + ROOF_PEARL); build('haus', 4, 4, true); const t = state.tiles.get('4,4'); t.roof = ${roof}; t.lvl = 2; ${extra} recalc(); return true; })()`);
+  it('Schalter nur bei Perlmutt; Glitzerfarben = gekaufte Glitzerwege, sonst Hinweis auf die Kunstakademie', () => {
+    game('state.design = new Set()'); haus(0);
+    game('openInfo(4, 4)');
+    expect(game("!!document.querySelector('#panel [data-rglit]')")).toBe(false);
+    game('closePanel()'); haus('ROOF_PEARL');
+    game('openInfo(4, 4)');
+    expect(game("!!document.querySelector('#panel [data-rglitmore]')")).toBe(true);   // noch kein Glitzer gekauft
+    game("state.design.add('wegmuster:glitzer_gold'); state.design.add('wegmuster:glitzer_regen'); openInfo(4, 4)");
+    expect(game("[...document.querySelectorAll('#panel [data-rglit]')].map(b => b.dataset.rglit)")).toEqual(['', 'gold', 'regen']);
+    game("document.querySelector('#panel [data-rglit=\"regen\"]').click()");
+    expect(game("state.tiles.get('4,4').rglitter")).toBe('regen');
+    const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
+    expect(d.tiles.get('4,4').rglitter).toBe('regen');
+    game("document.querySelector('#panel [data-rglit=\"\"]').click()");
+    expect(game("state.tiles.get('4,4').rglitter")).toBeUndefined();
+    game('closePanel()');
+  });
+  it('Funkel liegen auf der vorderen Dachhälfte zwischen Traufe und First; ohne Perlmutt keine', () => {
+    haus('ROOF_PEARL', "t.rglitter = 'silber';");
+    game("drawObject('haus', 400, 300, 1, 1e6, 4, 4, 2, state.tiles.get('4,4'))");
+    const sp = game("roofSparkSpots(state.tiles.get('4,4'), 4, 4)"), R = game("[...ROOF_GEO.get(state.tiles.get('4,4')).values()][0]");
+    expect(sp.length).toBeGreaterThanOrEqual(3);
+    for (const s of sp) { expect(s.up).toBeGreaterThanOrEqual(R.top - 1e-9); expect(s.up).toBeLessThanOrEqual(R.peakUp + 1e-9); expect(s.a - R.a + s.b - R.b).toBeGreaterThanOrEqual(-1e-9); }
+    game(`(() => { globalThis.__sp = 0; const k = drawSpark; drawSpark = (...a) => { globalThis.__sp++; return k(...a); };
+      try { for (let i = 0; i < 80; i++) roofSparks(state.tiles.get('4,4'), { x: 400, y: 300 }, 1.5, i * 70, 4, 4); } finally { drawSpark = k; } })()`);
+    expect(game('globalThis.__sp')).toBeGreaterThan(0);
+    game("state.tiles.get('4,4').roof = 0; globalThis.__sp = 0");
+    game(`(() => { const k = drawSpark; drawSpark = (...a) => { globalThis.__sp++; return k(...a); }; try { for (let i = 0; i < 80; i++) roofSparks(state.tiles.get('4,4'), { x: 400, y: 300 }, 1.5, i * 70, 4, 4); } finally { drawSpark = k; } })()`);
+    expect(game('globalThis.__sp')).toBe(0);
+  });
+});
