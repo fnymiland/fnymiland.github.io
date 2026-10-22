@@ -567,7 +567,7 @@ function dropGroup(hx, hy) {
 // --- Kopieren (Block 134, Wunsch Nutzer): mit ✋ markieren → „⧉ Kopieren“. Gleiche Stufe zum vollen Preis (was ein Neubau samt
 // Ausbauten kostet), die Kopie bleibt als Stempel am Finger, neue Bewohner ziehen ein. Einzelstücke bleiben draußen. Nur eine Art
 // Linie in einem Stil (Weg, Gleis, Hecke/Zaun/Mauer): Pipette – das Werkzeug mit genau diesem Stil in die Hand
-const noCopy = b => b === 'lm' || b === 'bergportal' || !!ITEMS[b].fixed || !!WONDERS[b] || !!ITEMS[b].gift || !!ITEMS[b].monPhases;   // Wahrzeichen: jedes eine eigene Baustelle   // Bergportal (157m): nur in die Wand bauen
+const noCopy = b => b === 'lm' || b === 'bergportal' || !!ITEMS[b].fixed || !!WONDERS[b] || !!ITEMS[b].gift || !!ITEMS[b].monPhases || !!ITEMS[b].unique;   // Wahrzeichen: jedes eine eigene Baustelle   // Bergportal (157m): nur in die Wand bauen
 // Kopie eines Übergangs in alter Fassung (Designpreis): die Kopie trägt danach brp im neuen Format – der nächste Stempel klont sie wieder und
 // muss gleich bleiben (sonst Neupreis als bezahlt, abgebucht aber der alte, Gegenprüfung G2 N1). Gemerkt nur für die Klone am Finger
 const COPY_ALT = new WeakSet();

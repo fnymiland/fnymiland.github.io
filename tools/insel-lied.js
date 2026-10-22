@@ -120,7 +120,7 @@
       pad: S.pad ? (fs, t, dur, vol) => V.streicher(fs, t, dur, vol) : () => {},
     };
   }
-  // drei Klangsets zum Vergleichen (gleiche Noten); gewählt hat der Nutzer das Vibraphon (22.10.2026).
+  // drei Klangsets zum Vergleichen (gleiche Noten); gewählt: Spieluhr (Nutzer 22.10.2026: „nur spieluhr, das klingt toll“) – im Spiel js/oper.js.
   // Bass überall weich (Sinus + Dreieck): ein gezupfter Kontrabass klang „knallig“ und „scheiße“, auch höher und leiser
   const SETS = {
     spieluhr: { name: 'Spieluhr & Streicher', mel: 'spieluhr', bass: 'weichbass',  tick: 'holzblock', pad: true },
@@ -129,7 +129,7 @@
   };
 
   // alle Töne einplanen; liefert die Dauer
-  function arrange(ctx, t0, stufe, set = 'vibra') {
+  function arrange(ctx, t0, stufe, set = 'spieluhr') {
     const { steps, first, last, bars } = score(), R = rig(ctx, set);
     // reines Meer am Rand: nur 4 Schläge vor/nach der Insel (Harfe in Stufe 3, sonst Stille)
     const from = Math.max(0, first - 4), to = Math.min(steps.length - 1, last + 4);
@@ -179,7 +179,7 @@
     run.raf = requestAnimationFrame(frame);
   }
   function stop() { if (!run) return; cancelAnimationFrame(run.raf); document.getElementById('liedstreifen')?.remove(); try { run.ctx.close(); } catch (e) { /* schon zu */ } run = null; }
-  function play(stufe = 3, set = 'vibra') {
+  function play(stufe = 3, set = 'spieluhr') {
     stop();
     const ctx = new (window.AudioContext || window.webkitAudioContext)(), t0 = ctx.currentTime + 0.3;
     run = { ctx }; const plan = arrange(ctx, t0, stufe, set); sweep(ctx, t0, plan);
@@ -187,7 +187,7 @@
   }
 
   // WAV zum Mitnehmen (16 Bit, Stereo)
-  async function wav(stufe = 3, set = 'vibra') {
+  async function wav(stufe = 3, set = 'spieluhr') {
     const rate = 44100, probe = score(), n = probe.last - probe.first + 9;
     const ctx = new OfflineAudioContext(2, Math.ceil((n * STEP + 3.2) * rate), rate);
     arrange(ctx, 0.05, stufe, set);

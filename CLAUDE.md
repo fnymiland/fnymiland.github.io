@@ -435,6 +435,12 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Seltene. **Baumenü zeigt nur Gekauftes** (Nutzer 21.10.2026, wie Animal Crossing): Gruppen ✨ Sternenbasar und 🏛️ Monumente sind Getter,
     leere Gruppen blendet renderTools aus; Schaufenster ist der Basar, Ziele zeigt das Sammelbuch („???“). Ein Kommentar `//` mitten in einer Zeile mit weiteren Einträgen verschluckt sie – drawObject fängt Fehler, darum prüft der Test
     `typeof MON_ART[…]`.
+29f. **🎭 Opernhaus** (Prachtbau, Block 161f, js/oper.js): Bild `OPER_ART(K, stufe)` aus tools/prachtbauten-entwurf.js (`semper`, Änderungen
+    zuerst dort zeigen). Einmal im Spiel über `ITEMS[b].unique` + `the` (placeError, kein Kopieren); Stufe = `t.lvl` (1–3), Ausbau per
+    `operUpgrade` (nur Taler, `OPER_STAGES`), Schönheit ×Stufe, Abriss gibt alles zurück (`operPaidUp`). Wirkung: **Lied** (`OPER_LIED`,
+    Hörprobe tools/insel-lied.js): Spalten x − y = Schläge, nur Dur-Fünftonleiter, Motiv je Takt nach dem Häufigsten, nur die Insel des
+    Opernhauses (`regionAt`). Klang nur **Spieluhr** mit weichem Bass (Nutzer 22.10.2026: gezupfter Kontrabass klang „scheiße“; Vibraphon/Harfe
+    nicht gewollt). `operPlay` hängt einen eigenen Ausgang an `audio()` (Ton aus → Hinweis), der Streifen ist eine eigene Ebene über dem Spiel.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

@@ -150,53 +150,53 @@
   "live": 52
  },
  "neu Tag Zoom 0.45": {
-  "ops": 1481,
-  "geo": 2784,
+  "ops": 1483,
+  "geo": 2676,
   "live": 2
  },
  "neu Tag Zoom 0.8": {
-  "ops": 772,
-  "geo": 1594,
+  "ops": 784,
+  "geo": 1694,
   "live": 1
  },
  "neu Tag Zoom 1.2": {
-  "ops": 445,
-  "geo": 1163,
+  "ops": 459,
+  "geo": 1313,
   "live": 1
  },
  "neu Tag Zoom 1.6": {
-  "ops": 4696,
-  "geo": 42803,
+  "ops": 4535,
+  "geo": 47218,
   "live": 29
  },
  "neu Tag Zoom 2.2": {
-  "ops": 3165,
-  "geo": 25723,
+  "ops": 3176,
+  "geo": 27963,
   "live": 21
  },
  "neu Nacht Zoom 0.45": {
-  "ops": 1436,
-  "geo": 2525,
-  "live": 1
+  "ops": 1478,
+  "geo": 2523,
+  "live": 2
  },
  "neu Nacht Zoom 0.8": {
-  "ops": 744,
-  "geo": 1394,
+  "ops": 756,
+  "geo": 1494,
   "live": 1
  },
  "neu Nacht Zoom 1.2": {
-  "ops": 466,
-  "geo": 1163,
+  "ops": 480,
+  "geo": 1313,
   "live": 1
  },
  "neu Nacht Zoom 1.6": {
-  "ops": 4916,
-  "geo": 43245,
+  "ops": 4755,
+  "geo": 47660,
   "live": 29
  },
  "neu Nacht Zoom 2.2": {
-  "ops": 3343,
-  "geo": 26081,
+  "ops": 3356,
+  "geo": 28393,
   "live": 21
  },
  "dach Tag Zoom 0.45": {
@@ -250,13 +250,13 @@
   "live": 31
  },
  "bruecken Tag Zoom 0.45": {
-  "ops": 981,
-  "geo": 2868,
+  "ops": 1014,
+  "geo": 2224,
   "live": 6
  },
  "bruecken Tag Zoom 0.8": {
-  "ops": 380,
-  "geo": 1243,
+  "ops": 392,
+  "geo": 1343,
   "live": 1
  },
  "bruecken Tag Zoom 1.2": {
@@ -265,23 +265,23 @@
   "live": 0
  },
  "bruecken Tag Zoom 1.6": {
-  "ops": 1980,
-  "geo": 8601,
+  "ops": 2047,
+  "geo": 9571,
   "live": 1
  },
  "bruecken Tag Zoom 2.2": {
-  "ops": 1205,
-  "geo": 5432,
+  "ops": 1247,
+  "geo": 5962,
   "live": 1
  },
  "bruecken Nacht Zoom 0.45": {
-  "ops": 998,
-  "geo": 2894,
+  "ops": 1051,
+  "geo": 2232,
   "live": 6
  },
  "bruecken Nacht Zoom 0.8": {
-  "ops": 347,
-  "geo": 831,
+  "ops": 359,
+  "geo": 931,
   "live": 1
  },
  "bruecken Nacht Zoom 1.2": {
@@ -290,113 +290,113 @@
   "live": 0
  },
  "bruecken Nacht Zoom 1.6": {
-  "ops": 1982,
-  "geo": 8601,
+  "ops": 2049,
+  "geo": 9571,
   "live": 1
  },
  "bruecken Nacht Zoom 2.2": {
-  "ops": 1207,
-  "geo": 5432,
+  "ops": 1249,
+  "geo": 5962,
   "live": 1
  },
  "bruecken-gleis Tag Zoom 0.45": {
-  "ops": 953,
-  "geo": 3946,
+  "ops": 1010,
+  "geo": 3333,
   "live": 8
  },
  "bruecken-gleis Tag Zoom 0.8": {
-  "ops": 703,
-  "geo": 50254,
+  "ops": 680,
+  "geo": 28237,
   "live": 8
  },
  "bruecken-gleis Tag Zoom 1.2": {
-  "ops": 505,
-  "geo": 49052,
+  "ops": 482,
+  "geo": 27015,
   "live": 5
  },
  "bruecken-gleis Tag Zoom 1.6": {
-  "ops": 3349,
-  "geo": 64294,
+  "ops": 3293,
+  "geo": 41945,
   "live": 12
  },
  "bruecken-gleis Tag Zoom 2.2": {
-  "ops": 2299,
-  "geo": 11168,
+  "ops": 2223,
+  "geo": 11059,
   "live": 10
  },
  "bruecken-gleis Nacht Zoom 0.45": {
-  "ops": 1021,
-  "geo": 4131,
+  "ops": 1134,
+  "geo": 3657,
   "live": 8
  },
  "bruecken-gleis Nacht Zoom 0.8": {
-  "ops": 726,
-  "geo": 50292,
+  "ops": 703,
+  "geo": 28148,
   "live": 8
  },
  "bruecken-gleis Nacht Zoom 1.2": {
-  "ops": 554,
-  "geo": 49896,
+  "ops": 548,
+  "geo": 27107,
   "live": 5
  },
  "bruecken-gleis Nacht Zoom 1.6": {
-  "ops": 3415,
-  "geo": 64422,
+  "ops": 3366,
+  "geo": 42105,
   "live": 12
  },
  "bruecken-gleis Nacht Zoom 2.2": {
-  "ops": 2365,
-  "geo": 11296,
+  "ops": 2296,
+  "geo": 11219,
   "live": 10
  },
  "bruecken-gleis-tx Tag Zoom 0.45": {
-  "ops": 1037,
-  "geo": 3572,
+  "ops": 1092,
+  "geo": 3067,
   "live": 6
  },
  "bruecken-gleis-tx Tag Zoom 0.8": {
-  "ops": 575,
-  "geo": 1871,
+  "ops": 599,
+  "geo": 2065,
   "live": 1
  },
  "bruecken-gleis-tx Tag Zoom 1.2": {
-  "ops": 179,
-  "geo": 435,
+  "ops": 194,
+  "geo": 504,
   "live": 2
  },
  "bruecken-gleis-tx Tag Zoom 1.6": {
-  "ops": 1986,
-  "geo": 8513,
+  "ops": 1998,
+  "geo": 9140,
   "live": 1
  },
  "bruecken-gleis-tx Tag Zoom 2.2": {
-  "ops": 1251,
-  "geo": 5217,
+  "ops": 1267,
+  "geo": 5636,
   "live": 0
  },
  "bruecken-gleis-tx Nacht Zoom 0.45": {
-  "ops": 998,
-  "geo": 3332,
+  "ops": 1090,
+  "geo": 2881,
   "live": 7
  },
  "bruecken-gleis-tx Nacht Zoom 0.8": {
-  "ops": 594,
-  "geo": 1899,
+  "ops": 622,
+  "geo": 2105,
   "live": 1
  },
  "bruecken-gleis-tx Nacht Zoom 1.2": {
-  "ops": 385,
-  "geo": 2224,
-  "live": 0
+  "ops": 205,
+  "geo": 520,
+  "live": 2
  },
  "bruecken-gleis-tx Nacht Zoom 1.6": {
-  "ops": 1992,
-  "geo": 8521,
+  "ops": 2006,
+  "geo": 9156,
   "live": 1
  },
  "bruecken-gleis-tx Nacht Zoom 2.2": {
-  "ops": 1253,
-  "geo": 5217,
+  "ops": 1273,
+  "geo": 5644,
   "live": 0
  }
 }

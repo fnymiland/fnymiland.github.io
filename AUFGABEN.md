@@ -2763,8 +2763,13 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
       Rathaus „Bereit“: bezahlbare Abschnitte in eigener Gruppe 🏛️ Wahrzeichen, einzeln (nicht in „Alle ausbauen“), Knopf baut (v1159).
 - [ ] 161d Denkmal, Ehrentitel, goldene Varianten – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig)
 - [ ] 161e Inselzauber – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig)
-- [ ] 161f Prachtbauten (je Entwurf zuerst) – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig). Der
-      Triumphbogen daraus ist seit Block 162 ein Wahrzeichen; offen bleiben Opernhaus, Glaspalast, Thermenpalast, Kathedrale, Luftschiffhafen
+- [ ] 161f Prachtbauten (je Entwurf zuerst). Der Triumphbogen daraus ist seit Block 162 ein Wahrzeichen; offen bleiben Glaspalast,
+      Thermenpalast, Kathedrale, Luftschiffhafen
+  - [x] **Opernhaus** (22.10.2026, js/oper.js, tests/oper.test.js): nach der Semperoper (Garnier und eigener Entwurf verworfen –
+        „sieht aus wie ein Rucksack“), Portal als erhöhtes Stück des Rundbaus nach links vorn (nicht als angesetzter Kasten, nicht schräg
+        nach vorn). 3×3, einmal, nach dem Laternenfest, Freizeit → Kultur; 500 Mio, Ausbau 1,5 / 4 Mrd. Wirkung „ganz was Neues“ statt
+        Boosts: **Deine Insel als Lied** (Spieluhr, Stufe 2 + Bass/Holzblock, Stufe 3 + Harfe/Marimba/Streicher), goldener Streifen
+        über der Insel. Offen: Notenblatt im Tagebuch (Idee).
 - [ ] 161g restliche Laden-Dinge
 - [x] 164 **Neue besondere Stücke** (eingebaut v1162, tests/besondere.test.js; Pünktchen im Spiel feiner als im ersten Einbau, wie die Vorschau) (Entwürfe tools/besondere-entwurf.js, tools/glitzer-vorschau.html; Entscheidungen 21./22.10.2026):
       - **Perlmutt-Dachfarbe** Variante B (kräftig: Rosa → Flieder → Mint → Himmelblau schräg übers Dach) – ✦ Meisterstück für ✨.

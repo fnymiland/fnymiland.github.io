@@ -55,7 +55,7 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   if (!cx0) return c;                                  // kein Speicher (iPad): leeres Bild statt „Hoppla“ (Block 124)
   if (scale !== 1) cx0.scale(scale, scale);
   const prev = g; g = cx0; FOG = false;
-  const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type), monH = ITEMS[type] && ITEMS[type].mon ? ITEMS[type].h : 0;   // Monumente: ganz ins Bild
+  const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type), monH = ITEMS[type] && (ITEMS[type].mon || ITEMS[type].operStages) ? ITEMS[type].h : 0;   // Monumente, Opernhaus: ganz ins Bild
   const z = monH ? Math.min(0.55, 60 / monH) : type === 'leuchtturm' ? 0.36 : big ? 0.72 : tall ? 0.95 : type === 'pb_station' ? 1 : 1.3, cx = type === 'pb_station' ? 66 : 56, cy = monH ? 66 : type === 'leuchtturm' ? 64 : tall ? 70 : type === 'pb_station' ? 62 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
   const block = (s, top) => {
     poly([[cx - hw * s, cy], [cx, cy + hh * s], [cx, cy + hh * s + d], [cx - hw * s, cy + d]], '#caa26c');
@@ -1966,6 +1966,7 @@ function openInfo(x, y) {
     }
   }
   wonder += monInfoHtml(t);                                             // Wahrzeichen (Block 162)
+  wonder += operInfoHtml(t);                                            // Opernhaus (Block 161f)
   const line = t.b === 'station' || t.b === 'ubahn' ? lineOf(x + ',' + y) : null, hub = t.b === 'hbf' ? hbfHtml(x, y, t) : t.b === 'station' ? stationLenHtml(x, y, t) : '';
   const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + ordersHtml(t) : '';
   const train = line ? trainChooser(line) : isCrossing(t) ? ubLookHtml(x, y, t) : '';   // Bahnübergang: Schranken oder Fußgängerbrücke (160c F1c)
@@ -2099,6 +2100,8 @@ function openInfo(x, y) {
   for (const b of el.querySelectorAll('[data-hlook]')) b.onclick = () => { t.look = b.dataset.hlook; t.born = performance.now(); sfx('deco'); groundVersion++; save(); openInfo(x, y); };
   if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
   if ($('p-mon')) $('p-mon').onclick = () => { if (monStep(x, y)) openInfo(x, y); };
+  if ($('p-oper-up')) $('p-oper-up').onclick = () => { if (operUpgrade(x, y)) openInfo(x, y); };
+  if ($('p-oper-lied')) $('p-oper-lied').onclick = () => { if (operPlaying()) operStop(); else operPlay(t.lvl || 1, regionAt(x, y)); openInfo(x, y); };
   for (const b of document.querySelectorAll('#panel [data-decree-pick]')) b.onclick = () => { chooseDecree(b.dataset.decreePick); openInfo(x, y); };
   for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (undoable(() => setCrossing(x, y, b.dataset.cross === '1'))) openInfo(x, y); };   // ↶, zuschauen/Besuch gesperrt (160c V2)
   for (const b of el.querySelectorAll('[data-foot]')) b.onclick = () => { if (undoable(() => setCrossing(x, y, true, b.dataset.foot))) openInfo(x, y); };
@@ -3299,6 +3302,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-22-oper', date: '22. Oktober', title: 'Das Opernhaus', items: [
+    '🎭 <b>Opernhaus:</b> Unter Freizeit → Kultur gibt es jetzt das Opernhaus, einen runden Prachtbau mit grüner Kuppel. Es kostet 500 Mio. Taler, braucht 3×3 Felder Wiese und steht nur einmal im Spiel.',
+    '🎶 <b>Deine Insel als Lied:</b> Tipp das Opernhaus an und drück „▶ Lied spielen“. Dann spielt es deine Insel ab wie eine Spieluhr, und ein goldener Lichtstreifen wandert dabei über die Insel. Häuser klingen ruhig, Läden lebhaft, Wahrzeichen wie eine Fanfare. Wenn du etwas baust, verändert sich die Melodie.',
+    '✨ <b>Ausbauen:</b> Für 1,5 Mrd. bekommt das Opernhaus ein zweites Geschoss und eine Kuppel, dann spielen Bass und Takt mit. Für 4 Mrd. wird es golden, und ein ganzes Orchester mit Harfe und Streichern ist dabei.',
+  ] },
   { id: '2026-10-22-glitzer', date: '22. Oktober', title: 'Glitzerwege und Perlmutt', items: [
     '✨ <b>Glitzerwege:</b> Vier neue Meisterstücke in der Kunstakademie: Silber-, Gold-, Perl- und Regenbogenglitzer, je 150 ✨. Feine Pünktchen liegen im Weg, und wenn du nah heranzoomst, blitzen immer wieder kleine Funkel auf. Den Glitzer gibt es in jeder Wegfarbe.',
     '🏠 <b>Perlmutt-Dach:</b> Eine schimmernde Dachfarbe in Rosa, Flieder, Mint und Himmelblau. Sie ist ein Meisterstück für 200 ✨. Unter „✨ Glitzer“ kannst du es außerdem funkeln lassen, in jedem Glitzer, den du für Wege schon hast.',
