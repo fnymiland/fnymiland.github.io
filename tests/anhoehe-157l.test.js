@@ -242,3 +242,42 @@ describe('6 Treppen vor einem Zug werden ausgespart', () => {
     game('trains.length = 0; syncTrains.sig = null');
   });
 });
+
+describe('7 Gleis-Rampe weit weg (WebGL): die Zelle des Wagens reicht für das Nachmalen der Rampe', () => {
+  const UP = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+  const anchor = (fx, fy, rot, len) => { const [Du, Dv] = UP[rot]; return [Math.min(fx, fx + (len - 1) * Du), Math.min(fy, fy + (len - 1) * Dv)]; };
+  for (const form of ['d', 'c']) for (const rot of [0, 1, 2, 3]) it(`${form.toUpperCase()}, hinauf nach ${['−y', '+x', '+y', '−x'][rot]}, Tram (längster Wagen): alle Flächen von rampOverSpan liegen in glMoverBox`, () => {
+    hills(block(10, 10, 18, 18));
+    const len = game(`RAMP_FORMS.${form}.len`), cut = game(`RAMP_FORMS.${form}.cut`), [Du, Dv] = UP[rot];
+    const o = len - 1 - cut, foot = [[14, 19 + o], [9 - o, 14], [14, 9 - o], [19 + o, 14]][rot];          // A/C in den Rand eingelassen, B/D davor (wie anhoehe-stufe2)
+    const [ax, ay] = anchor(foot[0], foot[1], rot, len);
+    game(`rampNewForm = '${form}'; buildRot = ${rot}; rotManual = true`);
+    expect(game(`placeError('huegelrampe', ${ax}, ${ay})`)).toBe(null);
+    game(`build('huegelrampe', ${ax}, ${ay}, true); rotManual = false; recalc()`);
+    const keys = []; for (let i = -3; i < len + 3; i++) keys.push([foot[0] + i * Du, foot[1] + i * Dv]);
+    game(`for (const [x, y] of ${JSON.stringify(keys.filter((_, i) => i < 3 || i >= 3 + len))}) build('schiene', x, y, true); recalc()`);
+    const rl = game(`(() => { trains.length = 0; const route = railPolyline(${JSON.stringify(keys.map(k => k.join()))}), kind = { ...TRAIN_KIND.tram, n: 1 };
+      trains.push({ id: 'probe', route, stops: [1, route.len - 1], powered: true, model: 'tram', col: 0, kind, c: 1, dir: 1, wait: 0, next: 1 }); return route.len; })()`);
+    game(`cam.z = 2; { const p = iso(14, 14); cam.x = p.x; cam.y = p.y; } render(1e6)`);   // Bildchen der Rampe anlegen
+    let checked = 0;
+    for (let c = 0.5; c <= rl - 0.5; c += 0.1) {
+      const bad = game(`(() => {
+        trains[0].c = ${c};
+        const out = [], z = cam.z;
+        for (const m of trainCars()) {
+          trainOnHills(m, Math.round(m.px) + ',' + Math.round(m.py));
+          const hl = m.hill;
+          if (!hl || !hl.ramp) continue;
+          const pts = [], prev = g, st = {};
+          g = new Proxy(st, { get: (t, p) => p in t ? t[p] : p === 'moveTo' || p === 'lineTo' ? (x, y) => pts.push([x, y + (st.ty || 0)]) : p === 'translate' ? (a, b) => { st.ty = (st.ty || 0) + b; } : p === 'save' ? () => { st.stack = (st.stack || []).concat([st.ty || 0]); } : p === 'restore' ? () => { st.ty = st.stack.pop(); } : () => {}, set: (t, p, v) => { t[p] = v; return true; } });
+          try { g.translate(0, -hl.base * z); rampOverSpan(hl.ramp[0], hl.ramp[1], hl.ramp[2], hl.ramp[3], z, hl.base * z); } finally { g = prev; }
+          const p = toScreen(m.px, m.py), cy = p.y - hl.base * z, [l, u, r, d] = glMoverBox(m, z);
+          if (pts.length) out.push(pts.filter(([x, y]) => x < p.x - l - 0.01 || x > p.x + r + 0.01 || y < cy - u - 0.01 || y > cy + d + 0.01).length, 1);
+        }
+        return out;
+      })()`);
+      for (let i = 0; i < bad.length; i += 2) { expect([c, bad[i]]).toEqual([c, 0]); checked++; }
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+});
