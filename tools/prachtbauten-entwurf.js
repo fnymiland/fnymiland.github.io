@@ -317,7 +317,8 @@
     if (lit()) { glowP(Fq(0.5, 10), 26 * z); glowP(wallOf(K, 1.25, 'b', -1.8, 1.8, 3, 'b')(0.2, 6), 18 * z); glowP(wallOf(K, 1.25, 'b', -1.8, 1.8, 3, 'b')(0.8, 6), 18 * z); }
   }
 
-  // B: Grand Palais – Steinflügel vorn mit Säulenreihe und großem Bogentor, dahinter das lange Glasdach (Tonne) und die Glaskuppel
+  // B: Grand Palais – Steinflügel vorn mit Säulenreihe und großem Bogentor, dahinter das lange Glasdach (Tonne) und die Glaskuppel.
+  // Stufe 1: Steinflügel mit Portikus, niedrige Glashalle · 2: Säulenreihe, höhere Tonne, Kuppel · 3: Gold (Kanten, Kugeln, Kuppelring, Laterne)
   function grandpalais(K, stufe = 3) {
     const z = K.z, s2 = stufe >= 2, s3 = stufe >= 3;
     K.block({ a: 0, b: 0, ha: 1.95, hb: 1.45, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
@@ -343,8 +344,10 @@
     for (let i = 0; i < 12; i++) { const t = 0.04 + i * 0.08; if (t > 0.42 && t < 0.58) continue; arch(Fb, t, t + 0.045, 3, 11, C('#9fc3e3')); }
     // Säulenreihe vor der Fassade (Paare zwischen den Fenstern), von hinten nach vorn
     const cols = []; for (let i = 0; i <= 12; i++) { const t = 0.02 + i * 0.08; if (t > 0.4 && t < 0.6) continue; cols.push(-1.85 + 3.7 * t); }
-    cols.sort((p, q) => K.depth(p, fb + fhb + 0.06) - K.depth(q, fb + fhb + 0.06)).forEach(a => column(K, a, fb + fhb + 0.06, 3, fH - 2, '#f6efe0', s3));
-    K.block({ a: 0, b: fb + fhb + 0.02, ha: 1.85, hb: 0.08, h: 2.2, lift: 3 + fH - 2, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : null });   // Gebälk über den Säulen
+    if (s2) {                                                             // Stufe 2: Säulenreihe mit Gebälk
+      cols.sort((p, q) => K.depth(p, fb + fhb + 0.06) - K.depth(q, fb + fhb + 0.06)).forEach(a => column(K, a, fb + fhb + 0.06, 3, fH - 2, '#f6efe0', s3));
+      K.block({ a: 0, b: fb + fhb + 0.02, ha: 1.85, hb: 0.08, h: 2.2, lift: 3 + fH - 2, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : null });   // Gebälk über den Säulen
+    }
     K.block({ a: 0, b: fb + fhb - 0.03, ha: 1.85, hb: 0.05, h: 2.6, lift: 3 + fH, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.1) });   // Attika an der Vorderkante
     // Portikus in der Mitte: springt vor, höher, mit flachem Giebel; Tor mittelbraun, darüber Glas im Bogen
     const pb = fb + fhb + 0.16;
