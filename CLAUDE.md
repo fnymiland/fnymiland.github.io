@@ -453,8 +453,11 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     als `strip`-Rückruf je Streifen (sonst fehlten sie am Rand oder schienen durch); Vitrinen-Gerüst erst hinten, dann Stück, Glas, vorn;
     Säulen, die auf der Linie anderer stehen, mit ihnen zeichnen (sonst liegen Kapitelle über dem Gebälk); Säulenfüße ≥ 0,07 von Wand/Kante.
 29h. **🌿 Botanischer Garten als Gebäude + echter Garten** (js/botgarten.js): Das Wunder ist nur noch das Gebäude (2×5, Rotunde mit zwei
-    Glasflügeln, `BG_ART`, Entwurf `botgartenNeu` in tools/prachtbauten-entwurf.js). Den Garten drumherum legt `bgGarden(x, y, rot)` beim Bauen
-    aus **echten Dingen** an (Nutzer: „wir haben doch alles da … nicht extra neu und viel zu klein gezeichnet“): Weg und Beete (`price: 0`),
+    Glasflügeln, `BG_ART`, Entwurf `botgartenNeu` in tools/prachtbauten-entwurf.js), steht direkt auf dem Boden – keine Platte, auch keine
+    Steinkante („immer noch eine Platte, nur zurechtgeschnitten“). Den Garten drumherum legt `bgGarden(x, y, rot)` beim Bauen
+    aus **echten Dingen** an (Nutzer: „wir haben doch alles da … nicht extra neu und viel zu klein gezeichnet“), Entwurf A: vorn Wegstück zur
+    Tür mit Laternen, daneben Beete, Hecke dort offen; sonst Wiese mit Bäumen/Büschen, hinten Teich (Rundweg mit Beeten im Weg: „ergibt
+    keinen Sinn“). Weg und Beete (`price: 0`),
     Bäume/Laternen als Kleinkram (`free`), Hecke als Kante (`free`, gespeichert in serialize **und** parseSave), Teich (`graben`) – nur auf
     freien eigenen Wiesenfeldern, kostet nichts, alles frei abreißbar ohne Erstattung. `t.bg2` = neuer Bau; alte Stände rückt
     `botgartenUmbau()` beim Laden in die Mitte ihrer alten Fläche und legen dort den Garten an (`growWonders` überspringt `bg2`).

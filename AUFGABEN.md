@@ -2772,7 +2772,8 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] **Botanischer Garten neu** (22.10.2026, js/botgarten.js, tests/botgarten.test.js): Nutzer: „voll broken“ + „mach das Zeug drumherum zu
         echten Dingen, die automatisch eingefügt, aber auch entfernt werden können“. Gebäude nur noch 2×5 (Rotunde + zwei Glasflügel, richtig
         angesetzt in jeder Drehung; die „grünen Schlangen“ = Palmen ohne Kronen, ersetzt). Garten automatisch: Weg, Hecke (vorn offen), 2 Beete,
-        Bäume in den Ecken, 2 Laternen, Teich – geschenkt, abreißbar. Alte Stände: Bau rückt in die Mitte, Garten beim Laden. Als Nächstes laut
+        Bäume in den Ecken, 2 Laternen, Teich – geschenkt, abreißbar. Danach (Nutzer): ohne Platte direkt auf den Boden (auch keine
+        Steinkante), Garten nach Entwurf A (Weg nur zur Tür, Beete daneben, Hecke dort offen; Rundweg/Promenade verworfen). Alte Stände: Bau rückt in die Mitte, Garten beim Laden. Als Nächstes laut
         Nutzer: „dann schauen wir uns die anderen an“ (Schloss u. a. mit aufgemaltem Umfeld).
   - [x] **Opernhaus** (22.10.2026, js/oper.js, tests/oper.test.js): nach der Semperoper (Garnier und eigener Entwurf verworfen –
         „sieht aus wie ein Rucksack“), Portal als erhöhtes Stück des Rundbaus nach links vorn (nicht als angesetzter Kasten, nicht schräg

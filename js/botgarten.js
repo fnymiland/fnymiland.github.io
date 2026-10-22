@@ -43,17 +43,17 @@ const BG_ART = (() => {
       glowQuad([F(a, lo), F(b, lo), F(b, hi), F(a, hi)], 9 * z); } }
   }
   return function botgarten(K) {
-    const z = K.z, WHITE = '#ffffff', BASE = '#dcd5c8', R = 0.88, RH = 24, wa = 0.46, wH = 13, wR = 9;
-    K.block({ a: 0, b: 0, ha: 0.95, hb: 2.45, h: 1.5, wall: BASE, type: 'flat', roof: '#efeae0' });   // Sockel, 2×5 (Rotunde passt gerade hinein)
+    const z = K.z, WHITE = '#ffffff', R = 0.88, RH = 24, wa = 0.46, wH = 13, wR = 9;
+    const SH = 0;                                                         // steht direkt auf dem Boden (ohne Platte, Nutzer)
     const rb = Math.sqrt(R * R - wa * wa);                                 // dort trifft die Flügelwand die Rotunde
     const shadeN = (na, nb) => K.turn(na, nb)[0] > 0.5;                     // Wand im Schatten (Normale zeigt nach rechts vorn)
     // Flügel in jeder Drehung: sichtbar sind die Wände, deren Normale zum Betrachter zeigt (K.facing), am inneren Ende nie (dort ist die
     // Rotunde); Dach: beide Schrägen, die hintere zuerst
     const wing = sgn => {
-      const b0 = sgn * rb, b1 = sgn * 2.38, bc = (b0 + b1) / 2, hb = Math.abs(b1 - b0) / 2, top = 1.5 + wH;
-      for (const sa of [-1, 1]) if (K.facing(sa, 0) > 0.01) glassFace(wallOf(K, sa * wa, 'b', bc - hb, bc + hb, 1.5, 'a'), 0, wH, 7, [wH * 0.55], 4, shadeN(sa, 0));
+      const b0 = sgn * rb, b1 = sgn * 2.38, bc = (b0 + b1) / 2, hb = Math.abs(b1 - b0) / 2, top = SH + wH;
+      for (const sa of [-1, 1]) if (K.facing(sa, 0) > 0.01) glassFace(wallOf(K, sa * wa, 'b', bc - hb, bc + hb, SH, 'a'), 0, wH, 7, [wH * 0.55], 4, shadeN(sa, 0));
       const endSeen = K.facing(0, sgn) > 0.01;
-      if (endSeen) glassFace(wallOf(K, b1, 'a', -wa, wa, 1.5, 'b'), 0, wH, 3, [wH * 0.55], 2, shadeN(0, sgn));
+      if (endSeen) glassFace(wallOf(K, b1, 'a', -wa, wa, SH, 'b'), 0, wH, 3, [wH * 0.55], 2, shadeN(0, sgn));
       const E = (sa, sb) => K.P(sa * wa, bc + sb * hb, top), Rr = sb => K.P(0, bc + sb * hb, top + wR);
       for (const sa of [-1, 1].sort((p, q) => K.facing(p, 0) - K.facing(q, 0))) {
         const [u] = K.turn(sa, 0), dark = u > 0.5;
@@ -65,14 +65,14 @@ const BG_ART = (() => {
       if (endSeen) {                                                       // Giebel am äußeren Ende: Glasdreieck mit Sprossen, Tür
         const p = K.P(wa, b1, top), q = K.P(-wa, b1, top), r = K.P(0, b1, top + wR);
         poly([p, q, r], C(shadeN(0, sgn) ? shade(GLASS, -0.12) : GLASS)); g.strokeStyle = C(WHITE); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath(); g.moveTo(...p); g.lineTo(...r); g.lineTo(...q); g.moveTo(...lerp(p, q, 0.5)); g.lineTo(...r); g.stroke();
-        const F = wallOf(K, b1, 'a', -wa, wa, 1.5, 'b'); arch(F, 0.38, 0.62, 0, 8, C('#ffffff'));
+        const F = wallOf(K, b1, 'a', -wa, wa, SH, 'b'); arch(F, 0.38, 0.62, 0, 8, C('#ffffff'));
       }
     };
     // hinterer Flügel zuerst, dann Rotunde, dann der vordere (nach der Tiefe des Flügelmittelpunkts – gilt in jeder Drehung)
     const [wBack, wFront] = [-1, 1].sort((p, q) => K.depth(0, p * 1.6) - K.depth(0, q * 1.6));
     wing(wBack);
     // Rotunde: Glaszylinder auf Steinring, Palmen drinnen, weiße Streben; Glaskuppel mit Rippen und goldener Spitze; Tür nach rechts vorn (+a)
-    const [cx, cy] = K.P(0, 0, 1.5), rx = R * Math.SQRT2 * TW / 2 * z, ry = rx / 2, Rg = ring(cx, cy, rx, ry, z);
+    const [cx, cy] = K.P(0, 0, SH), rx = R * Math.SQRT2 * TW / 2 * z, ry = rx / 2, Rg = ring(cx, cy, rx, ry, z);
     cyl(cx, cy, rx, ry, RH * z, lit() ? '#e8c77a' : GLASS_D);
     // Palmen hinter dem Glas – an der Glaswand abgeschnitten (sonst hingen die Wedel als „grüne Schlangen“ außen an der Rotunde)
     g.save(); g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI); g.lineTo(cx - rx, cy - RH * z); g.ellipse(cx, cy - RH * z, rx, ry, 0, Math.PI, 0, true); g.closePath(); g.clip();
@@ -106,30 +106,37 @@ const BG_ART = (() => {
 })();
 WONDER_ART.botgarten = (K, cx, cy, z) => { if (groundPart(() => {})) return; kShadow(K, 1.3); BG_ART(K); };
 
-// Garten aus echten Dingen rund um das Gebäude (Ring von einem Feld). Lange Seite vorn (Eingangsrichtung FRONT_DIR): Weg mit zwei Laternen,
-// in der Mitte der Eingang (Lücke in der Hecke); lange Seite hinten: Weg und zwei Beete; Stirnseiten: Weg; Ecken: Bäume, hinten an einem Ende
-// ein Teich. Außen herum Hecke. Nur auf freien eigenen Wiesenfeldern; geschenkt (Wege/Beete price 0, Bäume/Laternen free, Hecke free)
+// Garten aus echten Dingen rund um das Gebäude (Ring von einem Feld, Entwurf A – Nutzer 22.10.2026): Vorn (Eingangsrichtung FRONT_DIR)
+// in der Mitte ein Wegstück zur Tür mit zwei Laternen, links und rechts je zwei Blumenbeete, in den vorderen Ecken Bäume. Stirnseiten:
+// Büsche. Hinten: Teich in einer Ecke, Baum in der anderen, dazwischen Bäume und Büsche. Außen herum Hecke, am Eingang offen.
+// Nur auf freien eigenen Wiesenfeldern; geschenkt (Weg/Beete price 0, Kleinkram und Hecke free)
 function bgGarden(x, y, rot) {
   const fp = footprint('botgarten', x, y, rot), xs = fp.map(p => p[0]), ys = fp.map(p => p[1]);
   const x0 = Math.min(...xs) - 1, x1 = Math.max(...xs) + 1, y0 = Math.min(...ys) - 1, y1 = Math.max(...ys) + 1;
   const alongY = x1 - x0 < y1 - y0, [fx, fy] = FRONT_DIR[(rot || 0) & 3];
   const frontLine = alongY ? (fx > 0 ? x1 : x0) : (fy > 0 ? y1 : y0), backLine = alongY ? (fx > 0 ? x0 : x1) : (fy > 0 ? y0 : y1);
   const n = alongY ? y1 - y0 : x1 - x0, mid = Math.round(n / 2), pos = (tx, ty) => alongY ? ty - y0 : tx - x0, line = (tx, ty) => alongY ? tx : ty;
+  const outer = [0, 1, 2, 3].filter(i => alongY ? (i & 1 ? 1 : -1) === fx : (i & 2 ? 1 : -1) === fy);   // Ecken eines Feldes zur Eingangsseite
   const money = state.money, res = { ...state.res }, b0 = BATCH;
   const free = (tx, ty) => { const k = tx + ',' + ty; return ownedTile(tx, ty) && terrainAt(tx, ty) === 'grass' && !COVER.has(k) && !state.tiles.has(k) && !state.decos.has(k); };
   const tile = (b, tx, ty) => { if (!free(tx, ty) || placeError(b, tx, ty, 0, { noCost: true })) return false; state.money = 1e15; build(b, tx, ty, true); const t = state.tiles.get(tx + ',' + ty); if (t) t.price = 0; return !!t; };
-  const small = (b, tx, ty, slots) => { const k = tx + ',' + ty; if (!ownedTile(tx, ty) || COVER.has(k) && !(state.tiles.get(k) && state.tiles.get(k).b === 'weg')) return;
+  const small = (b, tx, ty, slots, onWeg) => { const k = tx + ',' + ty; if (!(onWeg || free(tx, ty))) return;
     const ds = state.decos.get(k) || newSlots(); for (const s of slots) if (!ds[s]) ds[s] = { b, rot: 0, free: true, ...(DECO_LOOKS[b] ? decoLookNew(b) : {}) }; state.decos.set(k, ds); };
   BATCH = 1;
   try {
     for (let tx = x0; tx <= x1; tx++) for (let ty = y0; ty <= y1; ty++) {
       if (tx > x0 && tx < x1 && ty > y0 && ty < y1) continue;                 // innen steht das Gebäude
-      const p = pos(tx, ty), corner = (tx === x0 || tx === x1) && (ty === y0 || ty === y1), ln = line(tx, ty);
-      if (corner) {
-        if (ln === backLine && p === 0) { if (free(tx, ty)) { state.money = 1e15; build('graben', tx, ty, true); } }   // Teich hinten an einem Ende
-        else if (free(tx, ty)) small('baum', tx, ty, [0, 3]);
-      } else if (ln === backLine && (p === mid - 1 || p === mid + 1)) tile('blumen', tx, ty);
-      else if (tile('weg', tx, ty) && ln === frontLine && (p === mid - 1 || p === mid + 1)) small('laterne', tx, ty, [0]);
+      const p = pos(tx, ty), ln = line(tx, ty), corner = p === 0 || p === n;
+      if (ln === frontLine) {
+        if (p === mid) { if (tile('weg', tx, ty)) small('laterne', tx, ty, outer, true); }   // Weg zur Tür
+        else if (corner) small('baum', tx, ty, [0, 3]);
+        else tile('blumen', tx, ty);
+      } else if (ln === backLine) {
+        if (p === 0) { if (free(tx, ty)) { state.money = 1e15; build('graben', tx, ty, true); } }   // Teich hinten an einem Ende
+        else if (p === n) small('baum', tx, ty, [0, 3]);
+        else if (p % 2 === 0) small('baum', tx, ty, [0]);
+        else small('busch', tx, ty, [1]);
+      } else small('busch', tx, ty, [0, 3]);                                 // Stirnseiten
     }
     // Hecke außen herum, vorn in der Mitte offen (Eingang)
     for (let tx = x0; tx <= x1; tx++) for (let ty = y0; ty <= y1; ty++) {

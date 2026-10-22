@@ -16,6 +16,10 @@ const ring = (x, y, rot) => game(`(() => { const fp = footprint('botgarten', ${x
     if (d) for (const s of d) if (s) out[s.b] = (out[s.b] || 0) + 1; }
   out.hecke = [...state.edges.values()].filter(e => e.b === 'hecke' && e.free).length; return out; })()`);
 
+// Hecke vor dem Wegstück zur Tür: muss offen sein (Nutzer: „dann musst du auch den Zaun an der Stelle öffnen“)
+const entrance = (x, y, rot) => game(`(() => { const t = [...state.tiles].find(([k, t]) => t.b === 'weg'), [wx, wy] = t[0].split(',').map(Number), [fx, fy] = FRONT_DIR[${rot}];
+  return state.edges.has(edgeBetween(wx, wy, wx + fx, wy + fy)); })()`);
+
 describe('Botanischer Garten', () => {
   it('ist 2×5; Bild in allen Drehungen, Tag und Nacht, ohne Fehler', () => {
     expect(game('ITEMS.botgarten.size')).toEqual([2, 5]);
@@ -29,12 +33,14 @@ describe('Botanischer Garten', () => {
     const anchor = game("[...state.tiles].find(([k, t]) => t.b === 'botgarten')");
     expect(anchor[1].bg2).toBe(true);
     const [ax, ay] = anchor[0].split(',').map(Number), r = ring(ax, ay, anchor[1].rot || 0);
-    expect(r.weg).toBeGreaterThanOrEqual(10);
-    expect(r.blumen).toBe(2);
+    expect(r.weg).toBe(1);                                                   // nur der Weg zur Tür
+    expect(r.blumen).toBe(4);                                                // vorn links und rechts davon
     expect(r.laterne).toBe(2);
-    expect(r.baum).toBeGreaterThanOrEqual(6);                                // drei Ecken mit je zwei Bäumen
+    expect(r.baum).toBe(8);                                                  // drei Ecken je zwei, hinten zwei einzelne
+    expect(r.busch).toBe(11);
     expect(r.teich).toBe(1);
-    expect(r.hecke).toBeGreaterThanOrEqual(20);
+    expect(r.hecke).toBe(21);                                                // 22 Außenkanten, eine offen (Eingang)
+    expect(entrance(ax, ay, anchor[1].rot || 0)).toBe(false);
     expect(m0 - game('state.money')).toBeLessThanOrEqual(game('ITEMS.botgarten.cost'));   // Garten kostet nichts extra
     expect(game('Object.values(state.res).every(v => v <= 99999)')).toBe(true);
   });
@@ -59,7 +65,7 @@ describe('Botanischer Garten', () => {
     const t = game("[...state.tiles].find(([k, t]) => t.b === 'botgarten')");
     expect(t[0]).toBe('8,6');                                               // 2 breit in der Mitte von 5 (5 tief bleibt)
     expect(t[1].bg2).toBe(true);
-    expect(ring(8, 6, 0).weg).toBeGreaterThanOrEqual(10);
+    expect(ring(8, 6, 0).blumen).toBe(4);
     const h0 = ring(8, 6, 0).hecke;
     game('adoptState(parseSave(JSON.parse(JSON.stringify(serialize()))))');
     expect(game("[...state.tiles].filter(([k, t]) => t.b === 'botgarten').map(([k]) => k)")).toEqual(['8,6']);
