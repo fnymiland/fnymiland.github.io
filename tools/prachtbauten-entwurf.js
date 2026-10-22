@@ -143,9 +143,9 @@
   const fRect = (F, t0, t1, h0, h1, fill) => poly([F(t0, h0), F(t1, h0), F(t1, h1), F(t0, h1)], fill);
   // Rundbau (Bildschirm-Zylinder): Punkt auf dem Mantel, Winkel t (0 = vorn, Blick +a+b), Höhe h über dem Fuß
   const ring = (cx, cy, rx, ry, z) => (t, h) => [cx + Math.sin(t) * rx, cy + Math.cos(t) * ry - h * z];
-  const onRing = (R, t0, t1, h0, h1, fill) => { if (Math.cos((t0 + t1) / 2) < 0.15) return; const pts = [], n = 8, rise = (h1 - h0) * 0.3;
+  const onRing = (R, t0, t1, h0, h1, fill) => { if (Math.cos((t0 + t1) / 2) < 0.35) return; const pts = [], n = 8, rise = (h1 - h0) * 0.3;   // fast seitliche Fenster wären nur halbe Striche
     for (let i = 0; i <= n; i++) pts.push(R(t0 + (t1 - t0) * i / n, h0));
-    for (let i = n; i >= 0; i--) { const t = t0 + (t1 - t0) * i / n; pts.push(R(t, h1 - rise + Math.sin(Math.PI * i / n) * rise)); }
+    for (let i = n; i >= 0; i--) { const t = t0 + (t1 - t0) * i / n; pts.push(R(t, h1 - rise + Math.sqrt(Math.sin(Math.PI * i / n)) * rise)); }   // Wurzel: Rundbogen statt Spitze
     poly(pts, fill); };
 
   // Semperoper: zweigeschossiger runder Arkadenbau vorn, aus der Mitte ragt der höhere Saal mit Kupferkuppel; Portal nach links vorn (+b)
@@ -170,24 +170,26 @@
     ellipse(cx, base - sh * z, r2 * 1.04, r2 * 0.52, C(s3 ? GOLD : TRIM));
     dome(cx, base - sh * z, r2, r2 / 2, 14 * z, DOME);
     if (s3) { cyl(cx, base - (sh + 14) * z, 3.2 * z, 1.6 * z, 4 * z, GOLD); crown(cx, base - (sh + 18) * z, z, 0.75); }
-    // Portal vorn (zum Betrachter) als Teil des Rundbaus: ein Stück des Rings springt leicht vor und steigt über die Brüstung
+    // Portal nach links vorn (+b, wie die Eingänge aller Gebäude) als Teil des Rundbaus: ein Stück des Rings springt leicht vor und steigt über die Brüstung
     // (Exedra wie in Dresden) – kein angesetzter Kasten. Große Rundbogennische, Pilaster, oben die Lyra
-    const tc = 0, t0 = tc - 0.36, t1 = tc + 0.36, ph = 40, ro = r1 * 1.05, ri = r1 * 0.9;
+    const tc = -Math.PI / 4, t0 = tc - 0.36, t1 = tc + 0.36, ph = 40, ro = r1 * 1.05, ri = r1 * 0.9;
     const Ro = ring(cx, cy, ro, ro / 2, z), Ri = ring(cx, cy, ri, ri / 2, z), arc = (Rf, a, b, h) => Array.from({ length: 17 }, (_, i) => Rf(a + (b - a) * i / 16, h));
-    const band = (h0, h1, col, a = t0, b = t1) => poly([...arc(Ro, a, b, h0), ...arc(Ro, b, a, h1)], C(col));
-    const sideOf = (t, col) => t > 0 ? shade(col, LIGHT.side) : col;                                      // rechte Hälfte im Schatten wie der Ring
-    poly([Ro(t0, 26.5), Ro(t0, ph), Ri(t0, ph), Ri(t0, 26.5)], C(shade(WALL, 0.06)));                      // Stirnseiten über der Terrasse
-    poly([Ro(t1, 26.5), Ro(t1, ph), Ri(t1, ph), Ri(t1, 26.5)], C(shade(WALL, LIGHT.side)));
-    band(0, ph, shade(WALL, 0.03), t0, 0); band(0, ph, sideOf(1, shade(WALL, 0.03)), 0, t1);               // Mantel, hell | Schatten
+    const strip = (h0, h1, col, a, b) => poly([...arc(Ro, a, b, h0), ...arc(Ro, b, a, h1)], C(col));
+    // Streifen auf dem Mantel; was rechts von vorn (t > 0) liegt, im Schatten wie der Ring
+    const band = (h0, h1, col, a = t0, b = t1) => { const m = Math.min(Math.max(0, a), b);
+      if (m > a) strip(h0, h1, col, a, m); if (b > m) strip(h0, h1, shade(col, LIGHT.side), m, b); };
+    if (tc >= 0) poly([Ro(t0, 26.5), Ro(t0, ph), Ri(t0, ph), Ri(t0, 26.5)], C(shade(WALL, 0.06)));        // Stirnseiten über der Terrasse
+    if (tc <= 0) poly([Ro(t1, 26.5), Ro(t1, ph), Ri(t1, ph), Ri(t1, 26.5)], C(shade(WALL, LIGHT.side)));
+    band(0, ph, shade(WALL, 0.03));                                                                        // Mantel
     poly([...arc(Ro, t0, t1, ph), ...arc(Ri, t1, t0, ph)], C(shade(TRIM, -0.05)));                         // Abdeckung, dunkler als die Terrasse
-    for (const d of [-0.31, -0.19, 0.19, 0.31]) band(0, ph - 1.2, sideOf(d, shade(WALL, -0.04)), tc + d - 0.025, tc + d + 0.025);   // Pilaster
+    for (const d of [-0.31, -0.19, 0.19, 0.31]) band(0, ph - 1.2, shade(WALL, -0.04), tc + d - 0.025, tc + d + 0.025);   // Pilaster
     for (const d of [-0.25, 0.25]) { onRing(Ro, tc + d - 0.03, tc + d + 0.03, 2, 10, dark); onRing(Ro, tc + d - 0.03, tc + d + 0.03, 15, 23, winCol); }
     onRing(Ro, tc - 0.13, tc + 0.13, 2, 31, C('#4f3d30'));                                                // Nische
     onRing(Ro, tc - 0.08, tc + 0.08, 3, 14, C('#8a5a3c'));                                                // Tor
     onRing(Ro, tc - 0.08, tc + 0.08, 17, 28, winCol);
     // Gesimse auf Höhe der Ringgesimse (11,5 und Brüstung 24), in der Nische unterbrochen; oben die Attika-Kante
-    for (const [h0, h1, col, gap] of [[11.5, 13, s3 ? GOLD : shade(TRIM, -0.06), 1], [24, 26.5, s3 ? GOLD : TRIM, 1], [ph - 1.2, ph, s3 ? GOLD : TRIM, 0]]) {
-      const cut = gap ? 0.13 : 0; band(h0, h1, col, t0, -cut); band(h0, h1, sideOf(1, col), cut, t1) }
+    for (const [h0, h1, col, cut] of [[11.5, 13, s3 ? GOLD : shade(TRIM, -0.06), 0.13], [24, 26.5, s3 ? GOLD : TRIM, 0.13], [ph - 1.2, ph, s3 ? GOLD : TRIM, 0]]) {
+      band(h0, h1, col, t0, tc - cut); band(h0, h1, col, tc + cut, t1); }
     if (s3) { const [o, i] = [Ro(tc, ph), Ri(tc, ph)]; lyre(o[0] * 0.25 + i[0] * 0.75, o[1] * 0.25 + i[1] * 0.75, z, 1.2); }   // ganz auf der Abdeckung
     if (lit()) glowP(Ro(tc, 22), 22 * z);
   }
