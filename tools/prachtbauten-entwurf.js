@@ -352,11 +352,12 @@
       const ringPt = (yy, ph) => [dx + R * Math.sin(ph), yy + R / 2 * Math.cos(ph)];
       const frame = front => {                                            // front: Teile mit cos φ ≥ 0 (zum Betrachter), sonst die Rückseite
         const inHalf = ph => (Math.cos(ph) >= -1e-6) === front, col = front ? RIBC : shade(RIBC, 0.25);
-        g.strokeStyle = C(col); g.lineWidth = Math.max(0.5, (front ? RIBW : RIBW * 0.8) * z); g.beginPath();
+        g.lineCap = 'round'; g.strokeStyle = C(col); g.lineWidth = Math.max(0.5, (front ? RIBW : RIBW * 0.8) * z); g.beginPath();   // rund: Teilstücke stoßen ohne Fuge aneinander
         for (let m = 0; m < NM; m++) { const ph = m * 2 * Math.PI / NM; if (!inHalf(ph)) continue;
           for (let j = 0; j <= 12; j++) { const p = dp(Math.PI / 2 * j / 12, ph); j ? g.lineTo(...p) : g.moveTo(...p); }       // Meridian
           const [x, y] = ringPt(dy, ph); g.moveTo(x, y); g.lineTo(x, y - dr * z); }                                          // Pfosten
-        const arc = (fn) => { let on = false; for (let j = 0; j <= 48; j++) { const ph = 2 * Math.PI * j / 48; if (!inHalf(ph)) { on = false; continue; } const p = fn(ph); on ? g.lineTo(...p) : g.moveTo(...p); on = true; } };
+        // Ring: jedes Teilstück gehört zu der Hälfte, in der seine Mitte liegt – sonst fehlte an den Seiten je ein Stück zwischen vorn und hinten
+        const arc = (fn) => { for (let j = 0; j < 48; j++) { if (!inHalf(2 * Math.PI * (j + 0.5) / 48)) continue; g.moveTo(...fn(2 * Math.PI * j / 48)); g.lineTo(...fn(2 * Math.PI * (j + 1) / 48)); } };
         arc(ph => dp(0.7, ph)); arc(ph => ringPt(dy, ph));                // Ring auf der Kuppel, Fußring
         g.stroke();
         g.strokeStyle = C(s3 ? (front ? GOLD : shade(GOLD, 0.2)) : col); g.lineWidth = Math.max(0.5, (s3 ? 1.3 : RIBW) * z); g.beginPath();
