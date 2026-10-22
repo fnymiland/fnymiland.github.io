@@ -121,7 +121,103 @@
     }
   }
 
-  window.PRACHT = { opernhaus };
+  // --- Vorbilder (Nutzer 22.10.2026: „sieht aus wie ein Rucksack – an echten Opernhäusern orientieren“, „zeig mir beide“) ---
+  // Die Schauseite blickt zum Betrachter (Normale +a+b): solche Wände erscheinen im Bild als gerade Rechtecke, Tiefe geht senkrecht nach
+  // oben (halbe Länge). F(u, h) = Punkt der Front: u waagerecht (Einheiten × z), h Höhe; Grundfläche liegt im 3×3-Rhombus
+  const front = (C, z, y0) => (u, h) => [C[0] + u * z, C[1] + y0 * z - h * z];
+  const rect = (F, u0, u1, h0, h1, fill) => poly([F(u0, h0), F(u1, h0), F(u1, h1), F(u0, h1)], fill);
+  const archF = (F, u0, u1, h0, h1, fill) => { const um = (u0 + u1) / 2, r = (u1 - u0) / 2, pts = [F(u0, h0), F(u1, h0), F(u1, h1 - r)];
+    for (let i = 1; i < 12; i++) { const an = i / 12 * Math.PI; pts.push(F(um + Math.cos(an) * r, h1 - r + Math.sin(an) * r)); } pts.push(F(u0, h1 - r)); poly(pts, fill); };
+  // Kasten mit Schauseite nach vorn: Front, Oberseite (Tiefe d nach hinten = d/2 nach oben im Bild)
+  const fbox = (C, z, y0, u0, u1, h, d, wall, top, lift = 0) => { const F = front(C, z, y0); rect(F, u0, u1, lift, lift + h, C_(wall)); poly([F(u0, lift + h), F(u1, lift + h), F(u1, lift + h + d / 2), F(u0, lift + h + d / 2)], C_(top)); return F; };
+  const C_ = c => C(c);
+  const lyre = (x, y, z, s = 1) => { g.strokeStyle = C(GOLD); g.lineWidth = 1.2 * z * s; g.beginPath();
+    g.moveTo(x - 3 * z * s, y); g.quadraticCurveTo(x - 4.6 * z * s, y - 6 * z * s, x - 2 * z * s, y - 9 * z * s);
+    g.moveTo(x + 3 * z * s, y); g.quadraticCurveTo(x + 4.6 * z * s, y - 6 * z * s, x + 2 * z * s, y - 9 * z * s);
+    g.moveTo(x - 2.4 * z * s, y - 8 * z * s); g.lineTo(x + 2.4 * z * s, y - 8 * z * s); g.stroke();
+    L(C(GOLD_D), 0.4 * s, z, [[x - 1 * z * s, y - 1 * z * s], [x - 1 * z * s, y - 8 * z * s]]); L(C(GOLD_D), 0.4 * s, z, [[x + 1 * z * s, y - 1 * z * s], [x + 1 * z * s, y - 8 * z * s]]);
+    box(x, y + 0.5 * z * s, 4 * z * s, 2 * z * s, 1.4 * z * s, GOLD_D, null, 0); };
+  const crown = (x, y, z, s = 1) => { ellipse(x, y, 4 * z * s, 1.8 * z * s, C(GOLD_D)); for (const k of [-3, -1.5, 0, 1.5, 3]) poly([[x + (k - 0.7) * z * s, y], [x + (k + 0.7) * z * s, y], [x + k * z * s, y - 3.4 * z * s]], C(GOLD)); circle(x, y - 4.4 * z * s, 1 * z * s, C(GOLD_L)); };
+
+  // Fläche in einer Wand: Rechteck von t0 bis t1, Höhe h0 bis h1 (für Säulen, Bänder)
+  const fRect = (F, t0, t1, h0, h1, fill) => poly([F(t0, h0), F(t1, h0), F(t1, h1), F(t0, h1)], fill);
+  // Rundbau (Bildschirm-Zylinder): Punkt auf dem Mantel, Winkel t (0 = vorn, Blick +a+b), Höhe h über dem Fuß
+  const ring = (cx, cy, rx, ry, z) => (t, h) => [cx + Math.sin(t) * rx, cy + Math.cos(t) * ry - h * z];
+  const onRing = (R, t0, t1, h0, h1, fill) => { if (Math.cos((t0 + t1) / 2) < 0.15) return; const pts = [], n = 8, rise = (h1 - h0) * 0.3;
+    for (let i = 0; i <= n; i++) pts.push(R(t0 + (t1 - t0) * i / n, h0));
+    for (let i = n; i >= 0; i--) { const t = t0 + (t1 - t0) * i / n; pts.push(R(t, h1 - rise + Math.sin(Math.PI * i / n) * rise)); }
+    poly(pts, fill); };
+
+  // Semperoper: zweigeschossiger runder Arkadenbau vorn, aus der Mitte ragt der höhere Saal mit Kupferkuppel; Portal nach links vorn (+b)
+  function semper(K, stufe = 3) {
+    const z = K.z, WALL = '#efe4cf', TRIM = '#e2d3b4', DOME = '#7fb8a4', s3 = stufe >= 3;
+    const winCol = lit() ? '#ffd873' : C('#9fc3e3'), dark = C('#5f4a3a');
+    K.block({ a: 0, b: 0, ha: 1.42, hb: 1.42, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
+    const [cx, cy] = K.P(-0.1, -0.1, 3), r1 = 1.15 * Math.SQRT2 * TW / 2 * z, r2 = 0.52 * Math.SQRT2 * TW / 2 * z;   // Ring breit, Saal schmaler
+    // äußerer Rundbau, zwei Geschosse mit Bögen
+    cyl(cx, cy, r1, r1 / 2, 24 * z, WALL);
+    const R = ring(cx, cy, r1, r1 / 2, z);
+    for (let t = -1.35; t <= 1.36; t += 0.27) { onRing(R, t - 0.08, t + 0.08, 2, 10, dark); onRing(R, t - 0.08, t + 0.08, 13, 21, winCol); if (lit() && Math.cos(t) > 0.15) glowP(R(t, 17), 12 * z); }
+    g.strokeStyle = C(s3 ? GOLD : shade(TRIM, -0.06)); g.lineWidth = 1 * z; g.beginPath(); for (let i = 0; i <= 24; i++) { const p = R(-Math.PI / 2 + Math.PI * i / 24, 11.5); i ? g.lineTo(...p) : g.moveTo(...p); } g.stroke();
+    cyl(cx, cy - 24 * z, r1, r1 / 2, 2.5 * z, s3 ? GOLD : TRIM);           // Brüstung
+    ellipse(cx, cy - 26.5 * z, r1 * 0.96, r1 * 0.48, C(shade(WALL, 0.07)));   // Terrasse
+    // Saal: höherer Rundbau aus der Mitte, Kupferkuppel mit Laterne
+    // (beginnt auf der Terrasse, nicht im Ring – sonst stand er vor dessen Obergeschoss)
+    const s0 = 26.5, sh = 16, base = cy - s0 * z;
+    cyl(cx, base, r2, r2 / 2, sh * z, shade(WALL, -0.02));
+    const R2 = ring(cx, base, r2, r2 / 2, z);
+    for (let t = -1.2; t <= 1.21; t += 0.4) onRing(R2, t - 0.1, t + 0.1, 4, 12, winCol);
+    ellipse(cx, base - sh * z, r2 * 1.04, r2 * 0.52, C(s3 ? GOLD : TRIM));
+    dome(cx, base - sh * z, r2, r2 / 2, 14 * z, DOME);
+    if (s3) { cyl(cx, base - (sh + 14) * z, 3.2 * z, 1.6 * z, 4 * z, GOLD); crown(cx, base - (sh + 18) * z, z, 0.75); }
+    // Portal nach links vorn (+b): hoch, tiefe Rundbogennische, Pilaster, Attika, oben die Lyra
+    const P = K.block({ a: -0.1, b: 1.0, ha: 0.34, hb: 0.16, h: 36, lift: 3, wall: WALL, type: 'flat', roof: shade(WALL, 0.08), trim: s3 ? GOLD : TRIM });
+    const Fb = wallOf(K, 1.16, 'a', -0.44, 0.24, 3, 'b');
+    arch(Fb, 0.2, 0.8, 3, 30, C('#4f3d30'));
+    arch(Fb, 0.33, 0.67, 4, 15, C('#8a5a3c'));
+    arch(Fb, 0.33, 0.67, 17, 27, winCol);
+    for (const t of [0.04, 0.11, 0.89, 0.96]) fRect(Fb, t - 0.02, t + 0.02, 0, 32, C(shade(WALL, 0.03)));
+    const Fa = wallOf(K, 0.24, 'b', 0.84, 1.16, 3, 'a');                   // Seite rechts (Schatten): schmales Fenster
+    arch(Fa, 0.3, 0.7, 14, 26, winCol);
+    if (s3) { const [lx, ly] = K.P(-0.1, 1.0, 39); lyre(lx, ly, z, 1.4); }
+    if (lit()) glowP(Fb(0.5, 22), 22 * z);
+  }
+
+  // Palais Garnier: Schauseite nach links vorn – Arkaden unten, Loggia mit Säulenpaaren oben, Eckpavillons mit Goldkronen;
+  // dahinter der Saal mit hoher Kupferkuppel und Krone
+  function garnier(K, stufe = 3) {
+    const z = K.z, WALL = '#efe4cf', TRIM = '#e2d3b4', DOME = '#7fb8a4', s3 = stufe >= 3;
+    const winCol = lit() ? '#ffd873' : C('#9fc3e3'), dark = C('#5f4a3a');
+    K.block({ a: 0, b: 0, ha: 1.42, hb: 1.42, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
+    // Saal hinten mit Kuppel
+    K.block({ a: -0.1, b: -0.5, ha: 0.72, hb: 0.6, h: 26, lift: 3, wall: shade(WALL, -0.03), roof: DOME, roofH: 6, type: 'mansard', over: 1.02, trim: s3 ? GOLD : TRIM });
+    const [dx, dy] = K.P(-0.1, -0.5, 3 + 26 + 5), rd = 0.5 * Math.SQRT2 * TW / 2 * z;
+    cyl(dx, dy, rd, rd / 2, 7 * z, shade(WALL, -0.02));
+    ellipse(dx, dy - 7 * z, rd * 1.04, rd * 0.52, C(s3 ? GOLD : TRIM));
+    dome(dx, dy - 7 * z, rd, rd / 2, 20 * z, DOME);
+    if (s3) crown(dx, dy - 27 * z, z, 1);
+    // Eckpavillon (springt vor): Fenster vorn und an der Seite, kleine Kuppel mit Krone
+    const pav = a => {
+      K.block({ a, b: 0.86, ha: 0.2, hb: 0.42, h: 36, lift: 3, wall: shade(WALL, 0.02), type: 'flat', roof: shade(WALL, 0.1), trim: s3 ? GOLD : TRIM });
+      const Pb = wallOf(K, 1.28, 'a', a - 0.2, a + 0.2, 3, 'b'), Pa = wallOf(K, a + 0.2, 'b', 0.44, 1.28, 3, 'a');
+      arch(Pb, 0.3, 0.7, 1, 12, dark); arch(Pb, 0.32, 0.68, 16, 27, winCol); fRect(Pb, 0, 1, 13, 14.5, C(s3 ? GOLD : TRIM));
+      for (const t of [0.22, 0.62]) { arch(Pa, t, t + 0.16, 1, 12, dark); arch(Pa, t + 0.01, t + 0.15, 16, 27, winCol); }
+      fRect(Pa, 0, 1, 13, 14.5, C(s3 ? GOLD : TRIM));
+      const [px, py] = K.P(a, 0.86, 39);
+      dome(px, py, 7 * z, 3.5 * z, 5 * z, DOME);
+      if (s3) crown(px, py - 5 * z, z, 0.7);
+    };
+    pav(-0.98);                                                            // links: liegt weiter hinten, zuerst
+    // Mittelbau (Foyer) genau zwischen den Pavillons: Arkaden unten, Loggia mit Säulenpaaren oben
+    K.block({ a: -0.1, b: 0.82, ha: 0.68, hb: 0.36, h: 30, lift: 3, wall: WALL, type: 'flat', roof: shade(WALL, 0.08), trim: s3 ? GOLD : TRIM });
+    const Fb = wallOf(K, 1.18, 'a', -0.78, 0.58, 3, 'b'), n = 5;
+    for (let i = 0; i < n; i++) { const t = (i + 0.5) / n; arch(Fb, t - 0.06, t + 0.06, 1, 12, dark); arch(Fb, t - 0.048, t + 0.048, 16, 25, winCol); if (lit()) glowP(Fb(t, 20), 12 * z); }
+    fRect(Fb, 0, 1, 13, 14.5, C(s3 ? GOLD : TRIM));
+    for (let i = 0; i <= n; i++) { const t = i / n; for (const dt of [-0.016, 0.016]) fRect(Fb, t + dt - 0.008, t + dt + 0.008, 15, 26.5, C(s3 ? GOLD_L : '#f8f2e4')); }
+    if (s3) lyre(...K.P(-0.1, 0.82, 33.5), z, 1.3);                       // Lyra mitten auf dem Mittelbau
+    pav(0.78);                                                             // rechts: liegt vorn, zuletzt
+  }
+  window.PRACHT = { opernhaus, semper, garnier };
   window.prachtEntwurf = (opts = {}) => {
     document.getElementById('cmp')?.remove();
     const Wv = innerWidth, Hv = innerHeight, cv = document.createElement('canvas'); cv.id = 'cmp'; cv.width = Wv * 2; cv.height = Hv * 2;
@@ -134,8 +230,8 @@
       stufen.forEach((st, i) => {
         const x = 12 + i * (cw + 12), cx = x + cw / 2, cy = Hv - 40 - 48 * z;
         diamond(cx, cy, 96 * z, 48 * z, opts.night ? '#33405e' : '#b4dd8c');
-        PRACHT[opts.bau || 'opernhaus'](kit(cx, cy, z, 0), st, { buehne: (opts.varianten || [])[i] || opts.buehne });
-        ctx.fillStyle = opts.night ? '#f1e3cf' : '#6b4f3a'; ctx.font = '700 15px system-ui'; ctx.fillText(opts.varianten ? 'Variante ' + opts.varianten[i] : 'Stufe ' + st, x + 4, 22);
+        PRACHT[(opts.baus || [])[i] || opts.bau || 'opernhaus'](kit(cx, cy, z, 0), st, { buehne: (opts.varianten || [])[i] || opts.buehne });
+        ctx.fillStyle = opts.night ? '#f1e3cf' : '#6b4f3a'; ctx.font = '700 15px system-ui'; ctx.fillText(opts.titel ? opts.titel[i] : opts.varianten ? 'Variante ' + opts.varianten[i] : 'Stufe ' + st, x + 4, 22);
       });
     } finally { g = prev; night = n0; SPRITE_PAINT = sp0; }
     return 'ok';
