@@ -2763,8 +2763,11 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
       Rathaus „Bereit“: bezahlbare Abschnitte in eigener Gruppe 🏛️ Wahrzeichen, einzeln (nicht in „Alle ausbauen“), Knopf baut (v1159).
 - [ ] 161d Denkmal, Ehrentitel, goldene Varianten – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig)
 - [ ] 161e Inselzauber – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig)
-- [ ] 161f Prachtbauten (je Entwurf zuerst). Der Triumphbogen daraus ist seit Block 162 ein Wahrzeichen; offen bleiben Glaspalast,
+- [ ] 161f Prachtbauten (je Entwurf zuerst). Der Triumphbogen daraus ist seit Block 162 ein Wahrzeichen; offen bleiben
       Thermenpalast, Kathedrale, Luftschiffhafen
+  - [x] **Glaspalast** (22.10.2026, js/glaspalast.js, tests/glaspalast.test.js): nach dem Grand Palais (Kristallpalast verworfen),
+        goldenes Glasdach und Kuppel, Balustrade mit Flügelpferden/Vasen auf Sockeln („übertreibs nicht“), Vordach mit zwei Säulenreihen.
+        4×3, 1 / 3 / 8 Mrd. Wirkung: „Dein Ausstellungsstück“ in der Kuppel-Vitrine (ganzes Glasdach durchsichtig: „sieht scheiße aus“).
   - [x] **Opernhaus** (22.10.2026, js/oper.js, tests/oper.test.js): nach der Semperoper (Garnier und eigener Entwurf verworfen –
         „sieht aus wie ein Rucksack“), Portal als erhöhtes Stück des Rundbaus nach links vorn (nicht als angesetzter Kasten, nicht schräg
         nach vorn). 3×3, einmal, nach dem Laternenfest, Freizeit → Kultur; 500 Mio, Ausbau 1,5 / 4 Mrd. Wirkung „ganz was Neues“ statt

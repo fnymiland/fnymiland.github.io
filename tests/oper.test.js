@@ -27,17 +27,17 @@ describe('Opernhaus', () => {
     expect(game("build('oper', 4, 4)")).toBeTruthy();
     expect(game("placeError('oper', 12, 12)")).toBe('Das Opernhaus gibt es schon');
     const m0 = game('state.money'), b1 = game("beautyOf(state.tiles.get('4,4'), 4, 4)");
-    expect(game('operUpgrade(4, 4)')).toBe(true);
+    expect(game('prachtUpgrade(4, 4)')).toBe(true);
     expect(game("[state.tiles.get('4,4').lvl, state.money]")).toEqual([2, m0 - 1.5e9]);
     expect(game("beautyOf(state.tiles.get('4,4'), 4, 4)")).toBe(b1 * 2);
-    expect(game('operUpgrade(4, 4)')).toBe(true);
+    expect(game('prachtUpgrade(4, 4)')).toBe(true);
     expect(game("[state.tiles.get('4,4').lvl, state.money]")).toEqual([3, m0 - 5.5e9]);
-    expect(game('operUpgrade(4, 4)')).toBe(false);                          // höchste Stufe
+    expect(game('prachtUpgrade(4, 4)')).toBe(false);                          // höchste Stufe
     expect(game('demolishInfo(4, 4).refund')).toBe(500e6 + 5.5e9);
   });
   it('Ausbau ohne genug Taler geht nicht; Infofenster zeigt Lied-Knopf und Ausbau', () => {
     game("build('oper', 4, 4); state.money = 1e9");
-    expect(game('operUpgrade(4, 4)')).toBe(false);
+    expect(game('prachtUpgrade(4, 4)')).toBe(false);
     expect(game("state.tiles.get('4,4').lvl")).toBe(1);
     game('openInfo(4, 4)');
     const html = game("document.getElementById('panel').innerHTML");

@@ -55,7 +55,7 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   if (!cx0) return c;                                  // kein Speicher (iPad): leeres Bild statt „Hoppla“ (Block 124)
   if (scale !== 1) cx0.scale(scale, scale);
   const prev = g; g = cx0; FOG = false;
-  const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type), monH = ITEMS[type] && (ITEMS[type].mon || ITEMS[type].operStages) ? ITEMS[type].h : 0;   // Monumente, Opernhaus: ganz ins Bild
+  const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type), monH = ITEMS[type] && (ITEMS[type].mon || ITEMS[type].prachtStages) ? ITEMS[type].h : 0;   // Monumente, Prachtbauten: ganz ins Bild
   const z = monH ? Math.min(0.55, 60 / monH) : type === 'leuchtturm' ? 0.36 : big ? 0.72 : tall ? 0.95 : type === 'pb_station' ? 1 : 1.3, cx = type === 'pb_station' ? 66 : 56, cy = monH ? 66 : type === 'leuchtturm' ? 64 : tall ? 70 : type === 'pb_station' ? 62 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
   const block = (s, top) => {
     poly([[cx - hw * s, cy], [cx, cy + hh * s], [cx, cy + hh * s + d], [cx - hw * s, cy + d]], '#caa26c');
@@ -1967,6 +1967,7 @@ function openInfo(x, y) {
   }
   wonder += monInfoHtml(t);                                             // Wahrzeichen (Block 162)
   wonder += operInfoHtml(t);                                            // Opernhaus (Block 161f)
+  wonder += glasInfoHtml(t);                                            // Glaspalast (Block 161f)
   const line = t.b === 'station' || t.b === 'ubahn' ? lineOf(x + ',' + y) : null, hub = t.b === 'hbf' ? hbfHtml(x, y, t) : t.b === 'station' ? stationLenHtml(x, y, t) : '';
   const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + ordersHtml(t) : '';
   const train = line ? trainChooser(line) : isCrossing(t) ? ubLookHtml(x, y, t) : '';   // Bahnübergang: Schranken oder Fußgängerbrücke (160c F1c)
@@ -2100,7 +2101,8 @@ function openInfo(x, y) {
   for (const b of el.querySelectorAll('[data-hlook]')) b.onclick = () => { t.look = b.dataset.hlook; t.born = performance.now(); sfx('deco'); groundVersion++; save(); openInfo(x, y); };
   if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
   if ($('p-mon')) $('p-mon').onclick = () => { if (monStep(x, y)) openInfo(x, y); };
-  if ($('p-oper-up')) $('p-oper-up').onclick = () => { if (operUpgrade(x, y)) openInfo(x, y); };
+  if ($('p-pracht-up')) $('p-pracht-up').onclick = () => { if (prachtUpgrade(x, y)) openInfo(x, y); };   // Prachtbauten (oper.js)
+  for (const b of el.querySelectorAll('[data-glas]')) b.onclick = () => { if (glasSetStueck(x, y, b.dataset.glas)) openInfo(x, y); };   // Glaspalast: Ausstellungsstück
   if ($('p-oper-lied')) $('p-oper-lied').onclick = () => { if (operPlaying()) operStop(); else operPlay(regionAt(x, y)); openInfo(x, y); };
   for (const b of document.querySelectorAll('#panel [data-decree-pick]')) b.onclick = () => { chooseDecree(b.dataset.decreePick); openInfo(x, y); };
   for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (undoable(() => setCrossing(x, y, b.dataset.cross === '1'))) openInfo(x, y); };   // ↶, zuschauen/Besuch gesperrt (160c V2)
@@ -3302,6 +3304,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-22-glaspalast', date: '22. Oktober', title: 'Der Glaspalast', items: [
+    '🏛️ <b>Glaspalast:</b> Unter Freizeit → Kultur gibt es jetzt den zweiten Prachtbau, eine lange Glashalle hinter einer Säulenfassade, nach dem Grand Palais in Paris. Er kostet 1 Mrd. Taler, braucht 4×3 Felder Wiese und steht nur einmal im Spiel.',
+    '🖼️ <b>Dein Ausstellungsstück:</b> Ab Stufe 2 wird die Glaskuppel eine Vitrine. Tipp den Glaspalast an und wähl ein Stück, das du besitzt, zum Beispiel ein Monument, ein Basar-Stück, ein Haus oder eine Deko. Es steht dann als Modell in der Kuppel, und du kannst es jederzeit wechseln.',
+    '✨ <b>Ausbauen:</b> Für 3 Mrd. kommen Säulen, Balustrade und Kuppel dazu, für 8 Mrd. wird das Glasdach golden, und auf der Balustrade stehen Flügelpferde und Vasen.',
+  ] },
   { id: '2026-10-22-oper', date: '22. Oktober', title: 'Das Opernhaus', items: [
     '🎭 <b>Opernhaus:</b> Unter Freizeit → Kultur gibt es jetzt das Opernhaus, einen runden Prachtbau mit grüner Kuppel. Es kostet 500 Mio. Taler, braucht 3×3 Felder Wiese und steht nur einmal im Spiel.',
     '🎶 <b>Deine Insel als Lied:</b> Tipp das Opernhaus an und drück „▶ Lied spielen“. Dann spielt es deine Insel ab wie eine Spieluhr, und ein goldener Lichtstreifen wandert dabei über die Insel. Häuser klingen ruhig, Läden lebhaft, Wahrzeichen wie eine Fanfare. Wenn du etwas baust, verändert sich die Melodie.',

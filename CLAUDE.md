@@ -444,6 +444,13 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     **Bauklänge** (`operTone(x, y, phrase)`, Nutzer: Lied als Dauermusik „zu unruhig“): steht das Opernhaus, ersetzt der Ton der Stelle den
     Bau-/Deko-Klang (build, buildSmall), Ausbauen (stageUpgrade, houseUpgrade) spielt den Takt statt `star`. Liefert false → gewohnter Klang. Immer nur Spieluhr, ohne Bass/Harfe je Stufe
     (Nutzer: „Stufe 1 klingt viel cooler als 3“).
+29g. **🏛️ Glaspalast** (Prachtbau, Block 161f, js/glaspalast.js): Bild `GLAS_ART(K, stufe, { stueck })` aus tools/prachtbauten-entwurf.js
+    (`grandpalais`, Änderungen zuerst dort zeigen; Halle, Steinflügel mit Balustrade, Vordach mit zwei Säulenreihen). 4×3, einmal, Stufen
+    wie das Opernhaus über **`ITEMS[b].prachtStages`** (gemeinsam: `prachtNext`, `prachtUpgrade`, `prachtPaidUp` in oper.js, Knopf
+    `p-pracht-up`). Ab Stufe 2: Kuppel = Vitrine mit `t.stueck` (gespeichert in tileOut, im Bildchen-Schlüssel), Auswahl `glasChoices()` =
+    im Basar Gekauftes + gerade Gebautes, ohne Netze, Kraftwerke, Betriebe (Häuser ja), Wunder, größer als 3×3. Zeichnen: Glastonnen-Rippen
+    als `strip`-Rückruf je Streifen (sonst fehlten sie am Rand oder schienen durch); Vitrinen-Gerüst erst hinten, dann Stück, Glas, vorn;
+    Säulen, die auf der Linie anderer stehen, mit ihnen zeichnen (sonst liegen Kapitelle über dem Gebälk); Säulenfüße ≥ 0,07 von Wand/Kante.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

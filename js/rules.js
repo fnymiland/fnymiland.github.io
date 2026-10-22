@@ -545,7 +545,7 @@ function beautyOf(t, x, y) {
   let v = 0;
   if (d.wonder && !wonderDone(t)) return 0;                              // Baustelle
   if (d.monPhases && monSite(t)) return 0;                               // Wahrzeichen im Bau (Block 162)
-  if (d.beauty) v += d.beauty * (nearHome && d.cat === 'deko' ? 1.5 : 1) * (t.b === 'kunst' && hasTech('kunst') ? 1.5 : 1) * (d.operStages ? t.lvl || 1 : 1);   // Opernhaus: je Stufe mehr
+  if (d.beauty) v += d.beauty * (nearHome && d.cat === 'deko' ? 1.5 : 1) * (t.b === 'kunst' && hasTech('kunst') ? 1.5 : 1) * (d.prachtStages ? t.lvl || 1 : 1);   // Prachtbauten: je Stufe mehr
   if (d.ugly && nearHome) v -= d.ugly;
   return v;
 }
@@ -3639,9 +3639,9 @@ function demolishInfo(x, y, under = false) {                            // under
     }
     const staged = t.b === 'haus' ? HOUSE_STAGES.slice(1, t.lvl).reduce((s, st) => s + (houseCost(st).money || 0), 0)   // Hausausbau (Block 84b)
       : BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
-      : WONDERS[t.b] ? wonderPaid(t).money : d.monPhases ? monPaid(t).money : d.operStages ? operPaidUp(t) : t.b === 'hbf' ? (gleisePaid(t) - HBF_MIN) * GLEIS_COST.money   // bezahlte Gleise (Block 137)
+      : WONDERS[t.b] ? wonderPaid(t).money : d.monPhases ? monPaid(t).money : d.prachtStages ? prachtPaidUp(t) : t.b === 'hbf' ? (gleisePaid(t) - HBF_MIN) * GLEIS_COST.money   // bezahlte Gleise (Block 137)
       : t.b === 'station' && stationLenPaid(t) === 3 ? STATION_LEN_COST.money : 0;
-    const price = (t.price != null ? t.price : d.baseCost || d.cost) + (t.loopPrice || 0), half = full ? paid.cost + (d.monPhases || d.operStages ? staged : 0) : Math.floor((price + staged) / 2);   // Wahrzeichen: auch die Abschnitte voll zurück
+    const price = (t.price != null ? t.price : d.baseCost || d.cost) + (t.loopPrice || 0), half = full ? paid.cost + (d.monPhases || d.prachtStages ? staged : 0) : Math.floor((price + staged) / 2);   // Wahrzeichen: auch die Abschnitte voll zurück
     const ships = { money: 0 }, mat = full ? { ...(paid.mat || {}) } : {};              // Schiffe des Hafens: voll zurück wie beim Verkaufen
     if (d.monPhases) for (const [r, n] of Object.entries(monPaid(t))) if (r !== 'money') mat[r] = (mat[r] || 0) + n;
     for (const s of t.ships || []) for (const [r, n] of Object.entries(shipModel(s).buy)) if (r === 'money') ships.money += n; else mat[r] = (mat[r] || 0) + n;

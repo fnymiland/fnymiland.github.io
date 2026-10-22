@@ -88,6 +88,7 @@ function tileOut(t) {
   if (t.animal) { o.animal = t.animal; o.name = t.name; if (t.more) o.more = t.more.map(r => ({ animal: r.animal, name: r.name })); }
   if (t.stage != null) o.stage = t.stage;
   if (t.look) o.look = t.look;
+  if (t.stueck) o.stueck = t.stueck;                                                     // Glaspalast: Ausstellungsstück (Block 161f)
   if (t.bridge) o.bridge = true;
   if (t.mini) o.mini = true;                                                             // alter 1×1-Leuchtturm (Block 83)
   if (t.wide) o.wide = true;                                                             // Wegform (Block 77)

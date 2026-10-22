@@ -13,7 +13,7 @@ const OPER_STAGES = [
   { name: 'Prachtoper', look: 'Gold, Lyra und Krone', cost: { money: 4e9 } },
 ];
 ITEMS.oper = { cat: 'deko', name: 'Opernhaus', size: [3, 3], cost: 500e6, needs: 'grass', h: 82, beauty: 100, festival: true, unique: true, the: 'Das Opernhaus',
-  operStages: OPER_STAGES, desc: 'Rundbau mit Bögen und grüner Kuppel. Antippen: Das Opernhaus spielt deine Insel als Lied.' };
+  prachtStages: OPER_STAGES, desc: 'Rundbau mit Bögen und grüner Kuppel. Antippen: Das Opernhaus spielt deine Insel als Lied.' };
 FX.oper = '🎶 spielt deine Insel · 🌸 je Stufe';
 ITEM_TIPS.oper = 'Einmal im Spiel, braucht 3×3 Felder Wiese. Antippen und ▶ – das Opernhaus spielt deine Insel als Lied, und Bauen klingt nach deiner Insel.';
 { const fz = MENU.find(m => m.id === 'freizeit'), kultur = fz && fz.groups.find(gr => gr.id === 'kultur'); if (kultur) kultur.items.push('oper'); }
@@ -88,18 +88,19 @@ const OPER_ART = (() => {
 })();
 BIG_ART.oper = (cx, cy, z, now, x, y, lvl) => OPER_ART(kit(cx, cy, z, 0), Math.max(1, Math.min(3, lvl || 1)));
 
-// Ausbau: nächste Stufe (oder null), bezahlte Ausbau-Taler (Abriss gibt alles zurück wie bei Wahrzeichen)
-const operNext = t => OPER_STAGES[t.lvl || 1] || null;
-const operPaidUp = t => OPER_STAGES.slice(1, t.lvl || 1).reduce((s, st) => s + st.cost.money, 0);
-function operUpgrade(x, y) {
-  const t = state.tiles.get(x + ',' + y), nx = t && t.b === 'oper' && operNext(t);
+// Prachtbauten (Opernhaus, Glaspalast): Stufen in ITEMS[b].prachtStages, Stufe = t.lvl. Nächste Stufe (oder null), bezahlte Ausbau-Taler
+// (Abriss gibt alles zurück wie bei Wahrzeichen), Ausbau per Knopf (nur Taler)
+const prachtNext = t => { const st = ITEMS[t.b] && ITEMS[t.b].prachtStages; return (st && st[t.lvl || 1]) || null; };
+const prachtPaidUp = t => (ITEMS[t.b].prachtStages || []).slice(1, t.lvl || 1).reduce((s, st) => s + st.cost.money, 0);
+function prachtUpgrade(x, y) {
+  const t = state.tiles.get(x + ',' + y), nx = t && prachtNext(t);
   if (!nx) return false;
   if (!canPay(nx.cost)) { fail('Zu wenig Taler'); return false; }
   state.money -= nx.cost.money;
   t.lvl = (t.lvl || 1) + 1;
   t.born = performance.now();
   recalc();
-  sparkle(x + 1.5, y + 1.5);
+  const [w, h] = sizeOf(t.b, t.rot, t); sparkle(x + w / 2, y + h / 2);
   confettiBurst(); sfx('star');
   toast(`🎉 ${nx.name}: ${nx.look}!`);
   save();
@@ -108,14 +109,14 @@ function operUpgrade(x, y) {
 // Infofenster (ui.js openInfo): Lied abspielen, Stufe, Ausbau
 function operInfoHtml(t) {
   if (t.b !== 'oper') return '';
-  const lvl = t.lvl || 1, nx = operNext(t);
+  const lvl = t.lvl || 1, nx = prachtNext(t);
   return `<div class="label">${OPER_STAGES[lvl - 1].name} · Stufe ${lvl} von ${OPER_STAGES.length}</div>
     <p class="muted">🎶 Spielt deine Insel als Lied auf der Spieluhr. Was du baust, verändert die Melodie, und Bauen klingt nach deiner Insel.</p>
     <div class="row"><button class="btn" id="p-oper-lied">${operPlaying() ? '■ Anhalten' : '▶ Lied spielen'}</button></div>
     ${nx ? `<div class="label">Nächste Stufe: ${nx.name}</div>
       <p class="muted">${nx.look[0].toUpperCase() + nx.look.slice(1)} · 🌸 +${ITEMS.oper.beauty}.</p>
       <div class="stats">${costSpans(nx.cost.money, {})}</div>
-      <div class="row"><button class="btn" id="p-oper-up" ${canPay(nx.cost) ? '' : 'disabled'}>✨ Ausbauen</button></div>`
+      <div class="row"><button class="btn" id="p-pracht-up" ${canPay(nx.cost) ? '' : 'disabled'}>✨ Ausbauen</button></div>`
     : '<p class="ok">Höchste Stufe – prächtiger geht es nicht!</p>'}`;
 }
 
