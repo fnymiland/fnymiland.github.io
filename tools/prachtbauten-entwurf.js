@@ -479,7 +479,60 @@
     if (lit()) { glowP(Fp(0.5, 9), 24 * z); for (const t of [0.2, 0.8]) glowP(Fb(t, 7), 14 * z); }
   }
 
-  window.PRACHT = { opernhaus, semper, garnier, kristall, grandpalais };
+  // --- Botanischer Garten neu (Nutzer 22.10.2026: „voll broken“ – die Flügel waren zwei Glashäuser, die in die Rotunde gesteckt waren;
+  // und „das Zeug drumherum zu echten Dingen“): nur noch das Gebäude. Rotunde in der Mitte, zwei Glasflügel längs b, die genau an der
+  // runden Wand enden; hinten → Rotunde → vorn gezeichnet. 2×5. Garten (Hecke, Weg, Laternen, Beete, Bäume, Teich) kommt als echte Dinge dazu.
+  function botgartenNeu(K, stufe = 3) {
+    const z = K.z, WHITE = '#ffffff', BASE = '#dcd5c8', R = 0.88, RH = 24, wa = 0.46, wH = 13, wR = 9;
+    const lit = () => night > 0.15 && isLive();
+    K.block({ a: 0, b: 0, ha: 0.95, hb: 2.45, h: 1.5, wall: BASE, type: 'flat', roof: '#efeae0' });   // Sockel, 2×5 (Rotunde passt gerade hinein)
+    const rb = Math.sqrt(R * R - wa * wa);                                 // dort trifft die Flügelwand die Rotunde
+    const wing = sgn => {
+      const b0 = sgn * rb, b1 = sgn * 2.38, bc = (b0 + b1) / 2, hb = Math.abs(b1 - b0) / 2, top = 1.5 + wH;
+      // Glaswände: rechts (+a, Schatten) immer; vorn (+b) nur beim vorderen Flügel (beim hinteren läge sie an der Rotunde)
+      glassFace(wallOf(K, wa, 'b', bc - hb, bc + hb, 1.5, 'a'), 0, wH, 7, [wH * 0.55], 4, true);
+      if (sgn > 0) glassFace(wallOf(K, bc + hb, 'a', -wa, wa, 1.5, 'b'), 0, wH, 3, [wH * 0.55], 2, false);
+      // Glasdach (Sattel längs b): von oben sieht man beide Schrägen – erst die linke (Sonne), dann die rechte (Schatten); vorn der Giebel
+      const E = (sa, sb) => K.P(sa * wa, bc + sb * hb, top), Rr = sb => K.P(0, bc + sb * hb, top + wR);
+      for (const sa of [-1, 1]) {
+        poly([E(sa, -1), E(sa, 1), Rr(1), Rr(-1)], C(sa < 0 ? shade(GLASS, 0.06) : shade(GLASS, -0.12)));
+        g.strokeStyle = C(sa < 0 ? WHITE : shade(WHITE, -0.1)); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath();
+        for (let i = 0; i <= 6; i++) { const t = -1 + 2 * i / 6; g.moveTo(...K.P(sa * wa, bc + t * hb, top)); g.lineTo(...K.P(0, bc + t * hb, top + wR)); }
+        g.moveTo(...E(sa, -1)); g.lineTo(...E(sa, 1)); g.moveTo(...Rr(-1)); g.lineTo(...Rr(1)); g.stroke();
+      }
+      if (sgn > 0) {                                                       // Giebel vorn: Glasdreieck mit Sprossen
+        const p = K.P(wa, b1, top), q = K.P(-wa, b1, top), r = K.P(0, b1, top + wR);
+        poly([p, q, r], C(GLASS)); g.strokeStyle = C(WHITE); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath(); g.moveTo(...p); g.lineTo(...r); g.lineTo(...q); g.moveTo(...lerp(p, q, 0.5)); g.lineTo(...r); g.stroke();
+        const F = wallOf(K, b1, 'a', -wa, wa, 1.5, 'b'); arch(F, 0.38, 0.62, 0, 8, C('#ffffff'));   // Tür vorn
+      }
+    };
+    wing(-1);
+    // Rotunde: Glaszylinder auf Steinring, Palmen drinnen, weiße Streben; Glaskuppel mit Rippen und goldener Spitze; Tür nach rechts vorn (+a)
+    const [cx, cy] = K.P(0, 0, 1.5), rx = R * Math.SQRT2 * TW / 2 * z, ry = rx / 2, Rg = ring(cx, cy, rx, ry, z);
+    cyl(cx, cy, rx, ry, RH * z, GLASS_D);
+    for (let i = 0; i < 7; i++) { const t = -1.2 + i * 0.4, [px, py] = Rg(t, 1);                       // Palmen hinter dem Glas
+      g.strokeStyle = C('#6a9a4a'); g.lineWidth = 1.4 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 15 * z); g.stroke();
+      for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(px, py - 15 * z); g.quadraticCurveTo(px + sx * 6 * z, py - 20 * z, px + sx * 9 * z, py - 13 * z); g.stroke(); }
+      ellipse(px, py - 6 * z, 4 * z, 3.4 * z, C('#78c67f')); }
+    g.globalAlpha = 0.55; cyl(cx, cy, rx, ry, RH * z, GLASS); g.globalAlpha = 1;
+    g.strokeStyle = C(WHITE); g.lineWidth = Math.max(0.5, 0.8 * z); g.beginPath();
+    for (let i = -6; i <= 6; i++) { const t = i * Math.PI / 13; const [x0, y0] = Rg(t, 0); g.moveTo(x0, y0); g.lineTo(x0, y0 - RH * z); }
+    for (const h of [RH * 0.5, RH]) for (let j = 0; j <= 24; j++) { const p = Rg(-Math.PI / 2 + Math.PI * j / 24, h); j ? g.lineTo(...p) : g.moveTo(...p); }
+    g.stroke();
+    onRing(Rg, Math.PI / 4 - 0.16, Math.PI / 4 + 0.16, 0, 11, C('#ffffff'));    // Tür
+    ellipse(cx, cy - RH * z, rx * 1.03, ry * 1.03, C('#f4f1ea'));               // Kranz
+    dome(cx, cy - RH * z, rx, ry, 26 * z, GLASS);
+    { const DH = 26 * z, y0 = cy - RH * z, dp = (lat, ph) => [cx + rx * Math.cos(lat) * Math.sin(ph), y0 + ry * Math.cos(lat) * Math.cos(ph) - DH * Math.sin(lat)];
+      g.strokeStyle = C(WHITE); g.lineWidth = Math.max(0.5, 0.8 * z); g.beginPath();
+      for (let m = -4; m <= 4; m++) { const ph = m * Math.PI / 9; for (let j = 0; j <= 12; j++) { const p = dp(Math.PI / 2 * j / 12, ph); j ? g.lineTo(...p) : g.moveTo(...p); } }
+      for (const lat of [0.4, 0.85]) for (let j = 0; j <= 24; j++) { const p = dp(lat, -Math.PI / 2 + Math.PI * j / 24); j ? g.lineTo(...p) : g.moveTo(...p); }
+      g.stroke(); }
+    cyl(cx, cy - (RH + 26) * z, 2.2 * z, 1.1 * z, 3 * z, '#f2c14e'); circle(cx, cy - (RH + 30) * z, 1.8 * z, C('#f2c14e'));
+    wing(1);
+  }
+
+  const botgartenAlt = K => drawObject('botgarten', ...K.P(0, 0), K.z, 1e6, 0, 0, 1, { b: 'botgarten', phase: 9, rot: 0 });   // zum Vergleich: wie bisher
+  window.PRACHT = { opernhaus, semper, garnier, kristall, grandpalais, botgartenNeu, botgartenAlt };
   window.prachtEntwurf = (opts = {}) => {
     document.getElementById('cmp')?.remove();
     const Wv = innerWidth, Hv = innerHeight, cv = document.createElement('canvas'); cv.id = 'cmp'; cv.width = Wv * 2; cv.height = Hv * 2;
