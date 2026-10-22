@@ -33,18 +33,31 @@
   }
 
   // Opernhaus 3×3, Stufe 1–3. Saal a ∈ [−1,0,0,7], b ∈ [−0,95,0,85]; Säulenhalle nach +b (links vorn, in der Sonne)
-  function opernhaus(K, stufe = 3) {
+  function opernhaus(K, stufe = 3, opt = {}) {
+    const buehne = opt.buehne || 'A';                                      // Stufe 2: A Bühnenhaus im Bau, B Seitenflügel, C kleines Bühnenhaus
     const z = K.z, WALL = '#f3e9d6', TRIM = '#e2d3b4', STONE = '#d9cdb4', DOME = '#7fb8a4', ROOF = '#cbbd9f';
     const winCol = lit() ? '#ffd873' : C('#9fc3e3');
     const s2 = stufe >= 2, s3 = stufe >= 3;
     // Sockel (fest, ganze Fläche bis knapp an den Rand)
     K.block({ a: 0, b: 0, ha: 1.42, hb: 1.42, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
-    // Bühnenhaus (Stufe 2): hinter dem Saal, gegenüber dem Eingang (−b), auf der Achse der Säulenhalle; hoch, Satteldach in Kupfer
-    if (s2) {
-      K.block({ a: -0.13, b: -1.02, ha: 0.6, hb: 0.3, h: 46, lift: 3, wall: shade(WALL, -0.03), roof: DOME, roofH: 10, type: 'gable', ridge: 'a', over: 1.06 });
-      const F = wallOf(K, 0.47, 'b', -1.32, -0.72, 3, 'a');                 // Schattenseite rechts vorn
-      for (const t of [0.18, 0.62]) arch(F, t, t + 0.2, 31, 41, winCol);
-      if (s3) L(C(GOLD_D), 0.9, z, [K.P(0.47, -1.32, 47), K.P(0.47, -0.72, 47)]);
+    // Stufe 2 hinter/neben dem Saal (Nutzer 22.10.: das alte Bühnenhaus sah „herangestellt“ aus) – drei Varianten zur Wahl
+    if (s2 && buehne === 'A') {                                            // A: Bühnenhaus gehört zum Bau – gleich breit, Wände bündig, gleiches Mansarddach, höher
+      K.block({ a: -0.15, b: -1.0, ha: 0.85, hb: 0.38, h: 42, lift: 3, wall: WALL, roof: DOME, roofH: 9, type: 'mansard', over: 1.02, trim: s3 ? GOLD : TRIM });
+      // Fenster nur auf dem freien Stück hinter dem Saaldach (b < −0,97, t < 0,54) – sonst schnitt das Dach sie an
+      const F = wallOf(K, 0.7, 'b', -1.38, -0.62, 3, 'a');
+      for (const t of [0.08, 0.3]) { arch(F, t, t + 0.14, 5, 14, C('#7a6248')); arch(F, t, t + 0.14, 28, 38, winCol, C(shade('#9fc3e3', -0.2))); }
+      if (s3) {                                                            // Goldkante am Dachknick wie beim Saal
+        const ea = 0.85 * 1.02 * 0.66, eb = 0.38 * 1.02 * 0.66, m = 45 + 9 * 0.62, A = -0.15, B = -1.0;
+        L(C(GOLD), 1.1, z, [K.P(A - ea, B + eb, m), K.P(A + ea, B + eb, m), K.P(A + ea, B - eb, m)]);
+      }
+    }
+    if (s2 && buehne === 'C') {                                            // C: kleines Bühnenhaus, mittig hinter der Kuppel
+      K.block({ a: -0.15, b: -0.98, ha: 0.42, hb: 0.3, h: 38, lift: 3, wall: WALL, roof: DOME, roofH: 8, type: 'mansard', over: 1.02, trim: s3 ? GOLD : TRIM });
+    }
+    if (s2 && buehne === 'B') {                                            // B: zwei niedrigere Seitenflügel links und rechts vom Saal
+      for (const [a, ha] of [[-1.2, 0.2], [0.9, 0.2]]) K.block({ a, b: -0.05, ha, hb: 0.6, h: 20, lift: 3, wall: WALL, roof: DOME, roofH: 6, type: 'mansard', over: 1.02, trim: s3 ? GOLD : TRIM });
+      const F = wallOf(K, 1.1, 'b', -0.65, 0.55, 3, 'a');
+      for (const t of [0.12, 0.42, 0.72]) arch(F, t, t + 0.16, 5, 15, winCol, C(shade('#9fc3e3', -0.2)));
     }
     // Saal
     const hallH = 30, top = 3 + hallH, mRoofH = 9, mTop = top + mRoofH * 0.62 + mRoofH * 0.38;   // Mansarddach (Kupfer), Kuppel auf seiner Kuppe
@@ -53,11 +66,6 @@
     const Fa = wallOf(K, 0.7, 'b', -0.95, 0.85, 3, 'a');
     for (let i = 0; i < 5; i++) { const t = 0.08 + i * 0.18; arch(Fa, t, t + 0.1, 5, 13, C('#7a6248')); arch(Fa, t, t + 0.1, 17, 26, winCol, C(shade('#9fc3e3', -0.2))); }
     if (lit()) for (let i = 0; i < 5; i++) glowP(Fa(0.13 + i * 0.18, 21), 16 * z);
-    const balu = (p, q, n) => {
-      for (let i = 0; i <= n; i++) { const a = p[0] + (q[0] - p[0]) * i / n, b = p[1] + (q[1] - p[1]) * i / n, [x, y] = K.P(a, b, top); L(C(GOLD_D), 0.6, z, [[x, y], [x, y - 3.2 * z]]); }
-      L(C(GOLD), 1, z, [K.P(p[0], p[1], top + 3.2), K.P(q[0], q[1], top + 3.2)]);
-    };
-    if (s3) balu([-1.02, -0.72], [-1.02, 0.87], 12);                       // hinten links: vor der Kuppel zeichnen
     // Kuppel (Stufe 2) über dem Saal: Tambour mit Fenstern, Kupferkuppel; Stufe 3: Goldrippen und Laterne
     if (s2) {
       const [dx, dy] = K.P(-0.15, -0.05, mTop - 1.2), R = 20 * z;           // mitten auf der Kuppe des Mansarddachs
@@ -77,20 +85,24 @@
         if (lit()) glowP([dx, dy - 37 * z], 26 * z);
       }
     }
-    // Balustrade (Stufe 3) auf der Traufe der beiden vorderen Kanten; hinten endet sie am Bühnenhaus
-    if (s3) { balu([0.72, -0.72], [0.72, 0.87], 12); balu([-1.02, 0.87], [0.72, 0.87], 14); }
+    // Stufe 3: Goldkante rings um den Knick des Mansarddachs (statt Balustrade – Nutzer: „ergibt keinen Sinn, nicht ums ganze Gebäude“)
+    if (s3) {
+      const ea = 0.85 * 1.02 * 0.66, eb = 0.9 * 1.02 * 0.66, m = top + 9 * 0.62, A = -0.15, B = -0.05;
+      L(C(GOLD), 1.1, z, [K.P(A - ea, B + eb, m), K.P(A + ea, B + eb, m), K.P(A + ea, B - eb, m)]);
+    }
     // Eingangswand hinter der Säulenhalle (+b, Sonnenseite): drei Türen unten, drei große Bogenfenster oben
     const Fb = wallOf(K, 0.85, 'a', -0.95, 0.7, 3, 'b');
     for (const t of [0.24, 0.45, 0.66]) { arch(Fb, t, t + 0.1, 4, 14, C('#8a5a3c')); arch(Fb, t, t + 0.1, 17, 27, winCol, C(shade('#9fc3e3', -0.2))); }
     if (lit()) for (const t of [0.29, 0.5, 0.71]) glowP(Fb(t, 22), 18 * z);
     // Podest der Säulenhalle und Freitreppe davor
     K.block({ a: -0.12, b: 1.05, ha: 0.72, hb: 0.2, h: 4, lift: 3, wall: STONE, type: 'flat', roof: shade(STONE, 0.06) });
-    for (let k = 0; k < 3; k++) K.block({ a: -0.12, b: 1.3 + k * 0.05, ha: 0.62 - k * 0.04, hb: 0.06, h: 3 - k, lift: 3, wall: shade(STONE, -0.12), type: 'flat', roof: shade(STONE, 0.16) });   // helle Auftritte, dunkle Stirn
+    for (let k = 0; k < 3; k++) K.block({ a: -0.12, b: 1.28 + k * 0.06, ha: 0.62 + k * 0.04, hb: 0.03, h: 3 - k, lift: 3, wall: shade(STONE, -0.12), type: 'flat', roof: shade(STONE, 0.16) });   // am Podest hoch, außen niedriger und breiter; helle Auftritte
+    for (const sa of [-1, 1]) K.block({ a: -0.12 + sa * 0.74, b: 1.34, ha: 0.035, hb: 0.09, h: 4, lift: 3, wall: STONE, type: 'flat', roof: shade(STONE, 0.06) });   // Treppenwangen links und rechts
     // Säulen (von hinten nach vorn) – sechs in einer Reihe vor der Wand
     const cols = [0, 1, 2, 3, 4, 5].map(i => [-0.7 + i * 0.232, 1.19]);        // gleichmäßig, Mitte −0,12 wie der Giebel; vorn bündig mit dem Gebälk
     cols.sort((p, q) => K.depth(...p) - K.depth(...q)).forEach(([a, b]) => column(K, a, b, 7, 21, '#f6efe0', s3));
     // Gebälk über den Säulen, darauf ein Satteldach (First quer zur Wand, nach vorn): die vordere Giebelwand ist das Giebeldreieck
-    const PB = K.block({ a: -0.12, b: 1.06, ha: 0.72, hb: 0.2, h: 4.5, lift: 28, wall: s3 ? shade(GOLD, 0.15) : TRIM, roof: shade(ROOF, -0.05), roofH: 9, type: 'gable', ridge: 'b', over: 1.0 });
+    const PB = K.block({ a: -0.12, b: 1.06, ha: 0.72, hb: 0.2, h: 4.5, lift: 28, wall: s3 ? shade(GOLD, 0.15) : TRIM, roof: DOME, roofH: 9, type: 'gable', ridge: 'b', over: 1.0 });   // Kupfer wie das übrige Dach
     const bF = 1.26, gt = 32.5, P1 = K.P(-0.84, bF, gt), P2 = K.P(0.6, bF, gt), PK = K.P(-0.12, bF, gt + 9);
     poly([P1, P2, PK], C(shade(WALL, 0.04)));
     poly([K.P(-0.76, bF + 0.002, gt + 0.9), K.P(0.52, bF + 0.002, gt + 0.9), K.P(-0.12, bF + 0.002, gt + 7.6)], C(shade(WALL, -0.07)));   // Giebelfeld vertieft
@@ -122,8 +134,8 @@
       stufen.forEach((st, i) => {
         const x = 12 + i * (cw + 12), cx = x + cw / 2, cy = Hv - 40 - 48 * z;
         diamond(cx, cy, 96 * z, 48 * z, opts.night ? '#33405e' : '#b4dd8c');
-        PRACHT[opts.bau || 'opernhaus'](kit(cx, cy, z, 0), st);
-        ctx.fillStyle = opts.night ? '#f1e3cf' : '#6b4f3a'; ctx.font = '700 15px system-ui'; ctx.fillText('Stufe ' + st, x + 4, 22);
+        PRACHT[opts.bau || 'opernhaus'](kit(cx, cy, z, 0), st, { buehne: (opts.varianten || [])[i] || opts.buehne });
+        ctx.fillStyle = opts.night ? '#f1e3cf' : '#6b4f3a'; ctx.font = '700 15px system-ui'; ctx.fillText(opts.varianten ? 'Variante ' + opts.varianten[i] : 'Stufe ' + st, x + 4, 22);
       });
     } finally { g = prev; night = n0; SPRITE_PAINT = sp0; }
     return 'ok';
