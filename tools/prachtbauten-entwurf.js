@@ -322,7 +322,7 @@
   function grandpalais(K, stufe = 3, opt = {}) {
     // Stufe 3 (Nutzer 22.10.): goldenes Glasdach und goldene Kuppel („geil“); Schmuck der Fassade zur Wahl: 'vasen' (auf Sockeln, mit
     // Girlanden – einzeln „plump, fad“) oder 'pferde' (goldene Flügelpferde wie die Pferdegruppen in Paris, ohne Menschen)
-    const z = K.z, s2 = stufe >= 2, s3 = stufe >= 3, [gv, krone = ''] = (opt.buehne || 'vasen').split('|'), RIB = '#7d8f96', RIBC = s3 ? GOLD_D : RIB, RIBW = s3 ? 0.75 : 0.6;
+    const z = K.z, s2 = stufe >= 2, s3 = stufe >= 3, [gv, dach = ''] = (opt.buehne || 'vasen').split('|'), RIB = '#7d8f96', RIBC = s3 ? GOLD_D : RIB, RIBW = s3 ? 0.75 : 0.6;
     K.block({ a: 0, b: 0, ha: 1.95, hb: 1.45, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
     // Halle hinten: Steinwände, Glastonne längs
     const hH = 12, htop = 3 + hH, hR = s2 ? 13 : 9;
@@ -353,21 +353,45 @@
       cols.sort((p, q) => K.depth(p, fb + fhb + 0.06) - K.depth(q, fb + fhb + 0.06)).forEach(a => column(K, a, fb + fhb + 0.06, 3, fH - 2, '#f6efe0', s3));
       K.block({ a: 0, b: fb + fhb + 0.02, ha: 1.85, hb: 0.08, h: 2.2, lift: 3 + fH - 2, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : null });   // Gebälk über den Säulen
     }
-    K.block({ a: 0, b: fb + fhb - 0.03, ha: 1.85, hb: 0.05, h: 2.6, lift: 3 + fH, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.1) });   // Attika an der Vorderkante
+    // Dach des Steinflügels (Nutzer 22.10.: die Fläche, auf der Vasen/Figuren stehen, „ist es noch nicht“ – wie lösen es echte Bauten?):
+    // ohne dach: schlichte Attika · 'terrasse': Balustrade, dahinter Plattenbelag · 'mansard': Balustrade, dahinter Schieferdach
+    // (runde Gauben wirkten schwebend, ein Glas-Pultdach neben der Halle wirr)
+    const be = fb + fhb - 0.03, h0 = 3 + fH, BAL = 3.6;                   // Vorderkante, Fuß und Höhe der Balustrade
+    if (!dach) K.block({ a: 0, b: be, ha: 1.85, hb: 0.05, h: 2.6, lift: h0, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.1) });   // Attika an der Vorderkante
+    else {
+      if (dach === 'terrasse') {                                          // Plattenbelag: Fugen quer
+        g.strokeStyle = C(shade(STONE2, -0.06)); g.lineWidth = Math.max(0.5, 0.35 * z); g.beginPath();
+        for (let a = -1.8; a <= 1.81; a += 0.15) { g.moveTo(...K.P(a, fb - fhb, h0)); g.lineTo(...K.P(a, be, h0)); }
+        for (const b of [fb - 0.12, fb + 0.06]) { g.moveTo(...K.P(-1.85, b, h0)); g.lineTo(...K.P(1.85, b, h0)); } g.stroke();
+      }
+      if (dach === 'mansard') {                                           // Schieferdach hinter der Balustrade, runde Gauben (Ochsenaugen)
+        K.block({ a: 0, b: fb - 0.02, ha: 1.8, hb: fhb - 0.04, h: 2.6, lift: h0, wall: STONE2, roof: '#a9b5c6', roofH: 12, type: 'mansard', over: 1.0 });   // höher als die Balustrade, sonst wirkt es wie eine Rinne
+      }
+      // Balustrade an der Vorderkante: Sockelleiste, Säulchen, Handlauf
+      K.block({ a: 0, b: be, ha: 1.85, hb: 0.05, h: 0.8, lift: h0, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.08) });
+      { const F = wallOf(K, be + 0.05, 'a', -1.85, 1.85, h0, 'b'); fRect(F, 0, 1, 0.8, 3, C(shade(STONE2, -0.22))); }   // Schatten zwischen den Säulchen
+      for (let a = -1.8; a <= 1.81; a += 0.075) {                         // Säulchen: bauchig, oben und unten schmal
+        const [x, y] = K.P(a, be + 0.05, h0 + 0.8), w = 0.42 * z;
+        poly([[x - w * 0.7, y], [x + w * 0.7, y], [x + w * 1.25, y - 0.8 * z], [x + w * 0.55, y - 2.2 * z], [x - w * 0.55, y - 2.2 * z], [x - w * 1.25, y - 0.8 * z]], C(shade(STONE2, 0.08)));
+      }
+      K.block({ a: 0, b: be, ha: 1.85, hb: 0.05, h: 0.7, lift: h0 + 3, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.12), trim: s3 ? GOLD : null });
+    }
     // Portikus in der Mitte: springt vor, höher, mit flachem Giebel; Tor mittelbraun, darüber Glas im Bogen
-    const pb = fb + fhb + 0.18, gt = fH + 3, gh = 8;                     // Portikus: breiter, mit echtem Giebel (Dach nach vorn), Giebelfeld für Schmuck
-    K.block({ a: 0, b: pb, ha: 0.5, hb: 0.18, h: gt, lift: 3, wall: shade(STONE2, 0.04), roof: GLASS, roofH: gh, type: 'gable', ridge: 'b', over: 1.0, trim: s3 ? GOLD : shade(STONE2, -0.08) });
-    const Fp = wallOf(K, pb + 0.18, 'a', -0.5, 0.5, 3, 'b');
-    g.strokeStyle = C(s3 ? GOLD : shade(STONE2, -0.12)); g.lineWidth = Math.max(0.5, 0.9 * z); g.beginPath(); g.moveTo(...Fp(0, gt)); g.lineTo(...Fp(0.5, gt + gh)); g.lineTo(...Fp(1, gt)); g.lineTo(...Fp(0, gt)); g.stroke();   // Giebelrahmen
-    arch(Fp, 0.3, 0.7, 0, 14, C('#8a5a3c'));
-    arch(Fp, 0.36, 0.64, 7, 13.2, C('#9fc3e3'));
-    for (const t of [0.08, 0.92]) fRect(Fp, t - 0.035, t + 0.035, 0, fH + 1, C(shade(STONE2, 0.1)));
+    const pb = fb + fhb + 0.16;
+    K.block({ a: 0, b: pb, ha: 0.32, hb: 0.14, h: fH + 3, lift: 3, wall: shade(STONE2, 0.04), type: 'flat', roof: shade(STONE2, 0.1), trim: s3 ? GOLD : shade(STONE2, -0.08) });
+    const Fp = wallOf(K, pb + 0.14, 'a', -0.32, 0.32, 3, 'b');
+    poly([Fp(-0.04, fH + 3), Fp(1.04, fH + 3), Fp(0.5, fH + 8)], C(shade(STONE2, 0.06)));   // flacher Giebel vorn
+    g.strokeStyle = C(s3 ? GOLD : shade(STONE2, -0.12)); g.lineWidth = Math.max(0.5, 0.8 * z); g.beginPath(); g.moveTo(...Fp(-0.04, fH + 3)); g.lineTo(...Fp(0.5, fH + 8)); g.lineTo(...Fp(1.04, fH + 3)); g.stroke();
+    arch(Fp, 0.22, 0.78, 0, 14, C('#8a5a3c'));
+    arch(Fp, 0.3, 0.7, 7, 13.2, C('#9fc3e3'));
+    for (const t of [0.08, 0.92]) fRect(Fp, t - 0.04, t + 0.04, 0, fH + 1, C(shade(STONE2, 0.1)));
     arch(Fa, 0.25, 0.75, 3, 11, C(shade('#9fc3e3', -0.1)));
-    const attic = a => K.P(a, fb + fhb - 0.03, 3 + fH + 2.6);
+    const top0 = dach ? 3 + fH + BAL + 0.1 : 3 + fH + 2.6, attic = a => K.P(a, fb + fhb - 0.03, top0);   // Vasen/Pferde: auf der Attika bzw. der Balustrade
     // Vase (Amphora) auf einem Sockel: Fuß, bauchiger Körper mit Glanz, Hals, Henkel, Deckel mit Knauf
     const vase = (a, sc = 1) => {
-      K.block({ a, b: fb + fhb - 0.03, ha: 0.07 * sc, hb: 0.07 * sc, h: 3 * sc, lift: 3 + fH + 2.6, wall: shade(STONE2, 0.05), type: 'flat', roof: GOLD });
-      const [x, y] = K.P(a, fb + fhb - 0.03, 3 + fH + 5.6 * sc), u = z * sc;
+      const pl = dach ? h0 : h0 + 2.6, ph = dach ? BAL + 1.2 : 3 * sc;   // Postament: mit Balustrade vom Dach bis über den Handlauf
+      K.block({ a, b: fb + fhb - 0.03, ha: 0.07 * sc, hb: 0.07 * sc, h: ph, lift: pl, wall: shade(STONE2, 0.05), type: 'flat', roof: GOLD });
+      const [x, y] = K.P(a, fb + fhb - 0.03, pl + ph), u = z * sc;
       poly([[x - 1.2 * u, y], [x + 1.2 * u, y], [x + 0.7 * u, y - 1 * u], [x - 0.7 * u, y - 1 * u]], C(GOLD_D));       // Fuß
       ellipse(x, y - 3.6 * u, 2.4 * u, 2.9 * u, C(GOLD));                                                                // Bauch
       ellipse(x - 0.8 * u, y - 4.4 * u, 0.7 * u, 1.5 * u, C(GOLD_L));                                                   // Glanz (Licht von links)
@@ -397,44 +421,12 @@
       g.stroke();
       for (let i = 0; i + 1 < tops.length; i++) { if (as[i] < 0 && as[i + 1] > 0) continue; const [x0, y0] = tops[i], [x1, y1] = tops[i + 1];
         for (const t of [0.25, 0.5, 0.75]) circle(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t - 3 * z + Math.sin(Math.PI * t) * 3.2 * z, 0.75 * z, C(t === 0.5 ? '#e8a0b4' : GOLD_L)); }
-      if (!krone) vase(0, 1.15);                                          // große Vase hinter dem Giebel des Portikus
-    }
-    // Bekrönung des Portikus (Nutzer: „wie lösen das Gebäude im RL?“): 'akroter' Palmetten auf Giebelspitze und -ecken + Lorbeerkranz im
-    // Giebelfeld · 'uhr' runde Uhr im Giebel · 'wappen' Schriftband in Goldbuchstaben + Wappenschild auf der Spitze
-    if (s3 && krone) {
-      const palmette = (x, y, s) => {                                    // Fächer aus spitzen Blättern über einem kleinen Fuß
-        for (let k = -3; k <= 3; k++) { const an = -Math.PI / 2 + k * 0.34, L = (2.6 - Math.abs(k) * 0.35) * s * z, w = 0.42 * s * z, tx = x + Math.cos(an) * L, ty = y + Math.sin(an) * L, nx = -Math.sin(an) * w, ny = Math.cos(an) * w;
-          poly([[x + nx, y + ny], [tx, ty], [x - nx, y - ny]], C(k % 2 ? GOLD : GOLD_L)); }
-        ellipse(x, y, 0.9 * s * z, 0.45 * s * z, C(GOLD_D)); };
-      if (krone === 'akroter') {
-        palmette(...Fp(0.5, gt + gh + 0.8), 1.5); palmette(...Fp(0, gt + 0.6), 1.1); palmette(...Fp(1, gt + 0.6), 1.1);
-        const [kx, ky] = Fp(0.5, gt + 2.6); g.strokeStyle = C(GOLD); g.lineWidth = Math.max(0.6, 0.8 * z);
-        g.beginPath(); g.ellipse(kx, ky, 1.7 * z, 1.5 * z, 0, Math.PI * 0.15, Math.PI * 0.85, true); g.stroke();   // Lorbeerkranz, oben offen
-        for (let k = 0; k < 8; k++) { const an = Math.PI * (0.2 + k * 0.09) + Math.PI; ellipse(kx + Math.cos(an) * 1.7 * z, ky - Math.sin(an) * 1.5 * z, 0.45 * z, 0.25 * z, C(GOLD_D)); }
-        for (const d of [-1, 1]) { g.beginPath(); g.moveTo(...Fp(0.5 + d * 0.08, gt + 1.6)); g.quadraticCurveTo(...Fp(0.5 + d * 0.2, gt + 0.7), ...Fp(0.5 + d * 0.32, gt + 1.3)); g.stroke(); }   // Bänder
-      }
-      if (krone === 'uhr') {
-        const [cx0, cy0] = Fp(0.5, gt + 2.9), r = 2.6 * z;
-        circle(cx0, cy0, r + 0.6 * z, C(GOLD)); circle(cx0, cy0, r, C('#fbf6ea'));
-        for (let k = 0; k < 12; k++) { const an = k * Math.PI / 6; circle(cx0 + Math.cos(an) * r * 0.8, cy0 + Math.sin(an) * r * 0.8, (k % 3 ? 0.18 : 0.32) * z, C('#6b4f3a')); }
-        g.strokeStyle = C('#4f3d30'); g.lineWidth = Math.max(0.5, 0.45 * z); g.beginPath(); g.moveTo(cx0, cy0); g.lineTo(cx0 + r * 0.45, cy0 - r * 0.2); g.moveTo(cx0, cy0); g.lineTo(cx0 - r * 0.1, cy0 - r * 0.7); g.stroke();
-        palmette(...Fp(0.5, gt + gh + 0.8), 1.2);
-      }
-      if (krone === 'wappen') {
-        const [tx, ty] = Fp(0.5, gt - 1.6);                              // Schriftband auf dem Gebälk des Portikus, schräg in der Wand
-        g.save(); g.translate(tx, ty); g.transform(1, 0.5, 0, 1, 0, 0); g.fillStyle = C(GOLD_D); g.font = `900 ${2.1 * z}px system-ui`; g.textAlign = 'center'; g.fillText('GLASPALAST', 0, 0); g.restore();
-        const [wx, wy] = Fp(0.5, gt + 3.4), u = z * 1.1;                  // im Giebelfeld                  // Wappenschild auf der Spitze: Stadtfarbe, goldener Rand und Stern
-        const shield = [[wx - 2.4 * u, wy - 3 * u], [wx + 2.4 * u, wy - 3 * u], [wx + 2.4 * u, wy], [wx, wy + 2.6 * u], [wx - 2.4 * u, wy]];
-        poly(shield.map(([x, y]) => [x + (x - wx) * 0.18, y + (y - wy) * 0.18]), C(GOLD));
-        poly(shield, C('#5f8fe8'));
-        const st = []; for (let i = 0; i < 10; i++) { const an = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? 0.55 : 1.3; st.push([wx + Math.cos(an) * rr * u, wy - 0.5 * u + Math.sin(an) * rr * u]); } poly(st, C(GOLD_L));
-        for (const d of [-1, 1]) { g.strokeStyle = C(GOLD); g.lineWidth = Math.max(0.6, 0.8 * z); g.beginPath(); g.moveTo(wx + d * 2.6 * u, wy - 0.5 * u); g.quadraticCurveTo(wx + d * 4.6 * u, wy + 0.2 * u, wx + d * 3.6 * u, wy + 2 * u); g.stroke(); }   // Ranken links und rechts
-      }
+      { const [sx, sy] = Fp(0.5, fH + 8); vase(0, 1.15); }                 // große Vase auf dem Giebel des Portikus
     }
     if (s3 && gv === 'pferde') {                                          // Flügelpferde: zwei auf den Ecken, eines (größer) über dem Portikus; Vasen dazwischen
       for (const [a, d] of [[-1.72, 1], [1.72, -1]]) { K.block({ a, b: fb + fhb - 0.03, ha: 0.08, hb: 0.06, h: 2.5, lift: 3 + fH + 2.6, wall: shade(STONE2, 0.05), type: 'flat', roof: shade(STONE2, 0.12), trim: GOLD }); const [x, y] = K.P(a, fb + fhb - 0.03, 3 + fH + 5.1); pegasus(x, y, 1.25, d); }
       for (const a of [-0.9, 0.9]) vase(a, 0.9);
-      { K.block({ a: 0, b: pb - 0.02, ha: 0.08, hb: 0.06, h: 2.5, lift: 3 + gt + gh - 1, wall: shade(STONE2, 0.05), type: 'flat', roof: shade(STONE2, 0.12), trim: GOLD }); const [x, y] = K.P(0, pb - 0.02, 3 + gt + gh + 1.5); pegasus(x, y, 1.7, 1); }
+      { K.block({ a: 0, b: pb - 0.02, ha: 0.08, hb: 0.06, h: 2.5, lift: 3 + fH + 3, wall: shade(STONE2, 0.05), type: 'flat', roof: shade(STONE2, 0.12), trim: GOLD }); const [x, y] = K.P(0, pb - 0.02, 3 + fH + 5.5); pegasus(x, y, 1.7, 1); }
     }
     if (lit()) { glowP(Fp(0.5, 9), 24 * z); for (const t of [0.2, 0.8]) glowP(Fb(t, 7), 14 * z); }
   }
