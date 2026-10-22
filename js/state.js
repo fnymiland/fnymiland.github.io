@@ -513,6 +513,8 @@ function afterLoad() {
   delete state.fitLm;
   nameHouses();
   recalc();
+  const arches = archHillRecheck();                // Fußgängerbrücken an der Kante einer Anhöhe (157l, hills.js): wieder Schranken
+  if (arches) recalc();
   collectAlbum();
   checkAchievements(true);                         // schon Erreichtes still zählen (Regel 30)
   if (typeof sdBackPay === 'function') sdWelcome(sdBackPay());          // ✨ Nachzahlung (Block 161)
@@ -523,6 +525,7 @@ function afterLoad() {
   if (ports) setTimeout(() => announceHarbors(ports), 2000);
   if (lights) setTimeout(() => toast('🗼 Neu: Dein Leuchtturm ist jetzt ein ganzes Kap mit Wärterhaus und großem Leuchtfeuer!'), 2400);
   if (hbfs) setTimeout(() => toast(`🚉 Neu: Der Hauptbahnhof hat die Eingangshalle in der Mitte – Gleis, Steig, Halle, Steig, Gleis. Gleise können ein Feld gerückt sein: Strecken davor prüfen${hbfs.stuck ? ` · ${hbfs.stuck === 1 ? 'Einer hatte' : hbfs.stuck + ' hatten'} keinen Platz – im Fenster umbauen` : ''}`), 2800);
+  if (arches) setTimeout(() => toast(`🌉 ${arches === 1 ? 'Eine Fußgängerbrücke stand' : arches + ' Fußgängerbrücken standen'} an der Kante einer Anhöhe – dort sind jetzt wieder Schranken. Bezahlt ist sie noch: im Fenster wieder einschalten, wenn der Boden eben ist.`), 3200);
   if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
 }
 

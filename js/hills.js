@@ -84,6 +84,15 @@ function archAround(x, y) {
   return false;
 }
 const ARCH_HERE = 'Hier steht eine Fußgängerbrücke – ihr Boden bleibt eben';
+// Nach dem Laden (157l, 22.10.2026): Fußgängerbrücken, die schon vor archHillError an einer Kante standen, hingen über die Kante – sie werden wieder
+// Schranken. Bezahltes bleibt (footPaid/brp): im Fenster wieder einschalten kostet nichts, sobald der Boden eben ist. → Zahl der umgestellten
+function archHillRecheck() {
+  if (!state.hills || !state.hills.size) return 0;
+  let n = 0;
+  for (const [k, t] of state.tiles) if (isCrossing(t) && t.foot && archHillError(...keyXY(k))) { t.foot = false; n++; }
+  if (n) groundVersion++;
+  return n;
+}
 // Ende einer Brücke übers Wasser (160c D4, luecken B3): längs der Achse direkt neben dem ersten/letzten Brückenfeld. Eine Anhöhe dort ließe den
 // Bogen auf Höhe 0 an der Wand enden, und die Brücke verlöre den Anschluss ans Wegenetz. Quer daneben bleibt frei.
 const WB_END_HERE = 'Am Ende einer Brücke übers Wasser muss der Weg eben bleiben';

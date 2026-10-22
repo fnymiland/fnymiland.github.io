@@ -166,3 +166,23 @@ describe('10 Gleis-Rampe A: Zaun an der offenen Seite (ohne Wange)', () => {
     game("rampNewForm = 'a'");
   });
 });
+
+describe('11 Fußgängerbrücken, die schon vor der Regel an einer Kante standen', () => {
+  it('werden beim Laden nachgeprüft: wieder Schranken, bezahlt bleibt bezahlt (wieder einschalten, sobald der Boden eben ist); eben bleibt sie', () => {
+    game("for (let x = 8; x <= 14; x++) build('schiene', x, 15, true); build('weg', 11, 14, true); build('weg', 11, 15, true); build('weg', 11, 16, true); recalc()");
+    expect(game("isCrossing(state.tiles.get('11,15'))")).toBe(true);
+    game("Object.assign(state.tiles.get('11,15'), { foot: true, footPaid: 'holz' }); for (const k of ['11,13', '11,14', '10,14', '12,14']) state.hills.set(k, { w: 0 }); groundVersion++; recalc()");
+    expect(game('archHillError(11, 15)')).not.toBe(null);                             // so ginge sie heute nicht mehr
+    game('adoptState(parseSave(JSON.parse(JSON.stringify(serialize()))))');
+    const t = () => game("(t => [!!t.foot, footPaidOf(t)])(state.tiles.get('11,15'))");
+    expect(t()).toEqual([false, 'holz']);
+    // eben (die Anhöhe ist weg): wieder einschalten kostet nichts
+    game("for (const k of ['11,13', '11,14', '10,14', '12,14']) state.hills.delete(k); groundVersion++; recalc()");
+    const m0 = game('state.money');
+    expect(game("setCrossing(11, 15, true, 'holz')")).toBe(true);
+    expect([...t(), game('state.money')]).toEqual([true, 'holz', m0]);
+    // eine ebene bleibt beim Laden, wie sie ist
+    game('adoptState(parseSave(JSON.parse(JSON.stringify(serialize()))))');
+    expect(t()).toEqual([true, 'holz']);
+  });
+});
