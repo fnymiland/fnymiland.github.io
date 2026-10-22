@@ -3304,6 +3304,10 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-22-zuege', date: '22. Oktober', title: 'Ordentlichere Züge', items: [
+    '🚆 <b>Züge:</b> Die Wagen sind oben jetzt geschlossen. Vorher sah man neben dem Dach durch den Wagen hindurch auf die Schienen, und das Dach schien zu schweben.',
+    '🌳 <b>Bäume vor dem Gleis:</b> Fährt ein Zug vorbei, schneidet er die Bäume davor nicht mehr ab.',
+  ] },
   { id: '2026-10-22-glaspalast', date: '22. Oktober', title: 'Der Glaspalast', items: [
     '🏛️ <b>Glaspalast:</b> Unter Freizeit → Kultur gibt es jetzt den zweiten Prachtbau, eine lange Glashalle hinter einer Säulenfassade, nach dem Grand Palais in Paris. Er kostet 1 Mrd. Taler, braucht 4×3 Felder Wiese und steht nur einmal im Spiel.',
     '🖼️ <b>Dein Ausstellungsstück:</b> Ab Stufe 2 wird die Glaskuppel eine Vitrine. Tipp den Glaspalast an und zeig darin etwas Seltenes: ein Stück aus dem Sternenbasar wie ein Monument oder einen Pokal, den du für deine Erfolge bekommen hast. Es steht dann als Modell in der Kuppel, und du kannst es jederzeit wechseln.',

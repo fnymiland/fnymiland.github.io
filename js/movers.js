@@ -812,12 +812,15 @@ function drawTrainCarBody(car, z, now) {
       if (lit) { const m = lerp(f.p, f.q, 0.5); glowQuad([[m[0] - 2, m[1] - H * 0.3 * z], [m[0] + 2, m[1] - H * 0.3 * z], [m[0] + 2, m[1] - H * 0.15 * z], [m[0] - 2, m[1] - H * 0.15 * z]], 22 * z); }
     }
   }
+  const cap = tr.model === 'modern' ? '#c7ccd3' : '#b7bbc4';               // Oberseite des Kastens: geschlossen, sonst sah man neben dem Dach durch den Wagen (166)
   if (!car.cut) {
+    poly(C4.map(([a, b]) => P(a, b, H)), C(cap));
     const roof = C4.map(([a, b]) => P(am + (a - am) * 0.97, b * 0.9, H));
     poly(roof, C(tr.model === 'modern' ? '#dfe3e8' : '#c9ccd4'));
     poly(C4.map(([a, b]) => P(am + (a - am) * 0.8, b * 0.5, H + (tr.model === 'tram' ? 1.6 : 1))), C(tr.model === 'modern' ? '#eceff2' : '#dcdfe5'));
   } else {                                                              // abgeschnitten: Dach wie am ganzen Wagen, am Schnitt gerade zu Ende
     const part = (k, bw, up, col) => { const r0 = Math.max(lo, -la * k), r1 = Math.min(hi, la * k); if (r1 - r0 > 1e-4) poly([[r0, -bw], [r1, -bw], [r1, bw], [r0, bw]].map(([a, b]) => P(a, b * wb, up)), C(col)); };
+    part(1, 1, H, cap);
     part(0.97, 0.9, H, tr.model === 'modern' ? '#dfe3e8' : '#c9ccd4');
     part(0.8, 0.5, H + (tr.model === 'tram' ? 1.6 : 1), tr.model === 'modern' ? '#eceff2' : '#dcdfe5');
   }
@@ -831,6 +834,16 @@ function drawTrainCarBody(car, z, now) {
 // (Wange des Einschnitts, Anhöhe neben dem Gleis unten), deckt er nicht zu (car.hill.occ). Ohne Anhöhen bleibt alles wie vorher
 const trainEndPts = m => [-1, 1].map(s => railPoint(m.train.route, m.d + s * m.len / 2 * m.mv));   // Gleis unter hinterem/vorderem Ende
 const trainTileOrder = (x, y) => (x + y) * 1e5 + x;                     // Maler-Reihenfolge der Felder (render.js visibleTiles)
+// Wagen längs x, der nach links oben ins vorige Feld ragt (166): Die Felder einer Schräge werden von links nach rechts gemalt, das Feld vorn
+// links davon (T−1, y+1) also vor dem Feld des Wagens (T, y) – der ganze Wagen malte über dessen Bäume. Das Stück im vorigen Feld kommt darum
+// mit dem Feld (T, y−1): nach allem dahinter, vor dem Feld vorn links. Längs y, schräg oder ganz in einem Feld: null (wie bisher)
+function trainBackPieces(m, k) {
+  if (Math.abs(m.dv) > 1e-3 || Math.abs(Math.abs(m.du) - 1) > 1e-3) return null;
+  const [T, y] = keyXY(k), la = m.len / 2, ab = (T - 0.5 - m.px) / m.du;     // a der Feldgrenze links oben
+  if (m.du > 0 ? ab <= -la + 0.01 : ab >= la - 0.01) return null;
+  const back = m.du > 0 ? [-la, ab] : [ab, la], rest = m.du > 0 ? [ab, la] : [-la, ab];
+  return [{ k: T + ',' + (y - 1), m: { ...m, cut: back, portal: null, gbK: (T - 1) + ',' + y } }, { k, m: { ...m, cut: rest, portal: null, gbK: k } }];
+}
 // render.js: mit welchem Feld der Wagen m gezeichnet wird (k: sein Mittelfeld) – setzt m.hill = { up: steht auf Anhöhe/Rampe, base: Hub dieses
 // Felds (tileB hebt um ihn an), ha/hb: Höhe des Gleises unter hinterem/vorderem Ende, occ: [[x, y, Höhe]] Anhöhen davor, ramp: [x, y, a0, a1] für
 // rampOverSpan } oder null (unten ohne Anhöhe davor)

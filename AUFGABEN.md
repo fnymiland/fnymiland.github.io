@@ -2804,5 +2804,10 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
 - [ ] 166 **Züge noch einmal ordentlich machen** (Nutzer 22.10.2026: „die sollten wir nochmal ordentlich machen“): Wagen übermalen Deko/Bäume
       vorn links – auf der Gleis-Rampe und auf flachem Boden (aus 157l (5) übersprungen: braucht Wagen in Stücken je Feld oder Nachmalen der Deko,
       Folgen für WebGL, Nacht, Bildchen). Zuerst gemeinsam ansehen: Bilder der Fehler, dann Optionen besprechen.
+      → **22.10.2026 (v1194, tests/zug-166.test.js):** [x] Bäume vorn links: nicht jedes Gleis, sondern Wagen längs x, die nach links oben ins
+        vorige Feld ragen (die Felder einer Schräge kommen von links nach rechts) – Stück im vorigen Feld mit dem Feld (T, y−1) (`trainBackPieces`);
+        in der Testwelt an der Achterbahn sichtbar (sie schob die Bäume näher ans Gleis). [x] „Lücken im Waggon“ (Nutzer: „das Dach schwebt“):
+        Oberseite des Kastens war offen – jetzt eine Fläche darüber, Dach darauf. Abstand zwischen den Wagen bleibt (Nutzer: „darf Abstand sein“;
+        Faltenbalg/Fahrgestell als Entwurf gezeigt und verworfen). Offen: weitere Wünsche zum Aussehen von Wagen und Loks.
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

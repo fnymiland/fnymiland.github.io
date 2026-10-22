@@ -162,13 +162,13 @@ describe('Zeichenreihenfolge und Verdeckung', () => {
             const log = JSON.parse(game(`(() => {
               trains[0].c = ${c};
               const log = [], ml = moverLive, ro = rampOverSpan;
-              moverLive = (m, z, now, w, lift) => { if (m.train) log.push({ k: null, up: !!(m.hill && m.hill.up), base: m.hill ? m.hill.base : 0, lift: lift || 0, ramp: !!(m.hill && m.hill.ramp) }); return ml(m, z, now, w, lift); };
+              moverLive = (m, z, now, w, lift) => { if (m.train) log.push({ k: null, i: m.i, up: !!(m.hill && m.hill.up), base: m.hill ? m.hill.base : 0, lift: lift || 0, ramp: !!(m.hill && m.hill.ramp) }); return ml(m, z, now, w, lift); };
               rampOverSpan = (...a) => { log.push({ over: a.slice(0, 4) }); return ro(...a); };
               try { render(1e6); } finally { moverLive = ml; rampOverSpan = ro; }
               return JSON.stringify(log);
             })()`));
             const cars = log.filter(e => e.over === undefined), overs = log.filter(e => e.over);
-            expect(cars.length).toBe(2);                                    // beide Wagen gezeichnet
+            expect(new Set(cars.map(e => e.i)).size).toBe(2);               // beide Wagen gezeichnet (ein Wagen ins vorige Feld in zwei Stücken, 166)
             for (const e of cars) expect([form, rot, c, e.lift]).toEqual([form, rot, c, e.base * 2]);   // tileB hebt um den Hub des Zeichenfelds
             expect(overs.length).toBe(cars.filter(e => e.ramp).length);
           }

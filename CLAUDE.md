@@ -452,6 +452,10 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     da oben drin ist doch stupid – eher mit raren Dingen flexen oder mit Erfolgen“). Zeichnen: Glastonnen-Rippen
     als `strip`-Rückruf je Streifen (sonst fehlten sie am Rand oder schienen durch); Vitrinen-Gerüst erst hinten, dann Stück, Glas, vorn;
     Säulen, die auf der Linie anderer stehen, mit ihnen zeichnen (sonst liegen Kapitelle über dem Gebälk); Säulenfüße ≥ 0,07 von Wand/Kante.
+29i. **🚆 Züge zeichnen (Block 166, movers.js):** Ein Wagen kommt mit dem Feld unter seiner Mitte (render.js `byTile`); die Felder einer
+    Schräge werden von links nach rechts gemalt. Ragt ein Wagen längs x nach links oben ins vorige Feld, malte er über die Bäume vorn links –
+    dieses Stück kommt mit dem Feld (T, y−1) (`trainBackPieces`, `car.cut`/`gbK` wie die Brücken-Stücke). Der Wagenkasten ist oben geschlossen
+    (eine Fläche über C4 in Höhe H, Dach darauf) – sonst sieht man neben dem eingerückten Dach durch den Wagen (nur sichtbare Seiten werden gemalt).
 29h. **🌿 Botanischer Garten als Gebäude + echter Garten** (js/botgarten.js): Das Wunder ist nur noch das Gebäude (2×5, Rotunde mit zwei
     Glasflügeln, `BG_ART`, Entwurf `botgartenNeu` in tools/prachtbauten-entwurf.js), steht direkt auf dem Boden – keine Platte, auch keine
     Steinkante („immer noch eine Platte, nur zurechtgeschnitten“). Den Garten drumherum legt `bgGarden(x, y, rot)` beim Bauen
