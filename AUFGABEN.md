@@ -2784,5 +2784,8 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
       Mondform, Lichterketten über Wegen, neue Feuerwerksfarben (Fest, Parade). Haus-Stile: Fachwerk Pastell, Turmhaus, Dachgarten, Erker mit
       Blumen. Fester Katalog (große ✨-Ziele): Haustier folgt der Figur, Jahreszeiten-Schalter (Herbstlaub/Schnee/Kirschblüte), Goldbrücke
       (5. Material), Sternschnuppen-Regen auf Knopfdruck.
+- [ ] 166 **Züge noch einmal ordentlich machen** (Nutzer 22.10.2026: „die sollten wir nochmal ordentlich machen“): Wagen übermalen Deko/Bäume
+      vorn links – auf der Gleis-Rampe und auf flachem Boden (aus 157l (5) übersprungen: braucht Wagen in Stücken je Feld oder Nachmalen der Deko,
+      Folgen für WebGL, Nacht, Bildchen). Zuerst gemeinsam ansehen: Bilder der Fehler, dann Optionen besprechen.
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).
