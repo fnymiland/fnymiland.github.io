@@ -27,11 +27,11 @@ describe('Botanischer Garten', () => {
       game(`(() => { const nv = night; night = ${n}; try { BG_ART(kit(400, 300, 2, ${rot})); } finally { night = nv; } })()`);
   });
   for (const rot of [0, 1, 2, 3]) it(`legt beim Bauen einen Garten aus echten Dingen an (Drehung ${rot}), ohne Geld oder Rohstoffe zu nehmen`, () => {
-    game(`state.rot = ${rot}`);
     const m0 = game('state.money');
-    expect(game(`(() => { const t = state.rot; state.rot = ${rot}; const r = build('botgarten', 8, 8); state.rot = t; return r; })()`)).toBeTruthy();
+    expect(game(`(() => { buildRot = ${rot}; rotManual = true; const r = build('botgarten', 8, 8); buildRot = 0; rotManual = false; return r; })()`)).toBeTruthy();
     const anchor = game("[...state.tiles].find(([k, t]) => t.b === 'botgarten')");
     expect(anchor[1].bg2).toBe(true);
+    expect(anchor[1].rot || 0).toBe(rot);
     const [ax, ay] = anchor[0].split(',').map(Number), r = ring(ax, ay, anchor[1].rot || 0);
     expect(r.weg).toBe(1);                                                   // nur der Weg zur Tür
     expect(r.blumen).toBe(4);                                                // vorn links und rechts davon
@@ -41,6 +41,10 @@ describe('Botanischer Garten', () => {
     expect(r.teich).toBe(1);
     expect(r.hecke).toBe(21);                                                // 22 Außenkanten, eine offen (Eingang)
     expect(entrance(ax, ay, anchor[1].rot || 0)).toBe(false);
+    const w = game("(() => { const [k, t] = [...state.tiles].find(([k, t]) => t.b === 'weg'), [x, y] = k.split(',').map(Number); return { ends: pathEnds(x, y, t, pathArms(x, y)), end: t.end }; })()");
+    const [fx, fy] = game(`FRONT_DIR[${rot}]`);                           // Weg richtet sich zur Tür aus: Enden zur Tür und zur Hecken-Lücke
+    expect(w.end).toBe('rand');
+    expect(w.ends.map(String).sort()).toEqual([[fx, fy], [-fx || 0, -fy || 0]].map(String).sort());
     expect(m0 - game('state.money')).toBeLessThanOrEqual(game('ITEMS.botgarten.cost'));   // Garten kostet nichts extra
     expect(game('Object.values(state.res).every(v => v <= 99999)')).toBe(true);
   });

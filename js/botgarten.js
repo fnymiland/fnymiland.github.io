@@ -128,7 +128,8 @@ function bgGarden(x, y, rot) {
       if (tx > x0 && tx < x1 && ty > y0 && ty < y1) continue;                 // innen steht das Gebäude
       const p = pos(tx, ty), ln = line(tx, ty), corner = p === 0 || p === n;
       if (ln === frontLine) {
-        if (p === mid) { if (tile('weg', tx, ty)) small('laterne', tx, ty, outer, true); }   // Weg zur Tür
+        if (p === mid) { if (tile('weg', tx, ty)) {                          // Weg zur Tür: längs zur Tür, beide Enden bis an den Rand (Tür, Hecken-Lücke)
+          Object.assign(state.tiles.get(tx + ',' + ty), { rot: alongY ? 0 : 1, end: 'rand' }); small('laterne', tx, ty, outer, true); } }
         else if (corner) small('baum', tx, ty, [0, 3]);
         else tile('blumen', tx, ty);
       } else if (ln === backLine) {
