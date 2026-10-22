@@ -237,7 +237,12 @@ const WONDER_ART = {
       g.strokeStyle = C('#ffffff'); g.lineWidth = 1.1 * z;
       for (let i = 1; i < 7; i++) { g.beginPath(); g.ellipse(x0, y0 - H - 1 * z, rx * i / 7, 36 * z, 0, Math.PI, 0); g.stroke(); }
       circle(x0, y0 - H - 38 * z, 2.4 * z, C('#f2c14e'));
-      if (lit) glowQuad([[x0 - rx * 0.6, y0 - H * 0.8], [x0 + rx * 0.6, y0 - H * 0.8], [x0 + rx * 0.6, y0 - H * 0.2], [x0 - rx * 0.6, y0 - H * 0.2]], 22 * z);
+      // Licht je Glasfeld zwischen den Streben, der Rundung folgend (vorher ein gerades Rechteck quer über die runde Wand: nachts ein
+      // gelber Aufkleber, Nutzer: „Botanischer Garten im Dunkeln verbuggt“)
+      if (lit) for (let i = 1; i < 9; i++) {
+        const xa = x0 - rx + i * rx / 5 + 1.2 * z, xb = x0 - rx + (i + 1) * rx / 5 - 1.2 * z, foot = px => y0 + Math.sqrt(Math.max(0, 1 - ((px - x0) / rx) ** 2)) * ry;
+        glowQuad([[xa, foot(xa) - H * 0.12], [xb, foot(xb) - H * 0.12], [xb, foot(xb) - H * 0.85], [xa, foot(xa) - H * 0.85]], 12 * z);
+      }
     };
     const hedge = (a, b, ha, hb) => () => K.block({ a, b, ha, hb, h: 6, wall: '#58ad52', type: 'flat', roof: '#6cc062' });
     const lamp = (a, b) => () => { const [lx, ly] = K.P(a, b); lampPost(lx, ly, z, 18); };

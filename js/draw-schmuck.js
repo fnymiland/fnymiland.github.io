@@ -39,9 +39,11 @@ function drawLantern(cx, cy, z, now, x, y, t) {
   } else if (form === 'pilz') {                                         // kurzer Stiel, großer Pilzhut (Farbe) mit Tupfen, leuchtet von unten
     g.fillStyle = C('#f4ecd8'); g.beginPath(); g.moveTo(cx - 1.6 * z, cy); g.lineTo(cx - 1.1 * z, cy - 8 * z); g.lineTo(cx + 1.1 * z, cy - 8 * z); g.lineTo(cx + 1.6 * z, cy); g.closePath(); g.fill();
     ellipse(cx, cy - 8 * z, 5.6 * z, 1.8 * z, lit ? '#ffe58a' : C('#efe3c8'));                 // Unterseite: das Licht
+    // Licht nur auf der sichtbaren Unterseite (Trapez in der Ellipse) und VOR dem Hut gestanzt – der Hut deckt den oberen Teil wieder zu.
+    // Vorher ein Rechteck nach dem Hut: nachts leuchtete ein gelber Kasten statt des runden Huts (Nutzer: „Pilzlaternen verbuggt“)
+    if (!dark) glowQuad([[cx - 3.4 * z, cy - 6.6 * z], [cx + 3.4 * z, cy - 6.6 * z], [cx + 5.2 * z, cy - 8.4 * z], [cx - 5.2 * z, cy - 8.4 * z]], 28 * z);
     g.fillStyle = C(col); g.beginPath(); g.ellipse(cx, cy - 8.4 * z, 6 * z, 5.4 * z, 0, Math.PI, 0); g.closePath(); g.fill();
     for (const [dx, dy, r] of [[-3, -11, 1], [1.5, -12.5, 0.9], [3.6, -9.6, 0.7], [-0.8, -9.4, 0.6]]) circle(cx + dx * z, cy + dy * z, r * z, C('#fffaf0'));
-    glow(cx, cy - 6 * z, 5 * z, 4 * z, 28);
   } else if (form === 'stab') {                                         // schlanke moderne Stablaterne mit Lichtband
     const top = cy - 26 * z;
     g.fillStyle = C(col); g.fillRect(cx - 1.1 * z, top, 2.2 * z, 26 * z);

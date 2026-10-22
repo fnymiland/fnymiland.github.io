@@ -3307,6 +3307,7 @@ const NEWS_HISTORY = [
   { id: '2026-10-22-glaspalast', date: '22. Oktober', title: 'Der Glaspalast', items: [
     '🏛️ <b>Glaspalast:</b> Unter Freizeit → Kultur gibt es jetzt den zweiten Prachtbau, eine lange Glashalle hinter einer Säulenfassade, nach dem Grand Palais in Paris. Er kostet 1 Mrd. Taler, braucht 4×3 Felder Wiese und steht nur einmal im Spiel.',
     '🖼️ <b>Dein Ausstellungsstück:</b> Ab Stufe 2 wird die Glaskuppel eine Vitrine. Tipp den Glaspalast an und zeig darin etwas Seltenes: ein Stück aus dem Sternenbasar wie ein Monument oder einen Pokal, den du für deine Erfolge bekommen hast. Es steht dann als Modell in der Kuppel, und du kannst es jederzeit wechseln.',
+    '🌙 <b>Licht repariert:</b> Nachts leuchten die Glashäuser und der Botanische Garten jetzt Scheibe für Scheibe zwischen den Streben, und die Pilzlaterne zeigt wieder ihren runden Hut mit leuchtender Unterseite statt eines gelben Kastens.',
     '✨ <b>Ausbauen:</b> Für 3 Mrd. kommen Säulen, Balustrade und Kuppel dazu, für 8 Mrd. wird das Glasdach golden, und auf der Balustrade stehen Flügelpferde und Vasen.',
   ] },
   { id: '2026-10-22-oper', date: '22. Oktober', title: 'Das Opernhaus', items: [

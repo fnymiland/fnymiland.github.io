@@ -444,9 +444,12 @@ const BUILDING_ART = {
         g.moveTo(F.P[0], F.P[1] - F.H * 0.55); g.lineTo(F.Q[0], F.Q[1] - F.H * 0.55);
         g.moveTo(F.P[0], F.P[1] - F.H); g.lineTo(F.Q[0], F.Q[1] - F.H);
         g.stroke();
-        if (lit) {                        // sanftes Licht aus der Mitte der Scheibe, damit Gerippe und Pflanzen sichtbar bleiben
-          const m0 = lerp(F.P, F.Q, 0.12), m1 = lerp(F.P, F.Q, 0.88);
-          glowQuad([[m0[0], m0[1] - F.H * 0.2], [m1[0], m1[1] - F.H * 0.2], [m1[0], m1[1] - F.H * 0.8], [m0[0], m0[1] - F.H * 0.8]], 15 * z);
+        if (lit) {                        // Licht je Scheibe zwischen den Streben (unten und oben vom Riegel) – ein großes Rechteck über die
+          // ganze Wand ließ die weißen Streben im Gelb verschwinden (Nutzer: „Botanischer Garten im Dunkeln verbuggt“)
+          for (let i = 0; i < n; i++) for (const [h0, h1] of [[0.08, 0.5], [0.6, 0.92]]) {
+            const m0 = lerp(F.P, F.Q, i / n + 0.03), m1 = lerp(F.P, F.Q, (i + 1) / n - 0.03);
+            glowQuad([[m0[0], m0[1] - F.H * h0], [m1[0], m1[1] - F.H * h0], [m1[0], m1[1] - F.H * h1], [m0[0], m0[1] - F.H * h1]], 10 * z);
+          }
         }
       }
       K.door(B, 'front', 0.44, 0.56, 0.72, '#ffffff');
