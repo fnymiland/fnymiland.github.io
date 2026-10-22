@@ -1747,7 +1747,7 @@ function buildSmall(b, x, y, slot) {
   payMat(ITEMS[b].mat);
   if (!state.decos.has(k)) state.decos.set(k, newSlots());
   state.decos.get(k)[slot] = { b, rot: smallRot(b, slot), born: performance.now(), ...(b === 'busch' ? bushColNew('busch') : {}), ...(DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)) : {}), ...(ITEMS[b].gift ? { sv: svPick } : {}) };
-  sfx('deco');
+  if (!operTone(x, y)) sfx('deco');                                    // Opernhaus: Ton aus dem Lied der Insel (oper.js)
   recalc(); checkStars(); save();
   if (ITEMS[b].gift) svPutDone();                                // jedes Souvenir steht nur einmal (Block 129)
   return true;

@@ -189,7 +189,7 @@ function build(b, x, y, quiet) {
       if (t.wall == null) t.wall = walls[Math.floor(Math.random() * walls.length)][1];
       if (t.roof == null) { const rs = roofs.filter(([, i]) => i !== ROOF_PEARL); t.roof = rs[Math.floor(Math.random() * rs.length)][1]; }   // Perlmutt nur gewählt (Block 164)
     }
-    sfx(d.paint ? 'road' : d.cat === 'deko' ? 'deco' : 'build');
+    if (d.paint || !operTone(x, y)) sfx(d.paint ? 'road' : d.cat === 'deko' ? 'deco' : 'build');   // Opernhaus: Ton aus dem Lied der Insel (oper.js)
   }
   recalc();
   if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost - back), '#d9534a');
@@ -799,7 +799,7 @@ function stageUpgrade(x, y, stay = false) {
   recalc();
   const [w, h] = sizeOf(t.b, t.rot, t);
   sparkle(x + (w - 1) / 2, y + (h - 1) / 2);
-  if (!QUIET) { sfx('star'); toast(`${ITEMS[t.b].name} ist jetzt: ${stageName(t)}!`); checkStars(); save(); }
+  if (!QUIET) { if (!operTone(x, y, true)) sfx('star'); toast(`${ITEMS[t.b].name} ist jetzt: ${stageName(t)}!`); checkStars(); save(); }
   if (!stay) openInfo(x, y);
   return true;
 }
@@ -873,7 +873,7 @@ function houseUpgrade(x, y, stay = false) {
   t.born = performance.now();
   recalc();
   sparkle(x, y);
-  if (!QUIET) { sfx('star'); toast(`${t.name}s Haus ist jetzt ein ${HOUSE_STAGES[t.lvl - 1].name}!`); checkStars(); save(); }
+  if (!QUIET) { if (!operTone(x, y, true)) sfx('star'); toast(`${t.name}s Haus ist jetzt ein ${HOUSE_STAGES[t.lvl - 1].name}!`); checkStars(); save(); }
   if (!stay) openInfo(x, y);
   return true;
 }

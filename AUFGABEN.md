@@ -2770,6 +2770,8 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         nach vorn). 3×3, einmal, nach dem Laternenfest, Freizeit → Kultur; 500 Mio, Ausbau 1,5 / 4 Mrd. Wirkung „ganz was Neues“ statt
         Boosts: **Deine Insel als Lied** (Spieluhr, Stufe 2 + Bass/Holzblock, Stufe 3 + Harfe/Marimba/Streicher), goldener Streifen
         über der Insel. Offen: Notenblatt im Tagebuch (Idee).
+        Nutzer: „klickt einmal drauf und es ist vergessen“ → Hintergrundmusik („zu unruhig“), Abendvorstellung und Liederbuch verworfen;
+        gewählt **B: Bauklänge** – Bauen spielt den Ton der Stelle aus dem Insellied, Ausbauen den Takt (Stufe 2 Bass, Stufe 3 Harfe).
 - [ ] 161g restliche Laden-Dinge
 - [x] 164 **Neue besondere Stücke** (eingebaut v1162, tests/besondere.test.js; Pünktchen im Spiel feiner als im ersten Einbau, wie die Vorschau) (Entwürfe tools/besondere-entwurf.js, tools/glitzer-vorschau.html; Entscheidungen 21./22.10.2026):
       - **Perlmutt-Dachfarbe** Variante B (kräftig: Rosa → Flieder → Mint → Himmelblau schräg übers Dach) – ✦ Meisterstück für ✨.

@@ -3305,6 +3305,7 @@ const NEWS_HISTORY = [
   { id: '2026-10-22-oper', date: '22. Oktober', title: 'Das Opernhaus', items: [
     '🎭 <b>Opernhaus:</b> Unter Freizeit → Kultur gibt es jetzt das Opernhaus, einen runden Prachtbau mit grüner Kuppel. Es kostet 500 Mio. Taler, braucht 3×3 Felder Wiese und steht nur einmal im Spiel.',
     '🎶 <b>Deine Insel als Lied:</b> Tipp das Opernhaus an und drück „▶ Lied spielen“. Dann spielt es deine Insel ab wie eine Spieluhr, und ein goldener Lichtstreifen wandert dabei über die Insel. Häuser klingen ruhig, Läden lebhaft, Wahrzeichen wie eine Fanfare. Wenn du etwas baust, verändert sich die Melodie.',
+    '🔔 <b>Bauen klingt nach deiner Insel:</b> Solange das Opernhaus steht, spielt jedes Bauen den Ton, der an dieser Stelle im Lied liegt. Beim Ausbauen erklingt der ganze Takt. Eine Häuserreihe wird so zu einer kleinen Melodie.',
     '✨ <b>Ausbauen:</b> Für 1,5 Mrd. bekommt das Opernhaus ein zweites Geschoss und eine Kuppel, dann spielen Bass und Takt mit. Für 4 Mrd. wird es golden, und ein ganzes Orchester mit Harfe und Streichern ist dabei.',
   ] },
   { id: '2026-10-22-glitzer', date: '22. Oktober', title: 'Glitzerwege und Perlmutt', items: [

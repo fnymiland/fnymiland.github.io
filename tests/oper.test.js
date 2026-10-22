@@ -54,6 +54,17 @@ describe('Opernhaus', () => {
     expect(sc.first).toBeGreaterThanOrEqual(4);                             // vier Schläge Meer davor
     expect(sc.n - 1 - sc.last).toBeGreaterThanOrEqual(4);
   });
+  it('Bauklänge: Ton der Stelle aus dem Lied (Fünftonleiter), Takt fürs Ausbauen; ohne Opernhaus der gewohnte Klang', () => {
+    game("for (let x = 0; x < 8; x++) build('haus', x, 0)");
+    expect(game('operTone(3, 0)')).toBe(false);                             // kein Opernhaus
+    game("build('oper', 10, 14)");
+    const n = game('OPER_LIED.noteAt(3, 0)');
+    const inScale = f => { const semi = Math.round(12 * Math.log2(f / 261.63)); return [0, 2, 4, 7, 9].includes(((semi % 12) + 12) % 12); };
+    expect(inScale(n.f)).toBe(true);
+    expect(n.phrase.filter(Boolean).every(inScale)).toBe(true);
+    expect(n.phrase).toHaveLength(8);
+    expect(game('OPER_LIED.noteAt(40, -40)')).toBe(null);                   // fremde Stelle ohne Lied: kein Ton
+  });
   it('ohne Ton: freundlicher Hinweis statt Fehler', () => {
     game('state.muted = true');
     expect(game('operPlay(1)')).toBe(false);

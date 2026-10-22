@@ -249,8 +249,49 @@ const OPER_LIED = (() => {
     if (stufe >= 3) R.pad([0, 2, 3].map(d => hz(d, 261.63)), tEnd, 2, 0.012);
     return { dur: (to - from + 1) * STEP + 3, from, steps, STEP, yMin: sc.yMin, yMax: sc.yMax };
   }
-  return { score, arrange };
+  // Ton an einer Stelle: Motiv des Takts dort, Akkord, Lage (für die Bauklänge). Pause im Motiv → der Ton davor
+  function noteAt(x, y) {
+    const sc = score(regionAt(x, y));
+    if (!sc) return null;
+    const i = sc.steps.findIndex(s => s.c === x - y), j = i - sc.first;
+    if (i < 0 || j < 0 || i > sc.last) return null;
+    const bar = sc.bars[Math.floor(j / 8)], beat = j % 8, ch = Math.floor(j / 8) % 4, M = MOTIF[bar.kind || 'haus'];
+    let k = beat; while (k > 0 && M.n[k] == null) k--;
+    const base = ANCHOR[ch] + bar.shift;
+    return { f: hz(base + (M.n[k] != null ? M.n[k] : 0)), bass: hz(BASS[ch], 65.41), phrase: M.n.map(o => o == null ? null : hz(base + o)), len: M.len, vol: M.vol };
+  }
+  return { score, arrange, rig, noteAt, STEP };
 })();
+
+// Bauklänge (Nutzer 22.10.2026, „B klingt gut“ – Hintergrundmusik war „zu unruhig“): Steht das Opernhaus, klingt Bauen wie der Ton, der an
+// dieser Stelle im Lied der Insel liegt, Ausbauen wie der Takt dort. Stufe 2: Bass darunter, Stufe 3: Harfe dazu. Liefert true, wenn es
+// geklungen hat (dann kein gewöhnlicher Bau-Klang); im Rechteck/Zieh-Rutsch (BATCH) still wie sfx, schnelle Folgen höchstens alle 60 ms
+let operVoice = null, operNoteT = 0;
+const operTile = () => { for (const t of state.tiles.values()) if (t.b === 'oper') return t; return null; };
+function operTone(x, y, phrase = false) {
+  if (BATCH) return false;
+  const op = operTile(), ctx = op && audio();
+  if (!ctx) return false;
+  const now = performance.now();
+  if (!phrase && now - operNoteT < 60) return true;
+  operNoteT = now;
+  try {
+    const n = OPER_LIED.noteAt(x, y);
+    if (!n) return false;
+    if (!operVoice || operVoice.ctx !== ctx) { const bus = ctx.createGain(); bus.gain.value = 0.8; bus.connect(ctx.destination); operVoice = { ctx, R: OPER_LIED.rig(ctx, bus) }; }
+    const R = operVoice.R, t0 = ctx.currentTime + 0.02, lvl = op.lvl || 1;
+    if (phrase) {                                                        // Ausbau: der ganze Takt der Stelle
+      let k = 0; for (const f of n.phrase) { if (f) R.mel(f, t0 + k * 0.16, n.len, n.vol); k++; }
+      if (lvl >= 2) R.bass(n.bass, t0, 1.6, 0.22);
+      if (lvl >= 3) R.harp(n.f, t0 + 8 * 0.16, 0.08);
+    } else {
+      R.mel(n.f, t0, Math.max(0.6, n.len), 0.15);
+      if (lvl >= 2) R.bass(n.bass, t0, 0.9, 0.14);
+      if (lvl >= 3) R.harp(n.f / 2, t0 + 0.03, 0.05);
+    }
+    return true;
+  } catch (e) { return false; }
+}
 
 // Abspielen: eigener Ausgang am Klang-Kontext (audio.js), Anhalten blendet ihn aus; der goldene Streifen läuft auf einer eigenen Ebene
 let operRun = null;
