@@ -79,7 +79,7 @@
     const burst = (t0, dur, vol, type, freq, q) => { const src = ctx.createBufferSource(), fl = ctx.createBiquadFilter(); src.buffer = noise; fl.type = type; fl.frequency.value = freq; fl.Q.value = q; src.connect(fl); env(fl, t0, dur, vol, 0.002).connect(out); src.start(t0, Math.abs(rnd()) * 0.5); src.stop(t0 + dur + 0.02); };
     // gezupfte Saite: Rauschen läuft durch eine Verzögerungsschleife; exakte Tonhöhe über playbackRate
     const ks = new Map();
-    const pluck = (f, t0, dur, vol, bright = 0.5, decay = 0.996, dest = out) => {
+    const pluck = (f, t0, dur, vol, bright = 0.5, decay = 0.996, dest = out, att = 0) => {
       const N = Math.max(4, Math.floor(rate / f - 0.5)), key = N + '|' + bright + '|' + decay + '|' + dur;
       if (!ks.has(key)) {
         const n = Math.ceil(dur * rate), b = ctx.createBuffer(1, n, rate), d = b.getChannelData(0), ring = new Float32Array(N);
@@ -88,7 +88,8 @@
         ks.set(key, b);
       }
       const src = ctx.createBufferSource(); src.buffer = ks.get(key); src.playbackRate.value = f / (rate / (N + 0.5));
-      const gn = ctx.createGain(); gn.gain.value = vol * 2.2; src.connect(gn).connect(dest); src.start(t0);
+      const gn = ctx.createGain(); if (att) { gn.gain.setValueAtTime(0, t0); gn.gain.linearRampToValueAtTime(vol * 2.2, t0 + att); } else gn.gain.value = vol * 2.2;
+      src.connect(gn).connect(dest); src.start(t0);
     };
     const lowpass = (freq) => { const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = freq; fl.connect(out); return fl; };
     const bassBus = lowpass(900), padBus = lowpass(1500);
@@ -101,7 +102,8 @@
         osc(f, t, dur * 2, 'sine', vol, trem, 0.004); osc(f * 4, t, dur * 0.4, 'sine', vol * 0.12, trem, 0.003); burst(t, 0.012, vol * 0.12, 'bandpass', 3000, 1);
       },
       marimba: (f, t, vol) => { osc(f, t, 0.5, 'sine', vol, out, 0.003); osc(f * 4, t, 0.09, 'sine', vol * 0.35, out, 0.002); osc(f * 10, t, 0.03, 'sine', vol * 0.1, out, 0.002); },
-      kontrabass: (f, t, dur, vol) => pluck(f, t, Math.min(2.2, dur + 0.6), vol * 1.4, 0.25, 0.9975, bassBus),
+      // Nutzer 22.10.: war „zu knallig, zu tief“ → eine Oktave höher, leiser, weicher Anschlag, dunkler
+      kontrabass: (f, t, dur, vol) => pluck(f * 2, t, Math.min(2.2, dur + 0.6), vol * 0.7, 0.12, 0.9965, bassBus, 0.025),
       weichbass: (f, t, dur, vol) => { osc(f, t, dur, 'sine', vol, bassBus, 0.02); osc(f * 2, t, dur * 0.7, 'triangle', vol * 0.18, bassBus, 0.02); },
       holzblock: (t, vol) => { burst(t, 0.05, vol * 3, 'bandpass', 1700, 9); osc(1200, t, 0.03, 'sine', vol * 0.6); },
       shaker: (t, vol) => burst(t, 0.07, vol * 2.2, 'highpass', 6500, 0.8),
@@ -120,7 +122,7 @@
       pad: S.pad ? (fs, t, dur, vol) => V.streicher(fs, t, dur, vol) : () => {},
     };
   }
-  // drei Klangsets zum Vergleichen (gleiche Noten)
+  // drei Klangsets zum Vergleichen (gleiche Noten); gewählt hat der Nutzer das Vibraphon (22.10.2026)
   const SETS = {
     spieluhr: { name: 'Spieluhr & Streicher', mel: 'spieluhr', bass: 'kontrabass', tick: 'holzblock', pad: true },
     harfe:    { name: 'Harfe & Holz',         mel: 'harfe',    bass: 'kontrabass', tick: 'shaker',    pad: false },
@@ -128,7 +130,7 @@
   };
 
   // alle Töne einplanen; liefert die Dauer
-  function arrange(ctx, t0, stufe, set = 'spieluhr') {
+  function arrange(ctx, t0, stufe, set = 'vibra') {
     const { steps, first, last, bars } = score(), R = rig(ctx, set);
     // reines Meer am Rand: nur 4 Schläge vor/nach der Insel (Harfe in Stufe 3, sonst Stille)
     const from = Math.max(0, first - 4), to = Math.min(steps.length - 1, last + 4);
@@ -178,7 +180,7 @@
     run.raf = requestAnimationFrame(frame);
   }
   function stop() { if (!run) return; cancelAnimationFrame(run.raf); document.getElementById('liedstreifen')?.remove(); try { run.ctx.close(); } catch (e) { /* schon zu */ } run = null; }
-  function play(stufe = 3, set = 'spieluhr') {
+  function play(stufe = 3, set = 'vibra') {
     stop();
     const ctx = new (window.AudioContext || window.webkitAudioContext)(), t0 = ctx.currentTime + 0.3;
     run = { ctx }; const plan = arrange(ctx, t0, stufe, set); sweep(ctx, t0, plan);
@@ -186,7 +188,7 @@
   }
 
   // WAV zum Mitnehmen (16 Bit, Stereo)
-  async function wav(stufe = 3, set = 'spieluhr') {
+  async function wav(stufe = 3, set = 'vibra') {
     const rate = 44100, probe = score(), n = probe.last - probe.first + 9;
     const ctx = new OfflineAudioContext(2, Math.ceil((n * STEP + 3.2) * rate), rate);
     arrange(ctx, 0.05, stufe, set);
