@@ -94,7 +94,7 @@ const BG_ART = (() => {
     }
     { const [u, v] = K.turn(1, 0), td = Math.atan2(u - v, (u + v)); onRing(Rg, td - 0.16, td + 0.16, 0, 11, C('#ffffff')); }   // Tür nach +a (onRing lässt sie weg, wenn sie hinten liegt)
     ellipse(cx, cy - RH * z, rx * 1.03, ry * 1.03, C('#f4f1ea'));               // Kranz
-    dome(cx, cy - RH * z, rx, ry, 26 * z, lit() ? '#fff0c4' : GLASS);
+    dome(cx, cy - RH * z, rx, ry, 26 * z, GLASS);                       // Glasdach wie die Flügeldächer (nachts nicht heller, Nutzer)
     { const DH = 26 * z, y0 = cy - RH * z, dp = (lat, ph) => [cx + rx * Math.cos(lat) * Math.sin(ph), y0 + ry * Math.cos(lat) * Math.cos(ph) - DH * Math.sin(lat)];
       g.strokeStyle = C(WHITE); g.lineWidth = Math.max(0.5, 0.8 * z); g.beginPath();
       for (let m = -4; m <= 4; m++) { const ph = m * Math.PI / 9; for (let j = 0; j <= 12; j++) { const p = dp(Math.PI / 2 * j / 12, ph); j ? g.lineTo(...p) : g.moveTo(...p); } }
