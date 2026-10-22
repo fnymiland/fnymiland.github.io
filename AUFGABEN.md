@@ -2501,6 +2501,22 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       - Beschreibung der Anhöhe im Baumenü (data.js `anhoehe.desc` und Tipp) nennt noch keine Gebäude oben.
       - Leistung: Gebäude mit Garten oben kosten nah ~10–20 µs je Bild (iPad ansehen); Testwelt mit Anhöhen fehlt im Leistungs-Wächter.
       - Vor dem Push: „Das ist neu“/NEWS_HISTORY für Anhöhen, Treppe, Gleis-Rampe, Gebäude oben.
+      → **Abgearbeitet 22.10.2026 (Nutzer: „los“, v1165, Test anhoehe-157l):**
+        [x] Bewohner-Sprung beim Losgehen: `setGoal` sucht den Weg überall ab dem Feld, auf das man zugeht (w.tx), nicht nur mit Anhöhen.
+        [x] Treppe: neue Treppe ohne Wahl in der Leiste so breit wie die gleich gerichtete daneben (`stairWideFor`: Bau, Vorschau, Geist; zwei
+            verschieden breite daneben: wie die Wegform). Treppe mit dem Werkzeug antippen übernimmt die gewählte Breite für ihre Reihe (kostenlos, ↶,
+            `stairWidthTap`/`stairWidthApply`; an einer Ecktreppe nicht schmal). Fuß nur über eine Ecktreppe erreichbar: `hillStairUse` geht über
+            Ecktreppen (kein falsches „zugestellt“).
+        [x] Gleis-Rampe: Treppen vor einem Zug ausgespart (`occ` mit ihrem Keil, `occOutline`, auch fürs Antippen); weit weg (WebGL) größere Zelle
+            für Wagen auf der Rampe (`glMoverBox`, die Tram schnitt bei C ab); ✋-Gruppen/⧉ Kopien mit Rampe legen an der Wand ab wie die einzelne
+            (`rampGroupAnchor`, nur wenn die Mitte nicht passt); Tunneleinfahrt direkt vor dem Fuß verbindet (`einLinks`, kein Prellbock); kein Zaun/
+            keine Linie an der offenen Seite einer Rampe A (`stairEdgeError`).
+        [x] Fußgängerbrücken an einer Kante: nach dem Laden nachgeprüft (`archHillRecheck` in afterLoad) – wieder Schranken, bezahlt bleibt (im
+            Fenster kostenlos wieder einschalten, wenn der Boden eben ist), Hinweis.
+        [x] Zaun-Vorschau oben (`hillMarkEdge`) geprüft: Striche nach der Oberseite beider Felder, voll breit – kein Befund (Wächter-Test).
+        [x] Beschreibung und Tipp der Anhöhe nennen Häuser und andere Gebäude oben.
+        [ ] Offen: Wagen übermalen Deko/Bäume vorn links (auch unten schon so) – braucht Wagen in Stücken je Feld oder Nachmalen der Deko (GL,
+            Nacht, Bildchen); zu groß für nebenbei, mit dem Nutzer besprechen.
 - [x] 157m **Bergportal: Tunnel in die Wand einer Anhöhe** (Nutzer 11.10.2026: „wieso haben wir keine Tunneleinfahrt an einer Seitenwand?“).
       Entscheidungen: als Wand mit Öffnung (kein Block vor der Wand), eine Öffnung reicht (keine Mindesttiefe der Anhöhe). Formen zur Wahl:
       **A Steinbogen** (Keilsteine, Schlussstein im Ring) und **D nur die Öffnung** (schmaler dunkler Rand in Wandfarbe) – Entwurf
