@@ -452,6 +452,13 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     da oben drin ist doch stupid – eher mit raren Dingen flexen oder mit Erfolgen“). Zeichnen: Glastonnen-Rippen
     als `strip`-Rückruf je Streifen (sonst fehlten sie am Rand oder schienen durch); Vitrinen-Gerüst erst hinten, dann Stück, Glas, vorn;
     Säulen, die auf der Linie anderer stehen, mit ihnen zeichnen (sonst liegen Kapitelle über dem Gebälk); Säulenfüße ≥ 0,07 von Wand/Kante.
+29h. **🌿 Botanischer Garten als Gebäude + echter Garten** (js/botgarten.js): Das Wunder ist nur noch das Gebäude (2×5, Rotunde mit zwei
+    Glasflügeln, `BG_ART`, Entwurf `botgartenNeu` in tools/prachtbauten-entwurf.js). Den Garten drumherum legt `bgGarden(x, y, rot)` beim Bauen
+    aus **echten Dingen** an (Nutzer: „wir haben doch alles da … nicht extra neu und viel zu klein gezeichnet“): Weg und Beete (`price: 0`),
+    Bäume/Laternen als Kleinkram (`free`), Hecke als Kante (`free`, gespeichert in serialize **und** parseSave), Teich (`graben`) – nur auf
+    freien eigenen Wiesenfeldern, kostet nichts, alles frei abreißbar ohne Erstattung. `t.bg2` = neuer Bau; alte Stände rückt
+    `botgartenUmbau()` beim Laden in die Mitte ihrer alten Fläche und legen dort den Garten an (`growWonders` überspringt `bg2`).
+    Andere Gebäude mit aufgemaltem Umfeld (Schloss …) sollen später genauso werden.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

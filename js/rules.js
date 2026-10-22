@@ -1409,8 +1409,10 @@ function removeEdge(k) {
   const e = state.edges.get(k);
   if (!e) return false;
   const d = ITEMS[e.b];
-  state.money += d.cost + (e.arch ? ARCHES[e.arch].cost : 0);
-  for (const [r, n] of Object.entries(d.mat || {})) state.res[r] += n;
+  if (!e.free) {                                                         // geschenkt (Garten des Botanischen Gartens): bringt nichts zurück
+    state.money += d.cost + (e.arch ? ARCHES[e.arch].cost : 0);
+    for (const [r, n] of Object.entries(d.mat || {})) state.res[r] += n;
+  } else if (e.arch) state.money += ARCHES[e.arch].cost;
   state.edges.delete(k);
   return true;
 }
@@ -3241,7 +3243,7 @@ function growWonders() {
   const out = [];
   rebuildCover();
   for (const [k, t] of [...state.tiles]) {
-    if (!OLD_WONDER_SIZE[t.b]) continue;
+    if (!OLD_WONDER_SIZE[t.b] || t.bg2) continue;                      // Botanischer Garten: schon von botgartenUmbau gerückt
     const [x, y] = keyXY(k), [w, h] = sizeOf(t.b, t.rot, t), [ow, oh] = OLD_WONDER_SIZE[t.b];
     state.tiles.delete(k); rebuildCover();
     const tries = [];

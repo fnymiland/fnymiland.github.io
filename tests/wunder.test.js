@@ -77,7 +77,7 @@ describe('Wunderwerke', () => {
   });
 
   it('groß: Riesenrad 5×5, Sternwarte 3×3, Botanischer Garten 5×5, Schloss 7×7 – die Seebrücke bleibt', () => {
-    expect(game("['riesenrad', 'sternwarte', 'botgarten', 'schloss', 'seebruecke'].map(b => ITEMS[b].size)")).toEqual([[5, 5], [3, 3], [5, 5], [7, 7], [4, 1]]);
+    expect(game("['riesenrad', 'sternwarte', 'botgarten', 'schloss', 'seebruecke'].map(b => ITEMS[b].size)")).toEqual([[5, 5], [3, 3], [2, 5], [7, 7], [4, 1]]);
   });
 
   it('Preis: Minuten Einkommen beim Aufstellen (mindestens ein Sockel), dazu viel Material', () => {

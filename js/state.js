@@ -88,7 +88,8 @@ function tileOut(t) {
   if (t.animal) { o.animal = t.animal; o.name = t.name; if (t.more) o.more = t.more.map(r => ({ animal: r.animal, name: r.name })); }
   if (t.stage != null) o.stage = t.stage;
   if (t.look) o.look = t.look;
-  if (t.stueck) o.stueck = t.stueck;                                                     // Glaspalast: Ausstellungsstück (Block 161f)
+  if (t.stueck) o.stueck = t.stueck;
+  if (t.bg2) o.bg2 = true;                                                               // Botanischer Garten im neuen Zuschnitt (botgarten.js)                                                     // Glaspalast: Ausstellungsstück (Block 161f)
   if (t.bridge) o.bridge = true;
   if (t.mini) o.mini = true;                                                             // alter 1×1-Leuchtturm (Block 83)
   if (t.wide) o.wide = true;                                                             // Wegform (Block 77)
@@ -166,7 +167,7 @@ function serialize() {
     hills: [...(state.hills || [])].map(([k, h]) => [k, { w: h.w || 0, ...(h.h > 1 ? { h: h.h } : {}) }]),   // Anhöhen (Block 157)
     bruecken: [...(state.bruecken || [])].map(([k, b]) => [k, { ax: b.ax ? 1 : 0, n: b.n, art: b.art, ...(b.weg && b.weg.some(Boolean) ? { weg: b.weg.map(w => w || null) } : {}),
       ...(b.gleis && b.gleis.some(f => f != null) ? { gleis: b.gleis.map(f => f == null ? null : f) } : {}), ...brClean({ ...b, brm: null }) }]),   // Brücken (Block 160; Gleis 160b; Brückenfamilie 160c)
-    decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}), ...(e.sq ? { sq: true } : {}), ...(e.shut ? { shut: true } : {}) }]), tunnels: [...state.tunnels.keys()].map(k => [k, {}]), roofs: [...roofMap].map(([k, r]) => [k, { ...(r.form ? { form: r.form } : {}), ...(r.col ? { col: r.col } : {}), ...(r.bel ? { bel: r.bel } : {}), ...(r.par ? { par: r.par } : {}), ...(r.top ? { top: r.top.map(decoOut) } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
+    decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}), ...(e.sq ? { sq: true } : {}), ...(e.shut ? { shut: true } : {}), ...(e.free ? { free: true } : {}) }]), tunnels: [...state.tunnels.keys()].map(k => [k, {}]), roofs: [...roofMap].map(([k, r]) => [k, { ...(r.form ? { form: r.form } : {}), ...(r.col ? { col: r.col } : {}), ...(r.bel ? { bel: r.bel } : {}), ...(r.par ? { par: r.par } : {}), ...(r.top ? { top: r.top.map(decoOut) } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
 
@@ -375,7 +376,7 @@ function parseSave(d) {
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie
     // Block 41: die Hecke ist jetzt eine Linie – alte Hecken-Ecken werden kleine Büsche an derselben Stelle
     decos: new Map((d.decos || []).map(([k, ds]) => [k, [...(ds || []), ...newSlots()].slice(0, SLOTS).map(dd => dd && dd.b === 'hecke' ? { ...dd, b: 'busch' } : dd)])),
-    edges: new Map((d.edges || []).filter(([k, e]) => /^[ab]-?\d+,-?\d+$/.test(k) && e && EDGE_TOOLS.has(e.b)).map(([k, e]) => [k, { b: e.b, style: e.style, ...(Number.isInteger(e.col) && BUSH_COLS[e.col] ? { col: e.col } : {}), ...(ARCHES[e.arch] ? { arch: e.arch } : {}), ...(typeof e.flush === 'boolean' ? { flush: e.flush } : {}), ...(e.gate === true || e.gate === 'offen' ? { gate: e.gate } : {}), ...(e.sq === true ? { sq: true } : {}), ...(e.shut === true ? { shut: true } : {}) }])),
+    edges: new Map((d.edges || []).filter(([k, e]) => /^[ab]-?\d+,-?\d+$/.test(k) && e && EDGE_TOOLS.has(e.b)).map(([k, e]) => [k, { b: e.b, style: e.style, ...(Number.isInteger(e.col) && BUSH_COLS[e.col] ? { col: e.col } : {}), ...(ARCHES[e.arch] ? { arch: e.arch } : {}), ...(typeof e.flush === 'boolean' ? { flush: e.flush } : {}), ...(e.gate === true || e.gate === 'offen' ? { gate: e.gate } : {}), ...(e.sq === true ? { sq: true } : {}), ...(e.shut === true ? { shut: true } : {}), ...(e.free === true ? { free: true } : {}) }])),
     tunnels: new Map((Array.isArray(d.tunnels) ? d.tunnels : []).filter(([k]) => /^-?\d+,-?\d+$/.test(k)).map(([k]) => [k, {}])),
     roofs: new Map((Array.isArray(d.roofs) ? d.roofs : []).filter(e => Array.isArray(e) && /^-?\d+,-?\d+$/.test(e[0])).map(([k, r]) => {   // Block 138
       const o = {}, f = r && +r.form, c = r && +r.col;
@@ -505,6 +506,7 @@ function afterLoad() {
   ownIslandsFully();
   ensureFar();
   if (state.growLight) for (const t of state.tiles.values()) if (t.b === 'leuchtturm') t.mini = true;   // alter Leuchtturm ist 1×1 – auch fürs Wachsen von Hafen/Rathaus
+  const bgs = botgartenUmbau();                    // Botanischer Garten: nur noch das Gebäude, Garten als echte Dinge (botgarten.js)
   const grown = growWonders();
   const hall = growTownHall();
   const ports = growHarbors();
@@ -514,6 +516,7 @@ function afterLoad() {
   delete state.fitLm;
   nameHouses();
   recalc();
+  if (bgs.length) { for (const [bx, by, br] of bgs) bgGarden(bx, by, br); recalc(); setTimeout(() => toast('🌿 Neu: Der Botanische Garten ist umgebaut – Hecke, Weg, Beete, Bäume, Laternen und Teich sind jetzt echte Dinge, die du verändern kannst.'), 3600); }
   const arches = archHillRecheck();                // Fußgängerbrücken an der Kante einer Anhöhe (157l, hills.js): wieder Schranken
   if (arches) recalc();
   collectAlbum();

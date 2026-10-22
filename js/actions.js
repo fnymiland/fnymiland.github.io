@@ -192,6 +192,7 @@ function build(b, x, y, quiet) {
     if (d.paint || !operTone(x, y)) sfx(d.paint ? 'road' : d.cat === 'deko' ? 'deco' : 'build');   // Opernhaus: Ton aus dem Lied der Insel (oper.js)
   }
   recalc();
+  if (b === 'botgarten' && state.tiles.get(k)) { state.tiles.get(k).bg2 = true; bgGarden(x, y, rot); recalc(); }   // Garten aus echten Dingen drumherum (botgarten.js)
   if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost - back), '#d9534a');
   const s = statusOf(x, y);
   if (s && s.how === 'weit' && !quiet) toast(hillNoStair(x, y) ? 'Oben ohne Treppe: nur halbe Kraft. Eine Treppe hinauf hilft.' : 'Weit weg vom Dorf: nur halbe Kraft. Ein Weg zum Dorf hilft.');   // Anhöhe ohne Treppe (157j)
