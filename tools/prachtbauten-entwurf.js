@@ -170,17 +170,26 @@
     ellipse(cx, base - sh * z, r2 * 1.04, r2 * 0.52, C(s3 ? GOLD : TRIM));
     dome(cx, base - sh * z, r2, r2 / 2, 14 * z, DOME);
     if (s3) { cyl(cx, base - (sh + 14) * z, 3.2 * z, 1.6 * z, 4 * z, GOLD); crown(cx, base - (sh + 18) * z, z, 0.75); }
-    // Portal nach links vorn (+b): hoch, tiefe Rundbogennische, Pilaster, Attika, oben die Lyra
-    const P = K.block({ a: -0.1, b: 1.0, ha: 0.34, hb: 0.16, h: 36, lift: 3, wall: WALL, type: 'flat', roof: shade(WALL, 0.08), trim: s3 ? GOLD : TRIM });
-    const Fb = wallOf(K, 1.16, 'a', -0.44, 0.24, 3, 'b');
-    arch(Fb, 0.2, 0.8, 3, 30, C('#4f3d30'));
-    arch(Fb, 0.33, 0.67, 4, 15, C('#8a5a3c'));
-    arch(Fb, 0.33, 0.67, 17, 27, winCol);
-    for (const t of [0.04, 0.11, 0.89, 0.96]) fRect(Fb, t - 0.02, t + 0.02, 0, 32, C(shade(WALL, 0.03)));
-    const Fa = wallOf(K, 0.24, 'b', 0.84, 1.16, 3, 'a');                   // Seite rechts (Schatten): schmales Fenster
-    arch(Fa, 0.3, 0.7, 14, 26, winCol);
-    if (s3) { const [lx, ly] = K.P(-0.1, 1.0, 39); lyre(lx, ly, z, 1.4); }
-    if (lit()) glowP(Fb(0.5, 22), 22 * z);
+    // Portal vorn (zum Betrachter) als Teil des Rundbaus: ein Stück des Rings springt leicht vor und steigt über die Brüstung
+    // (Exedra wie in Dresden) – kein angesetzter Kasten. Große Rundbogennische, Pilaster, oben die Lyra
+    const tc = 0, t0 = tc - 0.36, t1 = tc + 0.36, ph = 40, ro = r1 * 1.05, ri = r1 * 0.9;
+    const Ro = ring(cx, cy, ro, ro / 2, z), Ri = ring(cx, cy, ri, ri / 2, z), arc = (Rf, a, b, h) => Array.from({ length: 17 }, (_, i) => Rf(a + (b - a) * i / 16, h));
+    const band = (h0, h1, col, a = t0, b = t1) => poly([...arc(Ro, a, b, h0), ...arc(Ro, b, a, h1)], C(col));
+    const sideOf = (t, col) => t > 0 ? shade(col, LIGHT.side) : col;                                      // rechte Hälfte im Schatten wie der Ring
+    poly([Ro(t0, 26.5), Ro(t0, ph), Ri(t0, ph), Ri(t0, 26.5)], C(shade(WALL, 0.06)));                      // Stirnseiten über der Terrasse
+    poly([Ro(t1, 26.5), Ro(t1, ph), Ri(t1, ph), Ri(t1, 26.5)], C(shade(WALL, LIGHT.side)));
+    band(0, ph, shade(WALL, 0.03), t0, 0); band(0, ph, sideOf(1, shade(WALL, 0.03)), 0, t1);               // Mantel, hell | Schatten
+    poly([...arc(Ro, t0, t1, ph), ...arc(Ri, t1, t0, ph)], C(shade(TRIM, -0.05)));                         // Abdeckung, dunkler als die Terrasse
+    for (const d of [-0.31, -0.19, 0.19, 0.31]) band(0, ph - 1.2, sideOf(d, shade(WALL, -0.04)), tc + d - 0.025, tc + d + 0.025);   // Pilaster
+    for (const d of [-0.25, 0.25]) { onRing(Ro, tc + d - 0.03, tc + d + 0.03, 2, 10, dark); onRing(Ro, tc + d - 0.03, tc + d + 0.03, 15, 23, winCol); }
+    onRing(Ro, tc - 0.13, tc + 0.13, 2, 31, C('#4f3d30'));                                                // Nische
+    onRing(Ro, tc - 0.08, tc + 0.08, 3, 14, C('#8a5a3c'));                                                // Tor
+    onRing(Ro, tc - 0.08, tc + 0.08, 17, 28, winCol);
+    // Gesimse auf Höhe der Ringgesimse (11,5 und Brüstung 24), in der Nische unterbrochen; oben die Attika-Kante
+    for (const [h0, h1, col, gap] of [[11.5, 13, s3 ? GOLD : shade(TRIM, -0.06), 1], [24, 26.5, s3 ? GOLD : TRIM, 1], [ph - 1.2, ph, s3 ? GOLD : TRIM, 0]]) {
+      const cut = gap ? 0.13 : 0; band(h0, h1, col, t0, -cut); band(h0, h1, sideOf(1, col), cut, t1) }
+    if (s3) { const [o, i] = [Ro(tc, ph), Ri(tc, ph)]; lyre(o[0] * 0.25 + i[0] * 0.75, o[1] * 0.25 + i[1] * 0.75, z, 1.2); }   // ganz auf der Abdeckung
+    if (lit()) glowP(Ro(tc, 22), 22 * z);
   }
 
   // Palais Garnier: Schauseite nach links vorn – Arkaden unten, Loggia mit Säulenpaaren oben, Eckpavillons mit Goldkronen;
