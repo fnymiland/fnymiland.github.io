@@ -442,7 +442,8 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Opernhauses (`regionAt`). Klang nur **Spieluhr** mit weichem Bass (Nutzer 22.10.2026: gezupfter Kontrabass klang „scheiße“; Vibraphon/Harfe
     nicht gewollt). `operPlay` hängt einen eigenen Ausgang an `audio()` (Ton aus → Hinweis), der Streifen ist eine eigene Ebene über dem Spiel.
     **Bauklänge** (`operTone(x, y, phrase)`, Nutzer: Lied als Dauermusik „zu unruhig“): steht das Opernhaus, ersetzt der Ton der Stelle den
-    Bau-/Deko-Klang (build, buildSmall), Ausbauen (stageUpgrade, houseUpgrade) spielt den Takt statt `star`. Liefert false → gewohnter Klang.
+    Bau-/Deko-Klang (build, buildSmall), Ausbauen (stageUpgrade, houseUpgrade) spielt den Takt statt `star`. Liefert false → gewohnter Klang. Immer nur Spieluhr, ohne Bass/Harfe je Stufe
+    (Nutzer: „Stufe 1 klingt viel cooler als 3“).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

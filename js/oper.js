@@ -264,7 +264,8 @@ const OPER_LIED = (() => {
 })();
 
 // Bauklänge (Nutzer 22.10.2026, „B klingt gut“ – Hintergrundmusik war „zu unruhig“): Steht das Opernhaus, klingt Bauen wie der Ton, der an
-// dieser Stelle im Lied der Insel liegt, Ausbauen wie der Takt dort. Stufe 2: Bass darunter, Stufe 3: Harfe dazu. Liefert true, wenn es
+// dieser Stelle im Lied der Insel liegt, Ausbauen wie der Takt dort. Immer nur die Spieluhr (Nutzer: „Stufe 1 klingt viel cooler als 3“ –
+// Bass und Harfe dazu waren zu viel; die Stufen gelten nur fürs ▶ Lied). Liefert true, wenn es
 // geklungen hat (dann kein gewöhnlicher Bau-Klang); im Rechteck/Zieh-Rutsch (BATCH) still wie sfx, schnelle Folgen höchstens alle 60 ms
 let operVoice = null, operNoteT = 0;
 const operTile = () => { for (const t of state.tiles.values()) if (t.b === 'oper') return t; return null; };
@@ -279,15 +280,11 @@ function operTone(x, y, phrase = false) {
     const n = OPER_LIED.noteAt(x, y);
     if (!n) return false;
     if (!operVoice || operVoice.ctx !== ctx) { const bus = ctx.createGain(); bus.gain.value = 0.8; bus.connect(ctx.destination); operVoice = { ctx, R: OPER_LIED.rig(ctx, bus) }; }
-    const R = operVoice.R, t0 = ctx.currentTime + 0.02, lvl = op.lvl || 1;
+    const R = operVoice.R, t0 = ctx.currentTime + 0.02;
     if (phrase) {                                                        // Ausbau: der ganze Takt der Stelle
       let k = 0; for (const f of n.phrase) { if (f) R.mel(f, t0 + k * 0.16, n.len, n.vol); k++; }
-      if (lvl >= 2) R.bass(n.bass, t0, 1.6, 0.22);
-      if (lvl >= 3) R.harp(n.f, t0 + 8 * 0.16, 0.08);
     } else {
       R.mel(n.f, t0, Math.max(0.6, n.len), 0.15);
-      if (lvl >= 2) R.bass(n.bass, t0, 0.9, 0.14);
-      if (lvl >= 3) R.harp(n.f / 2, t0 + 0.03, 0.05);
     }
     return true;
   } catch (e) { return false; }
