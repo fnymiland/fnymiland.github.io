@@ -104,7 +104,10 @@ const BG_ART = (() => {
     wing(wFront);
   }
 })();
-WONDER_ART.botgarten = (K, cx, cy, z) => { if (groundPart(() => {})) return; kShadow(K, 1.3); BG_ART(K); };
+WONDER_ART.botgarten = (K, cx, cy, z, now, x, y, t) => {
+  if (groundPart(() => { if (t) courtFloor(K, t, x, y, () => {}); })) return;   // Weg zur Tür bis an die Rotunde (COURTS, wie bei anderen Gebäuden)
+  kShadow(K, 1.3); BG_ART(K);
+};
 
 // Garten aus echten Dingen rund um das Gebäude (Ring von einem Feld, Entwurf A – Nutzer 22.10.2026): Vorn (Eingangsrichtung FRONT_DIR)
 // in der Mitte ein Wegstück zur Tür mit zwei Laternen, links und rechts je zwei Blumenbeete, in den vorderen Ecken Bäume. Stirnseiten:

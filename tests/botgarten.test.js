@@ -45,6 +45,8 @@ describe('Botanischer Garten', () => {
     const [fx, fy] = game(`FRONT_DIR[${rot}]`);                           // Weg richtet sich zur Tür aus: Enden zur Tür und zur Hecken-Lücke
     expect(w.end).toBe('rand');
     expect(w.ends.map(String).sort()).toEqual([[fx, fy], [-fx || 0, -fy || 0]].map(String).sort());
+    expect(game(`courtOf(state.tiles.get('${ax},${ay}'), ${ax}, ${ay}).links.length`)).toBe(1);   // Belag vom Weg bis an die Tür der Rotunde
+    game(`openInfo(${ax}, ${ay}); closePanel()`);
     expect(m0 - game('state.money')).toBeLessThanOrEqual(game('ITEMS.botgarten.cost'));   // Garten kostet nichts extra
     expect(game('Object.values(state.res).every(v => v <= 99999)')).toBe(true);
   });

@@ -1086,6 +1086,7 @@ const COURTS = {
   kaufhaus: { a: 0.68, b: 0, w: 0.18, own: true, bare: true }, markthalle: { a: -0.98, p: [-1.47, 1.47], own: true },
   moebelhaus: { a: 0.43, p: [-0.6, 0.6], own: true }, hotel: { a: 0.3, p: [-0.62, 0.62], own: true },
   grandhotel: { a: 0.4, p: [-1.15, 1.15], own: true },
+  botgarten: { a: 0.86, b: 0, w: 0.2, own: true },                                    // Weg zur Tür der Rotunde (Rand bei 0,88); zeichnet WONDER_ART selbst
 };
 // Stücke eines Vorplatzes: { a, s: [quer von, bis], band: schmaler Weg }; s3: anders ab Stufe 3
 const courtParts = (C0, t) => [].concat((t && t.lvl >= 3 && C0.s3) || C0.parts || C0).map(c => ({ a: c.a, s: c.p || [c.b - (c.w || GP_FILL), c.b + (c.w || GP_FILL)], band: !c.p }));
