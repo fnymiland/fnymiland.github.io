@@ -487,26 +487,31 @@
     const lit = () => night > 0.15 && isLive();
     K.block({ a: 0, b: 0, ha: 0.95, hb: 2.45, h: 1.5, wall: BASE, type: 'flat', roof: '#efeae0' });   // Sockel, 2×5 (Rotunde passt gerade hinein)
     const rb = Math.sqrt(R * R - wa * wa);                                 // dort trifft die Flügelwand die Rotunde
+    const shadeN = (na, nb) => K.turn(na, nb)[0] > 0.5;                     // Wand im Schatten (Normale zeigt nach rechts vorn)
+    // Flügel in jeder Drehung: sichtbar sind die Wände, deren Normale zum Betrachter zeigt (K.facing), am inneren Ende nie (dort ist die
+    // Rotunde); Dach: beide Schrägen, die hintere zuerst
     const wing = sgn => {
       const b0 = sgn * rb, b1 = sgn * 2.38, bc = (b0 + b1) / 2, hb = Math.abs(b1 - b0) / 2, top = 1.5 + wH;
-      // Glaswände: rechts (+a, Schatten) immer; vorn (+b) nur beim vorderen Flügel (beim hinteren läge sie an der Rotunde)
-      glassFace(wallOf(K, wa, 'b', bc - hb, bc + hb, 1.5, 'a'), 0, wH, 7, [wH * 0.55], 4, true);
-      if (sgn > 0) glassFace(wallOf(K, bc + hb, 'a', -wa, wa, 1.5, 'b'), 0, wH, 3, [wH * 0.55], 2, false);
-      // Glasdach (Sattel längs b): von oben sieht man beide Schrägen – erst die linke (Sonne), dann die rechte (Schatten); vorn der Giebel
+      for (const sa of [-1, 1]) if (K.facing(sa, 0) > 0.01) glassFace(wallOf(K, sa * wa, 'b', bc - hb, bc + hb, 1.5, 'a'), 0, wH, 7, [wH * 0.55], 4, shadeN(sa, 0));
+      const endSeen = K.facing(0, sgn) > 0.01;
+      if (endSeen) glassFace(wallOf(K, b1, 'a', -wa, wa, 1.5, 'b'), 0, wH, 3, [wH * 0.55], 2, shadeN(0, sgn));
       const E = (sa, sb) => K.P(sa * wa, bc + sb * hb, top), Rr = sb => K.P(0, bc + sb * hb, top + wR);
-      for (const sa of [-1, 1]) {
-        poly([E(sa, -1), E(sa, 1), Rr(1), Rr(-1)], C(sa < 0 ? shade(GLASS, 0.06) : shade(GLASS, -0.12)));
-        g.strokeStyle = C(sa < 0 ? WHITE : shade(WHITE, -0.1)); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath();
+      for (const sa of [-1, 1].sort((p, q) => K.facing(p, 0) - K.facing(q, 0))) {
+        const [u] = K.turn(sa, 0), dark = u > 0.5;
+        poly([E(sa, -1), E(sa, 1), Rr(1), Rr(-1)], C(u < -0.5 ? shade(GLASS, 0.06) : dark ? shade(GLASS, -0.12) : GLASS));
+        g.strokeStyle = C(dark ? shade(WHITE, -0.1) : WHITE); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath();
         for (let i = 0; i <= 6; i++) { const t = -1 + 2 * i / 6; g.moveTo(...K.P(sa * wa, bc + t * hb, top)); g.lineTo(...K.P(0, bc + t * hb, top + wR)); }
         g.moveTo(...E(sa, -1)); g.lineTo(...E(sa, 1)); g.moveTo(...Rr(-1)); g.lineTo(...Rr(1)); g.stroke();
       }
-      if (sgn > 0) {                                                       // Giebel vorn: Glasdreieck mit Sprossen
+      if (endSeen) {                                                       // Giebel am äußeren Ende: Glasdreieck mit Sprossen, Tür
         const p = K.P(wa, b1, top), q = K.P(-wa, b1, top), r = K.P(0, b1, top + wR);
-        poly([p, q, r], C(GLASS)); g.strokeStyle = C(WHITE); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath(); g.moveTo(...p); g.lineTo(...r); g.lineTo(...q); g.moveTo(...lerp(p, q, 0.5)); g.lineTo(...r); g.stroke();
-        const F = wallOf(K, b1, 'a', -wa, wa, 1.5, 'b'); arch(F, 0.38, 0.62, 0, 8, C('#ffffff'));   // Tür vorn
+        poly([p, q, r], C(shadeN(0, sgn) ? shade(GLASS, -0.12) : GLASS)); g.strokeStyle = C(WHITE); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath(); g.moveTo(...p); g.lineTo(...r); g.lineTo(...q); g.moveTo(...lerp(p, q, 0.5)); g.lineTo(...r); g.stroke();
+        const F = wallOf(K, b1, 'a', -wa, wa, 1.5, 'b'); arch(F, 0.38, 0.62, 0, 8, C('#ffffff'));
       }
     };
-    wing(-1);
+    // hinterer Flügel zuerst, dann Rotunde, dann der vordere (nach der Tiefe des Flügelmittelpunkts – gilt in jeder Drehung)
+    const [wBack, wFront] = [-1, 1].sort((p, q) => K.depth(0, p * 1.6) - K.depth(0, q * 1.6));
+    wing(wBack);
     // Rotunde: Glaszylinder auf Steinring, Palmen drinnen, weiße Streben; Glaskuppel mit Rippen und goldener Spitze; Tür nach rechts vorn (+a)
     const [cx, cy] = K.P(0, 0, 1.5), rx = R * Math.SQRT2 * TW / 2 * z, ry = rx / 2, Rg = ring(cx, cy, rx, ry, z);
     cyl(cx, cy, rx, ry, RH * z, GLASS_D);
@@ -523,7 +528,7 @@
     for (let i = -6; i <= 6; i++) { const t = i * Math.PI / 13; const [x0, y0] = Rg(t, 0); g.moveTo(x0, y0); g.lineTo(x0, y0 - RH * z); }
     for (const h of [RH * 0.5, RH]) for (let j = 0; j <= 24; j++) { const p = Rg(-Math.PI / 2 + Math.PI * j / 24, h); j ? g.lineTo(...p) : g.moveTo(...p); }
     g.stroke();
-    onRing(Rg, Math.PI / 4 - 0.16, Math.PI / 4 + 0.16, 0, 11, C('#ffffff'));    // Tür
+    { const [u, v] = K.turn(1, 0), td = Math.atan2(u - v, (u + v)); onRing(Rg, td - 0.16, td + 0.16, 0, 11, C('#ffffff')); }   // Tür nach +a (onRing lässt sie weg, wenn sie hinten liegt)
     ellipse(cx, cy - RH * z, rx * 1.03, ry * 1.03, C('#f4f1ea'));               // Kranz
     dome(cx, cy - RH * z, rx, ry, 26 * z, GLASS);
     { const DH = 26 * z, y0 = cy - RH * z, dp = (lat, ph) => [cx + rx * Math.cos(lat) * Math.sin(ph), y0 + ry * Math.cos(lat) * Math.cos(ph) - DH * Math.sin(lat)];
@@ -532,7 +537,7 @@
       for (const lat of [0.4, 0.85]) for (let j = 0; j <= 24; j++) { const p = dp(lat, -Math.PI / 2 + Math.PI * j / 24); j ? g.lineTo(...p) : g.moveTo(...p); }
       g.stroke(); }
     cyl(cx, cy - (RH + 26) * z, 2.2 * z, 1.1 * z, 3 * z, '#f2c14e'); circle(cx, cy - (RH + 30) * z, 1.8 * z, C('#f2c14e'));
-    wing(1);
+    wing(wFront);
   }
 
   const botgartenAlt = K => drawObject('botgarten', ...K.P(0, 0), K.z, 1e6, 0, 0, 1, { b: 'botgarten', phase: 9, rot: 0 });   // zum Vergleich: wie bisher
@@ -549,8 +554,8 @@
       stufen.forEach((st, i) => {
         const x = 12 + i * (cw + 12), cx = x + cw / 2, cy = Hv - 40 - 48 * z;
         const fl = (opts.flaeche || [])[i] || opts.flaeche1;
-        if (fl) ground(kit(cx, cy, z, 0), fl[0] + 0.3, fl[1] + 0.3, opts.night ? '#33405e' : '#b4dd8c'); else diamond(cx, cy, 96 * z, 48 * z, opts.night ? '#33405e' : '#b4dd8c');
-        PRACHT[(opts.baus || [])[i] || opts.bau || 'opernhaus'](kit(cx, cy, z, 0), st, { buehne: (opts.varianten || [])[i] || opts.buehne, stueck: (opts.stuecke || [])[i] });
+        if (fl) ground(kit(cx, cy, z, (opts.rots || [])[i] || 0), fl[0] + 0.3, fl[1] + 0.3, opts.night ? '#33405e' : '#b4dd8c'); else diamond(cx, cy, 96 * z, 48 * z, opts.night ? '#33405e' : '#b4dd8c');
+        PRACHT[(opts.baus || [])[i] || opts.bau || 'opernhaus'](kit(cx, cy, z, (opts.rots || [])[i] || 0), st, { buehne: (opts.varianten || [])[i] || opts.buehne, stueck: (opts.stuecke || [])[i] });
         ctx.fillStyle = opts.night ? '#f1e3cf' : '#6b4f3a'; ctx.font = '700 15px system-ui'; ctx.fillText(opts.titel ? opts.titel[i] : opts.varianten ? 'Variante ' + opts.varianten[i] : 'Stufe ' + st, x + 4, 22);
       });
     } finally { g = prev; night = n0; SPRITE_PAINT = sp0; }
