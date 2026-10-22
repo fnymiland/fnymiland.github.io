@@ -252,17 +252,14 @@
     for (const h of [h0, ...hs, h1]) { g.moveTo(...F(0, h)); g.lineTo(...F(1, h)); }
     g.stroke();
   }
-  // Rippen auf einem Tonnendach (gleiche Form wie K.block 'barrel', over = 1): Bögen quer, Linien längs
-  function barrelRibs(K, a, b, ha, hb, top, roofH, alongA, n, col, w = 0.55) {
-    const L = alongA ? ha : hb, R = alongA ? hb : ha, z = K.z;
-    const pt = (s, th) => { const q = Math.cos(th) * R, up = top + Math.sin(th) * roofH; return alongA ? K.P(a + s, b + q, up) : K.P(a + q, b + s, up); };
-    g.strokeStyle = C(col); g.lineWidth = Math.max(0.5, w * z); g.beginPath();
-    const TH = 2.4;                                                        // dahinter neigt sich die Tonne vom Betrachter weg – sonst schienen Rippen der Rückseite durch
-    for (let i = 0; i <= n; i++) { const s = -L + 2 * L * i / n; for (let j = 0; j <= 12; j++) { const p = pt(s, TH * j / 12); j ? g.lineTo(...p) : g.moveTo(...p); } }
-    for (const th of [0.5, 1.0, 1.57, 2.14]) { g.moveTo(...pt(-L, th)); g.lineTo(...pt(L, th)); }
+  // Rippen auf einem Tonnendach als strip-Rückruf für K.block 'barrel': je Streifen gleich nach seinem Glas gezeichnet – was weiter vorn
+  // liegt, deckt sie wieder zu (Nutzer: „die Streben gehen nicht bis zum Rand“; eine feste Grenze schnitt sie ab oder ließ sie durchscheinen)
+  const ribStrip = (z, n, col, w = 0.55) => (t0, t1, pt, L) => {
+    g.strokeStyle = C(col); g.lineWidth = Math.max(0.5, w * z); g.lineCap = 'round'; g.beginPath();
+    for (let i = 0; i <= n; i++) { const s = -L + 2 * L * i / n; for (let j = 0; j <= 4; j++) { const p = pt(s, t0 + (t1 - t0) * j / 4); j ? g.lineTo(...p) : g.moveTo(...p); } }   // Bögen quer
+    for (let k = 1; k < 6; k++) { const th = Math.PI * k / 6; if (th >= t0 && th < t1) { g.moveTo(...pt(-L, th)); g.lineTo(...pt(L, th)); } }                  // Linien längs
     g.stroke();
-    return pt;
-  }
+  };
   // Fächerfenster in einem runden Giebel: Mitte unten bei (a, b) in Höhe top, halbe Breite r längs der Wand (axis: Wand läuft längs 'a' oder 'b')
   function fan(K, a, b, r, top, roofH, axis, col, rim, shadeSide) {
     const z = K.z, pt = (th, k) => axis === 'a' ? K.P(a + Math.cos(th) * r * k, b, top + Math.sin(th) * roofH * k) : K.P(a, b + Math.cos(th) * r * k, top + Math.sin(th) * roofH * k);
@@ -293,16 +290,14 @@
     // oberes Langhaus mit Tonne längs
     if (s2) {
       const H2 = 8, top = 3 + H1 + H2;
-      K.block({ a: 0, b: 0, ha: 1.8, hb: 0.72, h: H2, lift: 3 + H1, wall: GLASS, roof: shade(GLASS, 0.04), roofH: 9, type: 'barrel', ridge: 'a', over: 1 });
-      barrelRibs(K, 0, 0, 1.8, 0.72, top, 9, true, 14, FRAME);
+      K.block({ a: 0, b: 0, ha: 1.8, hb: 0.72, h: H2, lift: 3 + H1, wall: GLASS, roof: shade(GLASS, 0.04), roofH: 9, type: 'barrel', ridge: 'a', over: 1, strip: ribStrip(z, 14, FRAME) });
       glassFace(wallOf(K, 0.72, 'b', -1.8, 1.8, 3 + H1, 'b'), 0, H2, 24, [], 0, false);
       glassFace(wallOf(K, 1.8, 'a', -0.72, 0.72, 3 + H1, 'a'), 0, H2, 8, [], 0, true);
       fan(K, 1.8, 0, 0.72, top, 9, 'b', FRAME, s3 ? GOLD : null, true);   // Ende rechts: Glas mit Fächer statt Blechdeckel
     }
     // Querschiff (nach +b, zur Schauseite): hohe Tonne quer, vorn das große Fächerfenster
     const qa = 0, qha = 0.46, qhb = 1.32, qH = s2 ? 22 : 12, qRoof = s2 ? 14 : 8, qtop = 3 + qH;
-    K.block({ a: qa, b: 0, ha: qha, hb: qhb, h: qH, lift: 3, wall: GLASS, roof: shade(GLASS, 0.05), roofH: qRoof, type: 'barrel', ridge: 'b', over: 1 });
-    barrelRibs(K, qa, 0, qha, qhb, qtop, qRoof, false, 10, FRAME);
+    K.block({ a: qa, b: 0, ha: qha, hb: qhb, h: qH, lift: 3, wall: GLASS, roof: shade(GLASS, 0.05), roofH: qRoof, type: 'barrel', ridge: 'b', over: 1, strip: ribStrip(z, 10, FRAME) });
     const Fq = wallOf(K, qhb, 'b', qa - qha, qa + qha, 3, 'b');
     glassFace(Fq, 0, qH, 6, [qH * 0.5], 0, false);
     glassFace(wallOf(K, qa + qha, 'a', -qhb, qhb, 3, 'a'), 0, qH, 12, [qH * 0.5], 0, true);
@@ -341,8 +336,13 @@
     const lantern = () => { if (s3) { const t = dy - (dr + 20) * z; cyl(dx, t, 2.6 * z, 1.3 * z, 4 * z, GOLD); cone(dx, t - 4 * z, 3 * z, 1.5 * z, 3.5 * z, GOLD_D); circle(dx, t - 8.5 * z, 1.4 * z, lit() ? '#fff1a8' : C(GOLD_L)); } };
     // Halle immer gleich (Nutzer: das halb durchsichtige Glasdach „sieht scheiße aus“); bei 'ausstellung' ist nur die Kuppel eine Vitrine:
     // Boden auf Firsthöhe, Sockel, ein Modell (verkleinertes Spielbild, passend zur Kuppelhöhe), darüber Tambour und Kuppel halb durchsichtig
-    TB({ a: 0, b: HBc, ha: HA, hb: HB, h: hH, lift: 3, wall: STONE2, roof: GLASS, roofH: hR, type: 'barrel', ridge: 'a', over: 1 });
-    barrelRibs(K, 0, HBc, HA, HB, htop, hR, true, 16, RIBC, RIBW);
+    TB({ a: 0, b: HBc, ha: HA, hb: HB, h: hH, lift: 3, wall: STONE2, roof: GLASS, roofH: hR, type: 'barrel', ridge: 'a', over: 1, strip: ribStrip(z, 16, RIBC, RIBW) });
+    { // Dachende rechts: Glasrand zwischen rundem Giebel (0,94 R) und Rippe ganz füllen – sonst blieb hinten unten ein weißer Spalt
+      const ep = (th, k) => K.P(HA, HBc + Math.cos(th) * HB * k, htop + Math.sin(th) * hR * k), N = 24, ring = [];
+      for (let i = 0; i <= N; i++) ring.push(ep(Math.PI * i / N, 1)); for (let i = N; i >= 0; i--) ring.push(ep(Math.PI * i / N, 0.94));
+      poly(ring, C(shade(GLASS, LIGHT.side)));
+      g.strokeStyle = C(RIBC); g.lineWidth = Math.max(0.5, RIBW * z); g.lineCap = 'round'; g.beginPath(); for (let i = 0; i <= N; i++) { const p = ep(Math.PI * i / N, 1); i ? g.lineTo(...p) : g.moveTo(...p); } g.stroke();
+    }
     if (s2 && !show) { cyl(dx, dy, R, R / 2, dr * z, STONE2); ellipse(dx, dy - dr * z, R * 1.06, R * 0.53, C(s3 ? GOLD : shade(STONE2, -0.1))); dome(dx, dy - dr * z, R, R / 2, 20 * z, GLASS); domeRibs(); lantern(); }
     if (s2 && show) {
       // Gerüst der Vitrine ringsum (Nutzer: „die goldenen Leisten gehen nicht ganz rum – das sieht man, weil das Glas durchsichtig ist“):
