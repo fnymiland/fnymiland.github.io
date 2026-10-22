@@ -379,10 +379,18 @@
     TB({ a: 0, b: fb, ha: 1.85, hb: fhb, h: fH, lift: 3, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : shade(STONE2, -0.08) });
     const Fb = wallOf(K, fb + fhb, 'a', -1.85, 1.85, 3, 'b'), Fa = wallOf(K, 1.85, 'b', fb - fhb, fb + fhb, 3, 'a');
     for (let i = 0; i < 12; i++) { const t = 0.04 + i * 0.08; if (t > 0.36 && t < 0.64) continue; arch(Fb, t, t + 0.045, 3, 11, C('#9fc3e3')); }
+    // Tor des Vordachs in der Wand – vor allen Säulen gezeichnet (sie stehen davor)
+    const pHa = 0.46, Fp = wallOf(K, fb + fhb, 'a', -pHa, pHa, 3, 'b');   // Torwand = Wand des Flügels hinter den Säulen
+    if (s3) arch(Fp, 0.26, 0.74, 0, 12.8, C(GOLD));                         // Goldrahmen ums Tor
+    arch(Fp, 0.28, 0.72, 0, 12.2, C(shade('#8a5a3c', 0.05)));               // Tor: zwei Flügel (unter dem Gebälk)
+    fRect(Fp, 0.497, 0.503, 0, 7.4, C(shade('#8a5a3c', -0.2)));
+    arch(Fp, 0.33, 0.67, 7.6, 11.7, C('#9fc3e3'));                          // Oberlicht im Bogen
+    const PCOL_A = [-0.4, -0.135, 0.135, 0.4];                              // Säulen des Vordachs (je Reihe)
     // Säulenreihe vor der Fassade (Paare zwischen den Fenstern), von hinten nach vorn
     const cols = []; for (let i = 0; i <= 12; i++) { const t = 0.02 + i * 0.08; if (t > 0.36 && t < 0.64) continue; cols.push(-1.85 + 3.7 * t); }
     if (s2) {                                                             // Stufe 2: Säulenreihe mit Gebälk
-      cols.sort((p, q) => K.depth(p, fb + fhb + 0.06) - K.depth(q, fb + fhb + 0.06)).forEach(a => column(K, a, fb + fhb + 0.06, 3, fH - 2, '#f6efe0', s3));
+      // hintere Reihe des Vordachs steht auf derselben Linie und gehört hierher – nach dem Gebälk gezeichnet lagen ihre Kapitelle darüber
+      [...cols, ...PCOL_A].sort((p, q) => K.depth(p, fb + fhb + 0.06) - K.depth(q, fb + fhb + 0.06)).forEach(a => column(K, a, fb + fhb + 0.06, 3, fH - 2, '#f6efe0', s3));
       TB({ a: 0, b: fb + fhb + 0.02, ha: 1.85, hb: 0.08, h: 2.2, lift: 3 + fH - 2, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : null });   // Gebälk über den Säulen
     }
     // Dach des Steinflügels (Nutzer 22.10.: „so ein Geländer oben, das machen solche Gebäude da immer – dann Figuren auf Sockel, aber
@@ -452,17 +460,15 @@
     // Portikus als Vordach (Nutzer 22.10.: „kritisiere ihn selbst“ – war ein nackter Kasten; dann „darf weiter hervortreten, Säulen vorne und
     // hinten, hinten auf Linie mit den anderen – ein Vordach/Entree“): zwei Reihen hoher Säulen (hinten auf der Säulenlinie des Flügels)
     // tragen Gebälk und Giebeldach über die ganze Tiefe; in der Wand dahinter das Bogentor; davor zwei Stufen bis zur Kante der Grundfläche.
-    // Reihenfolge: Tor (in der Wand) → alle Säulen von hinten nach vorn → Gebälk → Giebeldach → Stufen
+    // Reihenfolge: Tor (in der Wand, oben beim Flügel) → hintere Säulen mit denen des Flügels → Gebälk des Flügels → vordere Säulen →
+    // Gebälk und Giebeldach des Vordachs → Stufen
     // Säulen und Gebälk genau so hoch wie am Flügel: das Gebälk läuft als ein Band durch und biegt nach vorn um das Vordach (vorher saß es
     // höher, das Band des Flügels stieß auf halber Höhe gegen die Säulen – Nutzer: „da wo die Leiste über den Säulen anbindet“)
-    const pHa = 0.46, ptop = 3 + fH - 2, pBack = fb + fhb + 0.06, pFront = 1.4;   // halbe Breite, Unterkante Gebälk, Säulenreihen
-    const pcB = (fb + fhb + pFront + 0.04) / 2, pHb = (pFront + 0.04 - fb - fhb) / 2;  // Gebälk von der Wand bis knapp vor die vordere Reihe
-    const Fp = wallOf(K, fb + fhb, 'a', -pHa, pHa, 3, 'b');                // Torwand = Wand des Flügels hinter den Säulen
-    if (s3) arch(Fp, 0.26, 0.74, 0, 12.8, C(GOLD));                         // Goldrahmen ums Tor
-    arch(Fp, 0.28, 0.72, 0, 12.2, C(shade('#8a5a3c', 0.05)));               // Tor: zwei Flügel (unter dem Gebälk)
-    fRect(Fp, 0.497, 0.503, 0, 7.4, C(shade('#8a5a3c', -0.2)));
-    arch(Fp, 0.33, 0.67, 7.6, 11.7, C('#9fc3e3'));                          // Oberlicht im Bogen
-    const pcols = []; for (const b of [pBack, pFront]) for (const a of [-0.4, -0.135, 0.135, 0.4]) pcols.push([a, b]);
+    const ptop = 3 + fH - 2, pBack = fb + fhb + 0.06, pFront = 1.4;           // Unterkante Gebälk, Säulenreihen
+    // Gebälk und Dach beginnen dort, wo das Gebälk des Flügels vorn endet (fb + fhb + 0,1) – reichten sie bis an die Wand, lag ihr hinteres
+    // Stück (zuletzt gezeichnet) über dem Band des Flügels und stand an der Ecke versetzt heraus (Nutzer: „sieht das komisch aus?“)
+    const pB0 = fb + fhb + 0.1, pcB = (pB0 + pFront + 0.04) / 2, pHb = (pFront + 0.04 - pB0) / 2;
+    const pcols = []; for (const b of s2 ? [pFront] : [pBack, pFront]) for (const a of PCOL_A) pcols.push([a, b]);   // ab Stufe 2 steht die hintere Reihe schon beim Flügel
     pcols.sort((p, q) => K.depth(...p) - K.depth(...q)).forEach(([a, b]) => column(K, a, b, 3, ptop - 3, '#f6efe0', s3));
     TB({ a: 0, b: pcB, ha: pHa, hb: pHb, h: 2.2, lift: ptop, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : shade(STONE2, -0.08) });   // Gebälk
     TB({ a: 0, b: pcB, ha: pHa, hb: pHb, h: 0.01, lift: ptop + 2.2, wall: STONE2, roof: '#f4ecdd', roofH: 7, type: 'gable', ridge: 'b', over: 1.0 });   // Giebeldach, Dreieck nach vorn
