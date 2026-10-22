@@ -2767,7 +2767,8 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
       Thermenpalast, Kathedrale, Luftschiffhafen
   - [x] **Glaspalast** (22.10.2026, js/glaspalast.js, tests/glaspalast.test.js): nach dem Grand Palais (Kristallpalast verworfen),
         goldenes Glasdach und Kuppel, Balustrade mit Flügelpferden/Vasen auf Sockeln („übertreibs nicht“), Vordach mit zwei Säulenreihen.
-        4×3, 1 / 3 / 8 Mrd. Wirkung: „Dein Ausstellungsstück“ in der Kuppel-Vitrine (ganzes Glasdach durchsichtig: „sieht scheiße aus“).
+        4×3, 1 / 3 / 8 Mrd. Wirkung: „Dein Ausstellungsstück“ in der Kuppel-Vitrine (ganzes Glasdach durchsichtig: „sieht scheiße aus“) – nur Seltenes
+        aus dem Basar und Pokale/Besonderes für Erfolge (Häuser, Läden: „stupid“).
   - [x] **Opernhaus** (22.10.2026, js/oper.js, tests/oper.test.js): nach der Semperoper (Garnier und eigener Entwurf verworfen –
         „sieht aus wie ein Rucksack“), Portal als erhöhtes Stück des Rundbaus nach links vorn (nicht als angesetzter Kasten, nicht schräg
         nach vorn). 3×3, einmal, nach dem Laternenfest, Freizeit → Kultur; 500 Mio, Ausbau 1,5 / 4 Mrd. Wirkung „ganz was Neues“ statt

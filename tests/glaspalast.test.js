@@ -33,19 +33,21 @@ describe('Glaspalast', () => {
     expect(game('prachtUpgrade(4, 4)')).toBe(false);
     expect(game('demolishInfo(4, 4).refund')).toBe(1e9 + 11e9);
   });
-  it('Vitrine erst ab Stufe 2; nur Besessenes; Stück wird gespeichert und geladen; Infofenster zeigt die Auswahl', () => {
-    game("build('glaspalast', 4, 4); build('haus', 12, 12)");
-    expect(game("glasSetStueck(4, 4, 'haus')")).toBe(false);                 // Stufe 1: keine Vitrine
+  it('Vitrine erst ab Stufe 2; nur Seltenes (Basar) und Freigeschaltetes aus Besonderes, keine Häuser; Stück wird gespeichert', () => {
+    game("build('glaspalast', 4, 4); build('haus', 12, 12); state.sdItems = new Set(['mon_stern'])");
+    expect(game("glasSetStueck(4, 4, 'mon_stern')")).toBe(false);            // Stufe 1: keine Vitrine
     game('prachtUpgrade(4, 4)');
-    expect(game('glasChoices()')).toContain('haus');
+    expect(game('glasChoices()')).toContain('mon_stern');
+    expect(game('glasChoices()')).not.toContain('haus');                     // „ein Haus da oben drin ist doch stupid“
     expect(game('glasChoices()')).not.toContain('glaspalast');
-    expect(game("glasSetStueck(4, 4, 'mon_pagode')")).toBe(false);           // nicht gekauft, nicht gebaut
-    expect(game("glasSetStueck(4, 4, 'haus')")).toBe(true);
+    expect(game("glasSetStueck(4, 4, 'mon_pagode')")).toBe(false);           // nicht gekauft
+    expect(game("glasChoices().includes('pokal_gold')")).toBe(game("unlockOk(ITEMS.pokal_gold, 'pokal_gold')"));   // Pokal nur mit den Erfolgen
+    expect(game("glasSetStueck(4, 4, 'mon_stern')")).toBe(true);
     game('adoptState(parseSave(JSON.parse(JSON.stringify(serialize())))); recalc()');
-    expect(game("state.tiles.get('4,4').stueck")).toBe('haus');
+    expect(game("state.tiles.get('4,4').stueck")).toBe('mon_stern');
     game('openInfo(4, 4)');
     const html = game("document.getElementById('panel').innerHTML");
-    expect(html).toContain('data-glas="haus"');
+    expect(html).toContain('data-glas="mon_stern"');
     expect(html).toContain('Vitrine leeren');
     game('closePanel()');
     expect(game("glasSetStueck(4, 4, '')")).toBe(true);

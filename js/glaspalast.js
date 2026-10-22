@@ -11,9 +11,9 @@ const GLAS_STAGES = [
   { name: 'Prachtpalast', look: 'goldenes Glasdach, Flügelpferde und Vasen', cost: { money: 8e9 } },
 ];
 ITEMS.glaspalast = { cat: 'deko', name: 'Glaspalast', size: [4, 3], cost: 1e9, needs: 'grass', h: 84, beauty: 120, festival: true, unique: true, the: 'Der Glaspalast',
-  prachtStages: GLAS_STAGES, desc: 'Eine lange Glashalle hinter einer Säulenfassade. Ab Stufe 2 steht in der Glaskuppel dein Ausstellungsstück.' };
+  prachtStages: GLAS_STAGES, desc: 'Eine lange Glashalle hinter einer Säulenfassade. Ab Stufe 2 zeigst du in der Glaskuppel etwas Seltenes oder einen Pokal.' };
 FX.glaspalast = '🖼️ dein Ausstellungsstück · 🌸 je Stufe';
-ITEM_TIPS.glaspalast = 'Einmal im Spiel, braucht 4×3 Felder Wiese. Ab Stufe 2 wird die Kuppel eine Vitrine: Antippen und ein Stück zum Ausstellen wählen.';
+ITEM_TIPS.glaspalast = 'Einmal im Spiel, braucht 4×3 Felder Wiese. Ab Stufe 2 wird die Kuppel eine Vitrine: Antippen und etwas Seltenes aus dem Sternenbasar oder einen Pokal ausstellen.';
 { const fz = MENU.find(m => m.id === 'freizeit'), kultur = fz && fz.groups.find(gr => gr.id === 'kultur'); if (kultur) kultur.items.push('glaspalast'); }
 
 const GLAS_ART = (() => {
@@ -216,15 +216,14 @@ const GLAS_ART = (() => {
 })();
 BIG_ART.glaspalast = (cx, cy, z, now, x, y, lvl, t) => GLAS_ART(kit(cx, cy, z, 0), Math.max(1, Math.min(3, lvl || 1)), { stueck: t && t.stueck });
 
-// Ausstellungsstück: was man besitzt – im Basar Gekauftes (auch Monumente) und alles, was gerade gebaut steht; nichts Riesiges,
-// keine Wege/Netze und nicht der Glaspalast selbst
-const GLAS_NO = new Set(['glaspalast', 'oper', 'weg', 'schiene', 'lm', 'rathaus', 'truhe']);
+// Ausstellungsstück: nur Besonderes zum Herzeigen (Nutzer: „ein Haus da oben drin ist doch stupid – eher mit raren Dingen flexen oder
+// mit Erfolgen“): im Sternenbasar Gekauftes (auch Monumente, Prachtstücke) und die freigeschalteten Stücke aus 🏆 Besonderes (Pokale
+// für Erfolge, Denkmal, Statue …). Gebaut sein muss es nicht. Nichts größer als 3×3 (passt als Modell in die Kuppel)
+const GLAS_NO = new Set(['glaspalast', 'oper']);
 function glasChoices() {
-  const ids = new Set(state.sdItems || []);
-  for (const t of state.tiles.values()) ids.add(t.b);
-  for (const ds of state.decos.values()) for (const d of ds) if (d) ids.add(d.b);
-  const ok = id => { const d = ITEMS[id], [w, h] = (d && d.size) || [1, 1];
-    return !!d && !GLAS_NO.has(id) && !WONDERS[id] && !['netz', 'strom'].includes(d.cat) && !(d.cat === 'bau' && !isHome(id)) && !d.paint && !TERRAFORM[id] && w * h <= 9; };   // bis 3×3 passt als Modell in die Kuppel; keine Betriebe/Kraftwerke (die Liste wurde sonst sehr lang), Häuser ja
+  const bes = ((MENU.find(m => m.id === 'gestalten') || { groups: [] }).groups.find(gr => gr.id === 'besonderes') || { items: [] }).items;
+  const ids = new Set([...(state.sdItems || []), ...bes.filter(id => ITEMS[id] && unlockOk(ITEMS[id], id))]);
+  const ok = id => { const d = ITEMS[id], [w, h] = (d && d.size) || [1, 1]; return !!d && !GLAS_NO.has(id) && !d.paint && w * h <= 9; };
   return [...ids].filter(ok).sort((a, b) => ITEMS[a].name.localeCompare(ITEMS[b].name, 'de'));
 }
 function glasSetStueck(x, y, id) {
@@ -241,10 +240,11 @@ function glasInfoHtml(t) {
   if (t.b !== 'glaspalast') return '';
   const lvl = t.lvl || 1, nx = prachtNext(t), list = lvl >= 2 ? glasChoices() : [];
   return `<div class="label">${GLAS_STAGES[lvl - 1].name} · Stufe ${lvl} von ${GLAS_STAGES.length}</div>
-    ${lvl >= 2 ? `<div class="label">🖼️ Ausstellungsstück in der Kuppel</div>
+    ${lvl >= 2 && !list.length ? '<div class="label">🖼️ Ausstellungsstück in der Kuppel</div><p class="muted">Noch nichts zum Herzeigen – hier stellst du Stücke aus dem Sternenbasar ✨ und Pokale für deine Erfolge aus.</p>' : ''}
+    ${lvl >= 2 && list.length ? `<div class="label">🖼️ Ausstellungsstück in der Kuppel</div>
       <div class="looks">${list.map(id => `<button class="look${t.stueck === id ? ' on' : ''}" data-glas="${id}">${escHtml(ITEMS[id].name)}</button>`).join('')}
-        ${t.stueck ? '<button class="look" data-glas="">Vitrine leeren</button>' : ''}</div>`
-      : '<p class="muted">🖼️ Ab Stufe 2 wird die Kuppel eine Vitrine – darin stellst du ein Stück aus, das du besitzt.</p>'}
+        ${t.stueck ? '<button class="look" data-glas="">Vitrine leeren</button>' : ''}</div>` : ''}
+    ${lvl < 2 ? '<p class="muted">🖼️ Ab Stufe 2 wird die Kuppel eine Vitrine – darin zeigst du Seltenes aus dem Sternenbasar oder Pokale für deine Erfolge.</p>' : ''}
     ${nx ? `<div class="label">Nächste Stufe: ${nx.name}</div>
       <p class="muted">${nx.look[0].toUpperCase() + nx.look.slice(1)} · 🌸 +${ITEMS.glaspalast.beauty}.</p>
       <div class="stats">${costSpans(nx.cost.money, {})}</div>

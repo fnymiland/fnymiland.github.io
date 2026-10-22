@@ -447,8 +447,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
 29g. **🏛️ Glaspalast** (Prachtbau, Block 161f, js/glaspalast.js): Bild `GLAS_ART(K, stufe, { stueck })` aus tools/prachtbauten-entwurf.js
     (`grandpalais`, Änderungen zuerst dort zeigen; Halle, Steinflügel mit Balustrade, Vordach mit zwei Säulenreihen). 4×3, einmal, Stufen
     wie das Opernhaus über **`ITEMS[b].prachtStages`** (gemeinsam: `prachtNext`, `prachtUpgrade`, `prachtPaidUp` in oper.js, Knopf
-    `p-pracht-up`). Ab Stufe 2: Kuppel = Vitrine mit `t.stueck` (gespeichert in tileOut, im Bildchen-Schlüssel), Auswahl `glasChoices()` =
-    im Basar Gekauftes + gerade Gebautes, ohne Netze, Kraftwerke, Betriebe (Häuser ja), Wunder, größer als 3×3. Zeichnen: Glastonnen-Rippen
+    `p-pracht-up`). Ab Stufe 2: Kuppel = Vitrine mit `t.stueck` (gespeichert in tileOut, im Bildchen-Schlüssel), Auswahl `glasChoices()` = nur
+    Seltenes zum Herzeigen: im Basar Gekauftes + freigeschaltete Stücke aus 🏆 Besonderes (Pokale für Erfolge …), bis 3×3 (Nutzer: „ein Haus
+    da oben drin ist doch stupid – eher mit raren Dingen flexen oder mit Erfolgen“). Zeichnen: Glastonnen-Rippen
     als `strip`-Rückruf je Streifen (sonst fehlten sie am Rand oder schienen durch); Vitrinen-Gerüst erst hinten, dann Stück, Glas, vorn;
     Säulen, die auf der Linie anderer stehen, mit ihnen zeichnen (sonst liegen Kapitelle über dem Gebälk); Säulenfüße ≥ 0,07 von Wand/Kante.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
