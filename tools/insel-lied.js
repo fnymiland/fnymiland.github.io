@@ -102,8 +102,6 @@
         osc(f, t, dur * 2, 'sine', vol, trem, 0.004); osc(f * 4, t, dur * 0.4, 'sine', vol * 0.12, trem, 0.003); burst(t, 0.012, vol * 0.12, 'bandpass', 3000, 1);
       },
       marimba: (f, t, vol) => { osc(f, t, 0.5, 'sine', vol, out, 0.003); osc(f * 4, t, 0.09, 'sine', vol * 0.35, out, 0.002); osc(f * 10, t, 0.03, 'sine', vol * 0.1, out, 0.002); },
-      // Nutzer 22.10.: war „zu knallig, zu tief“ → eine Oktave höher, leiser, weicher Anschlag, dunkler
-      kontrabass: (f, t, dur, vol) => pluck(f * 2, t, Math.min(2.2, dur + 0.6), vol * 0.7, 0.12, 0.9965, bassBus, 0.025),
       weichbass: (f, t, dur, vol) => { osc(f, t, dur, 'sine', vol, bassBus, 0.02); osc(f * 2, t, dur * 0.7, 'triangle', vol * 0.18, bassBus, 0.02); },
       holzblock: (t, vol) => { burst(t, 0.05, vol * 3, 'bandpass', 1700, 9); osc(1200, t, 0.03, 'sine', vol * 0.6); },
       shaker: (t, vol) => burst(t, 0.07, vol * 2.2, 'highpass', 6500, 0.8),
@@ -122,10 +120,11 @@
       pad: S.pad ? (fs, t, dur, vol) => V.streicher(fs, t, dur, vol) : () => {},
     };
   }
-  // drei Klangsets zum Vergleichen (gleiche Noten); gewählt hat der Nutzer das Vibraphon (22.10.2026)
+  // drei Klangsets zum Vergleichen (gleiche Noten); gewählt hat der Nutzer das Vibraphon (22.10.2026).
+  // Bass überall weich (Sinus + Dreieck): ein gezupfter Kontrabass klang „knallig“ und „scheiße“, auch höher und leiser
   const SETS = {
-    spieluhr: { name: 'Spieluhr & Streicher', mel: 'spieluhr', bass: 'kontrabass', tick: 'holzblock', pad: true },
-    harfe:    { name: 'Harfe & Holz',         mel: 'harfe',    bass: 'kontrabass', tick: 'shaker',    pad: false },
+    spieluhr: { name: 'Spieluhr & Streicher', mel: 'spieluhr', bass: 'weichbass',  tick: 'holzblock', pad: true },
+    harfe:    { name: 'Harfe & Holz',         mel: 'harfe',    bass: 'weichbass',  tick: 'shaker',    pad: false },
     vibra:    { name: 'Vibraphon am Abend',   mel: 'vibra',    bass: 'weichbass',  tick: 'besen',     pad: true },
   };
 
