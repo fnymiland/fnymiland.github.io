@@ -510,10 +510,14 @@
     // Rotunde: Glaszylinder auf Steinring, Palmen drinnen, weiße Streben; Glaskuppel mit Rippen und goldener Spitze; Tür nach rechts vorn (+a)
     const [cx, cy] = K.P(0, 0, 1.5), rx = R * Math.SQRT2 * TW / 2 * z, ry = rx / 2, Rg = ring(cx, cy, rx, ry, z);
     cyl(cx, cy, rx, ry, RH * z, GLASS_D);
-    for (let i = 0; i < 7; i++) { const t = -1.2 + i * 0.4, [px, py] = Rg(t, 1);                       // Palmen hinter dem Glas
-      g.strokeStyle = C('#6a9a4a'); g.lineWidth = 1.4 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 15 * z); g.stroke();
-      for (const sx of [-1, 1]) { g.beginPath(); g.moveTo(px, py - 15 * z); g.quadraticCurveTo(px + sx * 6 * z, py - 20 * z, px + sx * 9 * z, py - 13 * z); g.stroke(); }
-      ellipse(px, py - 6 * z, 4 * z, 3.4 * z, C('#78c67f')); }
+    // Palmen hinter dem Glas – an der Glaswand abgeschnitten (sonst hingen die Wedel als „grüne Schlangen“ außen an der Rotunde)
+    g.save(); g.beginPath(); g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI); g.lineTo(cx - rx, cy - RH * z); g.ellipse(cx, cy - RH * z, rx, ry, 0, Math.PI, 0, true); g.closePath(); g.clip();
+    for (let i = 0; i < 7; i++) { const t = -1.2 + i * 0.4, [px, py] = Rg(t, 1);
+      ellipse(px + (i % 2 ? 4 : -4) * z, py - 3 * z, 4.2 * z, 3.4 * z, C(i % 2 ? '#86cf8a' : '#6fbf7a'));   // Busch am Boden
+      g.strokeStyle = C('#9a7a52'); g.lineWidth = 1.3 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px + 0.6 * z, py - 15 * z); g.stroke();   // Stamm
+      g.fillStyle = C('#5fae62');                                          // Krone: Blätter strahlenförmig, nach unten hängend
+      for (const an of [-2.6, -2.0, -1.57, -1.1, -0.5]) { g.beginPath(); g.ellipse(px + 0.6 * z + Math.cos(an) * 4 * z, py - 15 * z + Math.sin(an) * 2.2 * z + 1.2 * z, 4.6 * z, 1.3 * z, an + Math.PI / 2 * 0 , 0, Math.PI * 2); g.fill(); } }
+    g.restore();
     g.globalAlpha = 0.55; cyl(cx, cy, rx, ry, RH * z, GLASS); g.globalAlpha = 1;
     g.strokeStyle = C(WHITE); g.lineWidth = Math.max(0.5, 0.8 * z); g.beginPath();
     for (let i = -6; i <= 6; i++) { const t = i * Math.PI / 13; const [x0, y0] = Rg(t, 0); g.moveTo(x0, y0); g.lineTo(x0, y0 - RH * z); }
