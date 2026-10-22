@@ -320,13 +320,15 @@
   // B: Grand Palais – Steinflügel vorn mit Säulenreihe und großem Bogentor, dahinter das lange Glasdach (Tonne) und die Glaskuppel.
   // Stufe 1: Steinflügel mit Portikus, niedrige Glashalle · 2: Säulenreihe, höhere Tonne, Kuppel · 3: Gold (Kanten, Kugeln, Kuppelring, Laterne)
   function grandpalais(K, stufe = 3, opt = {}) {
-    // Stufe 3 (Nutzer 22.10.): goldenes Glasdach und goldene Kuppel („geil“); Schmuck der Fassade zur Wahl: 'vasen' (auf Sockeln, mit
-    // Girlanden – einzeln „plump, fad“) oder 'pferde' (goldene Flügelpferde wie die Pferdegruppen in Paris, ohne Menschen)
-    const z = K.z, s2 = stufe >= 2, s3 = stufe >= 3, [gv, dach = ''] = (opt.buehne || 'vasen').split('|'), RIB = '#7d8f96', RIBC = s3 ? GOLD_D : RIB, RIBW = s3 ? 0.75 : 0.6;
-    K.block({ a: 0, b: 0, ha: 1.95, hb: 1.45, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
+    // Stufe 3 (Nutzer 22.10.): goldenes Glasdach und goldene Kuppel („geil“)
+    // Blöcke mit Zierband: auf Flächen nach +a (Schatten) dunkler – K.block malt trim auf allen Seiten gleich hell (Prüfer: „Gold auf
+    // Schattenseiten nicht abgedunkelt“)
+    const TB = ({ trim, ...o }) => { const r = K.block(o); if (trim) for (const f of Object.values(r.faces)) if (f) faceQuad(f.P, f.Q, 0, 1, f.H - 1.4 * K.z, f.H, C(K.turn(...f.n)[0] > 0.5 ? shade(trim, LIGHT.side) : trim)); return r; };
+    const z = K.z, s2 = stufe >= 2, s3 = stufe >= 3, RIB = '#7d8f96', RIBC = s3 ? GOLD_D : RIB, RIBW = s3 ? 0.75 : 0.6;
+    TB({ a: 0, b: 0, ha: 1.95, hb: 1.45, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
     // Halle hinten: Steinwände, Glastonne längs
     const hH = 12, htop = 3 + hH, hR = s2 ? 13 : 9;
-    K.block({ a: 0, b: -0.35, ha: 1.75, hb: 0.95, h: hH, lift: 3, wall: STONE2, roof: GLASS, roofH: hR, type: 'barrel', ridge: 'a', over: 1 });
+    TB({ a: 0, b: -0.35, ha: 1.75, hb: 0.95, h: hH, lift: 3, wall: STONE2, roof: GLASS, roofH: hR, type: 'barrel', ridge: 'a', over: 1 });
     barrelRibs(K, 0, -0.35, 1.75, 0.95, htop, hR, true, 16, RIBC, RIBW);
     // Kuppel über der Mitte (Stufe 2)
     if (s2) {
@@ -344,90 +346,88 @@
     }
     // Steinflügel vorn (+b): Säulenreihe, Bogentor in der Mitte, Attika
     const fH = 15, fb = 1.02, fhb = 0.26;
-    K.block({ a: 0, b: fb, ha: 1.85, hb: fhb, h: fH, lift: 3, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : shade(STONE2, -0.08) });
+    TB({ a: 0, b: fb, ha: 1.85, hb: fhb, h: fH, lift: 3, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : shade(STONE2, -0.08) });
     const Fb = wallOf(K, fb + fhb, 'a', -1.85, 1.85, 3, 'b'), Fa = wallOf(K, 1.85, 'b', fb - fhb, fb + fhb, 3, 'a');
     for (let i = 0; i < 12; i++) { const t = 0.04 + i * 0.08; if (t > 0.42 && t < 0.58) continue; arch(Fb, t, t + 0.045, 3, 11, C('#9fc3e3')); }
     // Säulenreihe vor der Fassade (Paare zwischen den Fenstern), von hinten nach vorn
     const cols = []; for (let i = 0; i <= 12; i++) { const t = 0.02 + i * 0.08; if (t > 0.4 && t < 0.6) continue; cols.push(-1.85 + 3.7 * t); }
     if (s2) {                                                             // Stufe 2: Säulenreihe mit Gebälk
       cols.sort((p, q) => K.depth(p, fb + fhb + 0.06) - K.depth(q, fb + fhb + 0.06)).forEach(a => column(K, a, fb + fhb + 0.06, 3, fH - 2, '#f6efe0', s3));
-      K.block({ a: 0, b: fb + fhb + 0.02, ha: 1.85, hb: 0.08, h: 2.2, lift: 3 + fH - 2, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : null });   // Gebälk über den Säulen
+      TB({ a: 0, b: fb + fhb + 0.02, ha: 1.85, hb: 0.08, h: 2.2, lift: 3 + fH - 2, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : null });   // Gebälk über den Säulen
     }
-    // Dach des Steinflügels (Nutzer 22.10.: die Fläche, auf der Vasen/Figuren stehen, „ist es noch nicht“ – wie lösen es echte Bauten?):
-    // ohne dach: schlichte Attika · 'terrasse': Balustrade, dahinter Plattenbelag · 'mansard': Balustrade, dahinter Schieferdach
-    // (runde Gauben wirkten schwebend, ein Glas-Pultdach neben der Halle wirr)
-    const be = fb + fhb - 0.03, h0 = 3 + fH, BAL = 3.6;                   // Vorderkante, Fuß und Höhe der Balustrade
-    if (!dach) K.block({ a: 0, b: be, ha: 1.85, hb: 0.05, h: 2.6, lift: h0, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.1) });   // Attika an der Vorderkante
+    // Dach des Steinflügels (Nutzer 22.10.: „so ein Geländer oben, das machen solche Gebäude da immer – dann Figuren auf Sockel, aber
+    // übertreibs nicht“): ab Stufe 2 Terrasse mit Balustrade vorn und an der rechten Seite, vier Postamente (Ecken, neben dem Portikus);
+    // Stufe 3: Flügelpferde auf den Ecken, Vasen innen. Stufe 1: schlichte Attika.
+    // Reihenfolge (Nutzer: „schau, welche Linien vorne und welche hinten liegen“): alles hier liegt hinter dem Portikus, darum vor ihm;
+    // Balustraden-Stücke und Postamente nach ihrer Tiefe (a + b) von hinten nach vorn – ein Sockel überdeckt nie Säulchen weiter vorn
+    const be = fb + fhb - 0.03, h0 = 3 + fH, BAL = 3.7, POST_H = 5.9, bBack = fb - fhb + 0.03, aSide = 1.81;
+    const vase = (x, y, sc = 1) => {                                       // Amphora: Fuß, Bauch mit Glanz (Licht von links), Hals, Henkel, Deckel
+      const u = z * sc;
+      poly([[x - 1.2 * u, y], [x + 1.2 * u, y], [x + 0.7 * u, y - 1 * u], [x - 0.7 * u, y - 1 * u]], C(GOLD_D));
+      ellipse(x, y - 3.6 * u, 2.4 * u, 2.9 * u, C(GOLD));
+      ellipse(x - 0.8 * u, y - 4.4 * u, 0.7 * u, 1.5 * u, C(GOLD_L));
+      poly([[x - 1 * u, y - 6 * u], [x + 1 * u, y - 6 * u], [x + 1.3 * u, y - 7.6 * u], [x - 1.3 * u, y - 7.6 * u]], C(GOLD_D));
+      g.strokeStyle = C(GOLD_D); g.lineWidth = Math.max(0.5, 0.6 * u); g.beginPath();
+      g.moveTo(x - 1.2 * u, y - 7.1 * u); g.quadraticCurveTo(x - 3.4 * u, y - 7.2 * u, x - 2.2 * u, y - 4.6 * u);
+      g.moveTo(x + 1.2 * u, y - 7.1 * u); g.quadraticCurveTo(x + 3.4 * u, y - 7.2 * u, x + 2.2 * u, y - 4.6 * u); g.stroke();
+      ellipse(x, y - 7.7 * u, 1.6 * u, 0.6 * u, C(GOLD)); circle(x, y - 8.6 * u, 0.7 * u, C(GOLD_L));
+    };
+    const pegasus = (px, py, s, dir = 1) => {                              // Flügelpferd, steigend, Seitenansicht; dir 1 = Kopf rechts
+      const P = (x, y) => [px + dir * (x - 5) * s * z, py - y * s * z];
+      poly([[5.0, 7.4], [3.0, 11.6], [4.4, 11.0], [3.8, 12.8], [5.4, 11.6], [5.2, 13.4], [6.6, 11.4], [6.6, 8.2]].map(q => P(...q)), C(GOLD_D));
+      poly([[3.2, 0], [3.6, 3.2], [2.6, 5.4], [1.0, 4.4], [0.6, 5.2], [1.4, 6.4], [3.4, 6.8], [5.8, 7.6], [6.6, 9.4], [7.8, 10.6], [9.4, 10.0], [9.6, 9.3],
+        [8.5, 9.0], [7.6, 8.2], [7.9, 7.1], [9.3, 7.6], [9.8, 6.7], [8.8, 6.5], [8.6, 5.6], [7.4, 5.4], [5.6, 4.9], [4.8, 3.0], [4.6, 0]].map(q => P(...q)), C(GOLD));
+      poly([[5.4, 7.6], [3.6, 11.0], [4.6, 10.8], [4.4, 12.0], [5.6, 11.0], [5.8, 12.4], [6.4, 10.6], [6.2, 8.0]].map(q => P(...q)), C(GOLD_L));
+      circle(...P(8.6, 9.9), 0.35 * s * z, C(GOLD_D));
+    };
+    if (!s2) TB({ a: 0, b: be, ha: 1.85, hb: 0.05, h: 2.6, lift: h0, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.1) });   // Stufe 1: Attika
     else {
-      if (dach === 'terrasse') {                                          // Plattenbelag: Fugen quer
-        g.strokeStyle = C(shade(STONE2, -0.06)); g.lineWidth = Math.max(0.5, 0.35 * z); g.beginPath();
-        for (let a = -1.8; a <= 1.81; a += 0.15) { g.moveTo(...K.P(a, fb - fhb, h0)); g.lineTo(...K.P(a, be, h0)); }
-        for (const b of [fb - 0.12, fb + 0.06]) { g.moveTo(...K.P(-1.85, b, h0)); g.lineTo(...K.P(1.85, b, h0)); } g.stroke();
-      }
-      if (dach === 'mansard') {                                           // Schieferdach hinter der Balustrade, runde Gauben (Ochsenaugen)
-        K.block({ a: 0, b: fb - 0.02, ha: 1.8, hb: fhb - 0.04, h: 2.6, lift: h0, wall: STONE2, roof: '#a9b5c6', roofH: 12, type: 'mansard', over: 1.0 });   // höher als die Balustrade, sonst wirkt es wie eine Rinne
-      }
-      // Balustrade an der Vorderkante: Sockelleiste, Säulchen, Handlauf
-      K.block({ a: 0, b: be, ha: 1.85, hb: 0.05, h: 0.8, lift: h0, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.08) });
-      { const F = wallOf(K, be + 0.05, 'a', -1.85, 1.85, h0, 'b'); fRect(F, 0, 1, 0.8, 3, C(shade(STONE2, -0.22))); }   // Schatten zwischen den Säulchen
-      for (let a = -1.8; a <= 1.81; a += 0.075) {                         // Säulchen: bauchig, oben und unten schmal
-        const [x, y] = K.P(a, be + 0.05, h0 + 0.8), w = 0.42 * z;
-        poly([[x - w * 0.7, y], [x + w * 0.7, y], [x + w * 1.25, y - 0.8 * z], [x + w * 0.55, y - 2.2 * z], [x - w * 0.55, y - 2.2 * z], [x - w * 1.25, y - 0.8 * z]], C(shade(STONE2, 0.08)));
-      }
-      K.block({ a: 0, b: be, ha: 1.85, hb: 0.05, h: 0.7, lift: h0 + 3, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.12), trim: s3 ? GOLD : null });
+      g.strokeStyle = C(shade(STONE2, -0.06)); g.lineWidth = Math.max(0.5, 0.35 * z); g.beginPath();      // Terrasse: Plattenfugen (liegen ganz unten)
+      for (let a = -1.8; a <= 1.81; a += 0.15) { g.moveTo(...K.P(a, fb - fhb, h0)); g.lineTo(...K.P(a, be, h0)); }
+      for (const b of [fb - 0.12, fb + 0.06]) { g.moveTo(...K.P(-1.85, b, h0)); g.lineTo(...K.P(1.85, b, h0)); } g.stroke();
+      const STONE_B = shade(STONE2, 0.08), GAP = shade(STONE2, -0.22);
+      // ein Stück Balustrade: Sockelleiste, Schatten dahinter, Säulchen (von hinten nach vorn), Handlauf
+      const front = (a0, a1) => () => {                                   // vorn, Wand nach +b (Sonnenseite)
+        const am = (a0 + a1) / 2, ha = (a1 - a0) / 2;
+        TB({ a: am, b: be, ha, hb: 0.05, h: 0.8, lift: h0, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.08) });
+        fRect(wallOf(K, be + 0.05, 'a', a0, a1, h0, 'b'), 0, 1, 0.8, BAL - 0.7, C(GAP));
+        for (let a = a0 + 0.04; a < a1 - 0.02; a += 0.075) { const [x, y] = K.P(a, be + 0.05, h0 + 0.8), w = 0.42 * z;
+          poly([[x - w * 0.7, y], [x + w * 0.7, y], [x + w * 1.25, y - 0.8 * z], [x + w * 0.55, y - (BAL - 1.5) * z], [x - w * 0.55, y - (BAL - 1.5) * z], [x - w * 1.25, y - 0.8 * z]], C(STONE_B)); }
+        TB({ a: am, b: be, ha, hb: 0.05, h: 0.7, lift: h0 + BAL - 0.7, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.12), trim: s3 ? GOLD : null });
+      };
+      const side = (b0, b1, aS = aSide) => () => {                         // Seitenstück: sichtbar ist immer die Seite nach +a (rechts außen; links die Innenseite)
+        const bm = (b0 + b1) / 2, hb = (b1 - b0) / 2, sh = c => shade(c, LIGHT.side);
+        TB({ a: aS, b: bm, ha: 0.03, hb, h: 0.8, lift: h0, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.08) });
+        fRect(wallOf(K, aS + 0.03, 'b', b0, b1, h0, 'a'), 0, 1, 0.8, BAL - 0.7, C(sh(GAP)));
+        for (let b = b0 + 0.04; b < b1 - 0.02; b += 0.075) { const [x, y] = K.P(aS + 0.03, b, h0 + 0.8), w = 0.42 * z;
+          poly([[x - w * 0.7, y], [x + w * 0.7, y], [x + w * 1.25, y - 0.8 * z], [x + w * 0.55, y - (BAL - 1.5) * z], [x - w * 0.55, y - (BAL - 1.5) * z], [x - w * 1.25, y - 0.8 * z]], C(sh(STONE_B))); }
+        TB({ a: aS, b: bm, ha: 0.03, hb, h: 0.7, lift: h0 + BAL - 0.7, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.12), trim: s3 ? GOLD : null });
+      };
+      const post = (a, b, deco) => () => {                                // Postament über die Balustrade hinaus, Stufe 3 mit Figur
+        TB({ a, b, ha: 0.075, hb: 0.09, h: POST_H, lift: h0, wall: shade(STONE2, 0.05), type: 'flat', roof: shade(STONE2, 0.12), trim: s3 ? GOLD : shade(STONE2, -0.06) });
+        if (s3 && deco) deco(...K.P(a, b, h0 + POST_H));
+      };
+      const POSTS = [[-1.78, be, (x, y) => pegasus(x, y, 1.25, -1)], [-0.62, be, (x, y) => vase(x, y, 0.9)], [0.62, be, (x, y) => vase(x, y, 0.9)], [1.78, be, (x, y) => pegasus(x, y, 1.25, 1)]];
+      const parts = [];                                                   // [Tiefe, Zeichnen]
+      const cuts = POSTS.map(p => p[0]);
+      for (let i = 0; i + 1 < cuts.length; i++) { const a0 = cuts[i] + 0.075, a1 = cuts[i + 1] - 0.075; parts.push([(a0 + a1) / 2 + be, front(a0, a1)]); }
+      const bS = bBack + 0.05, bE = be - 0.09;                            // Seitenstücke zwischen Endpfosten hinten und Eck-Postament vorn
+      parts.push([aSide + (bS + bE) / 2, side(bS, bE)]);
+      parts.push([-aSide + (bS + bE) / 2, side(bS, bE, -aSide)]);          // links: nur die Innenseite ist zu sehen
+      for (const aS of [aSide, -aSide]) parts.push([aS + bBack, () => TB({ a: aS, b: bBack, ha: 0.045, hb: 0.05, h: BAL + 0.4, lift: h0, wall: shade(STONE2, 0.05), type: 'flat', roof: shade(STONE2, 0.12), trim: s3 ? GOLD : null })]);   // Endpfosten hinten
+      for (const [a, b, deco] of POSTS) parts.push([a + b + 0.01, post(a, b, deco)]);
+      parts.sort((p, q) => p[0] - q[0]).forEach(p => p[1]());
     }
     // Portikus in der Mitte: springt vor, höher, mit flachem Giebel; Tor mittelbraun, darüber Glas im Bogen
-    const pb = fb + fhb + 0.16;
-    K.block({ a: 0, b: pb, ha: 0.32, hb: 0.14, h: fH + 3, lift: 3, wall: shade(STONE2, 0.04), type: 'flat', roof: shade(STONE2, 0.1), trim: s3 ? GOLD : shade(STONE2, -0.08) });
+    const pb = fb + fhb + 0.16, pt = fH + 5;                            // Dach über dem Handlauf der Balustrade – sonst schimmerte sie als Streifen darüber
+    TB({ a: 0, b: pb, ha: 0.32, hb: 0.14, h: pt, lift: 3, wall: shade(STONE2, 0.04), type: 'flat', roof: shade(STONE2, 0.1), trim: s3 ? GOLD : shade(STONE2, -0.08) });
     const Fp = wallOf(K, pb + 0.14, 'a', -0.32, 0.32, 3, 'b');
-    poly([Fp(-0.04, fH + 3), Fp(1.04, fH + 3), Fp(0.5, fH + 8)], C(shade(STONE2, 0.06)));   // flacher Giebel vorn
-    g.strokeStyle = C(s3 ? GOLD : shade(STONE2, -0.12)); g.lineWidth = Math.max(0.5, 0.8 * z); g.beginPath(); g.moveTo(...Fp(-0.04, fH + 3)); g.lineTo(...Fp(0.5, fH + 8)); g.lineTo(...Fp(1.04, fH + 3)); g.stroke();
+    poly([Fp(0, pt), Fp(1, pt), Fp(0.5, pt + 5)], C(shade(STONE2, 0.06)));   // flacher Giebel vorn, genau über den Ecken
+    g.strokeStyle = C(s3 ? GOLD : shade(STONE2, -0.12)); g.lineWidth = Math.max(0.5, 0.8 * z); g.beginPath(); g.moveTo(...Fp(0, pt)); g.lineTo(...Fp(0.5, pt + 5)); g.lineTo(...Fp(1, pt)); g.stroke();
     arch(Fp, 0.22, 0.78, 0, 14, C('#8a5a3c'));
     arch(Fp, 0.3, 0.7, 7, 13.2, C('#9fc3e3'));
     for (const t of [0.08, 0.92]) fRect(Fp, t - 0.04, t + 0.04, 0, fH + 1, C(shade(STONE2, 0.1)));
     arch(Fa, 0.25, 0.75, 3, 11, C(shade('#9fc3e3', -0.1)));
-    const top0 = dach ? 3 + fH + BAL + 0.1 : 3 + fH + 2.6, attic = a => K.P(a, fb + fhb - 0.03, top0);   // Vasen/Pferde: auf der Attika bzw. der Balustrade
-    // Vase (Amphora) auf einem Sockel: Fuß, bauchiger Körper mit Glanz, Hals, Henkel, Deckel mit Knauf
-    const vase = (a, sc = 1) => {
-      const pl = dach ? h0 : h0 + 2.6, ph = dach ? BAL + 1.2 : 3 * sc;   // Postament: mit Balustrade vom Dach bis über den Handlauf
-      K.block({ a, b: fb + fhb - 0.03, ha: 0.07 * sc, hb: 0.07 * sc, h: ph, lift: pl, wall: shade(STONE2, 0.05), type: 'flat', roof: GOLD });
-      const [x, y] = K.P(a, fb + fhb - 0.03, pl + ph), u = z * sc;
-      poly([[x - 1.2 * u, y], [x + 1.2 * u, y], [x + 0.7 * u, y - 1 * u], [x - 0.7 * u, y - 1 * u]], C(GOLD_D));       // Fuß
-      ellipse(x, y - 3.6 * u, 2.4 * u, 2.9 * u, C(GOLD));                                                                // Bauch
-      ellipse(x - 0.8 * u, y - 4.4 * u, 0.7 * u, 1.5 * u, C(GOLD_L));                                                   // Glanz (Licht von links)
-      poly([[x - 1 * u, y - 6 * u], [x + 1 * u, y - 6 * u], [x + 1.3 * u, y - 7.6 * u], [x - 1.3 * u, y - 7.6 * u]], C(GOLD_D));   // Hals
-      g.strokeStyle = C(GOLD_D); g.lineWidth = Math.max(0.5, 0.6 * u); g.beginPath();
-      g.moveTo(x - 1.2 * u, y - 7.1 * u); g.quadraticCurveTo(x - 3.4 * u, y - 7.2 * u, x - 2.2 * u, y - 4.6 * u);           // Henkel
-      g.moveTo(x + 1.2 * u, y - 7.1 * u); g.quadraticCurveTo(x + 3.4 * u, y - 7.2 * u, x + 2.2 * u, y - 4.6 * u); g.stroke();
-      ellipse(x, y - 7.7 * u, 1.6 * u, 0.6 * u, C(GOLD)); circle(x, y - 8.6 * u, 0.7 * u, C(GOLD_L));                   // Deckel, Knauf
-      return [x, y];
-    };
-    // Flügelpferd, steigend, Blick nach links vorn (Seitenansicht), auf Sockel; s: Größe, dir 1/−1
-    const pegasus = (px, py, s, dir = 1) => {
-      const P = (x, y) => [px + dir * (x - 5) * s * z, py - y * s * z];
-      const body = [[3.2, 0], [3.6, 3.2], [2.6, 5.4], [1.0, 4.4], [0.6, 5.2], [1.4, 6.4], [3.4, 6.8], [5.8, 7.6], [6.6, 9.4], [7.8, 10.6], [9.4, 10.0], [9.6, 9.3],
-        [8.5, 9.0], [7.6, 8.2], [7.9, 7.1], [9.3, 7.6], [9.8, 6.7], [8.8, 6.5], [8.6, 5.6], [7.4, 5.4], [5.6, 4.9], [4.8, 3.0], [4.6, 0]];
-      const wing = [[5.0, 7.4], [3.0, 11.6], [4.4, 11.0], [3.8, 12.8], [5.4, 11.6], [5.2, 13.4], [6.6, 11.4], [6.6, 8.2]];
-      poly(wing.map(q => P(...q)), C(GOLD_D));
-      poly(body.map(q => P(...q)), C(GOLD));
-      poly([[5.4, 7.6], [3.6, 11.0], [4.6, 10.8], [4.4, 12.0], [5.6, 11.0], [5.8, 12.4], [6.4, 10.6], [6.2, 8.0]].map(q => P(...q)), C(GOLD_L));   // vorderer Flügel hell
-      circle(...P(8.6, 9.9), 0.35 * s * z, C(GOLD_D));                                                                     // Auge
-    };
-    if (s3 && gv === 'vasen') {                                           // Vasen auf Sockeln über den Säulenpaaren, Girlanden dazwischen
-      const as = [-1.75, -1.15, -0.55, 0.55, 1.15, 1.75], tops = as.map(a => vase(a));
-      g.strokeStyle = C(GOLD); g.lineWidth = Math.max(0.5, 0.7 * z); g.beginPath();
-      for (let i = 0; i + 1 < tops.length; i++) { if (as[i] < 0 && as[i + 1] > 0) continue; const [x0, y0] = tops[i], [x1, y1] = tops[i + 1];
-        for (let k = 0; k <= 12; k++) { const t = k / 12, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t - 3 * z + Math.sin(Math.PI * t) * 3.2 * z; k ? g.lineTo(x, y) : g.moveTo(x, y); } }
-      g.stroke();
-      for (let i = 0; i + 1 < tops.length; i++) { if (as[i] < 0 && as[i + 1] > 0) continue; const [x0, y0] = tops[i], [x1, y1] = tops[i + 1];
-        for (const t of [0.25, 0.5, 0.75]) circle(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t - 3 * z + Math.sin(Math.PI * t) * 3.2 * z, 0.75 * z, C(t === 0.5 ? '#e8a0b4' : GOLD_L)); }
-      { const [sx, sy] = Fp(0.5, fH + 8); vase(0, 1.15); }                 // große Vase auf dem Giebel des Portikus
-    }
-    if (s3 && gv === 'pferde') {                                          // Flügelpferde: zwei auf den Ecken, eines (größer) über dem Portikus; Vasen dazwischen
-      for (const [a, d] of [[-1.72, 1], [1.72, -1]]) { K.block({ a, b: fb + fhb - 0.03, ha: 0.08, hb: 0.06, h: 2.5, lift: 3 + fH + 2.6, wall: shade(STONE2, 0.05), type: 'flat', roof: shade(STONE2, 0.12), trim: GOLD }); const [x, y] = K.P(a, fb + fhb - 0.03, 3 + fH + 5.1); pegasus(x, y, 1.25, d); }
-      for (const a of [-0.9, 0.9]) vase(a, 0.9);
-      { K.block({ a: 0, b: pb - 0.02, ha: 0.08, hb: 0.06, h: 2.5, lift: 3 + fH + 3, wall: shade(STONE2, 0.05), type: 'flat', roof: shade(STONE2, 0.12), trim: GOLD }); const [x, y] = K.P(0, pb - 0.02, 3 + fH + 5.5); pegasus(x, y, 1.7, 1); }
-    }
     if (lit()) { glowP(Fp(0.5, 9), 24 * z); for (const t of [0.2, 0.8]) glowP(Fb(t, 7), 14 * z); }
   }
 
