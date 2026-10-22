@@ -234,19 +234,148 @@
     if (s3) lyre(...K.P(-0.1, 0.82, 33.5), z, 1.3);                       // Lyra mitten auf dem Mittelbau
     pav(0.78);                                                             // rechts: liegt vorn, zuletzt
   }
-  window.PRACHT = { opernhaus, semper, garnier };
+  // --- Glaspalast (Nutzer 22.10.2026: „mach mit dem Glaspalast weiter“). Der Botanische Garten hat schon Glaskuppel + Flügel – darum andere
+  // Vorbilder: A Kristallpalast (London 1851, ganz aus Glas, gestuftes Langhaus, hohes Querschiff mit Fächerfenster), B Grand Palais (Paris,
+  // Steinfassade mit Säulen, dahinter riesiges Glasdach mit Kuppel). Grundfläche 4×3: lang nach a (Schauseite +b, links vorn, in der Sonne)
+  const GLASS = '#bfe0ee', GLASS_D = '#9cc8dc', FRAME = '#ffffff', STONE2 = '#eadfca';
+  // Glasfläche einer Wand: Sprossen senkrecht (cols) und Riegel waagerecht (Höhen hs), drinnen ein paar Palmen als weiche Flecken
+  function glassFace(F, h0, h1, cols, hs, plants, shadeSide) {
+    const z = F.z, tint = c => C(shadeSide ? shade(c, -0.2) : c);
+    fRect(F, 0, 1, h0, h1, tint(GLASS_D));
+    if (plants) for (let i = 0; i < plants; i++) {                        // Palmen drinnen – zuerst, das Glas liegt davor
+      const t = (i + 0.5) / plants, [x, y] = F(t, h0 + 0.5);
+      ellipse(x, y - 4 * z, 3.4 * z, 4.4 * z, C(shadeSide ? '#4f9a5e' : '#5fb06c')); ellipse(x + 2 * z, y - 7.5 * z, 2.6 * z, 2.8 * z, C(shadeSide ? '#62a86c' : '#78c67f'));
+    }
+    g.globalAlpha = 0.62; fRect(F, 0, 1, h0, h1, tint(GLASS)); g.globalAlpha = 1;
+    g.strokeStyle = C(shadeSide ? shade(FRAME, -0.12) : FRAME); g.lineWidth = Math.max(0.5, 0.55 * z); g.beginPath();
+    for (let i = 0; i <= cols; i++) { const t = i / cols; g.moveTo(...F(t, h0)); g.lineTo(...F(t, h1)); }
+    for (const h of [h0, ...hs, h1]) { g.moveTo(...F(0, h)); g.lineTo(...F(1, h)); }
+    g.stroke();
+  }
+  // Rippen auf einem Tonnendach (gleiche Form wie K.block 'barrel', over = 1): Bögen quer, Linien längs
+  function barrelRibs(K, a, b, ha, hb, top, roofH, alongA, n, col, w = 0.55) {
+    const L = alongA ? ha : hb, R = alongA ? hb : ha, z = K.z;
+    const pt = (s, th) => { const q = Math.cos(th) * R, up = top + Math.sin(th) * roofH; return alongA ? K.P(a + s, b + q, up) : K.P(a + q, b + s, up); };
+    g.strokeStyle = C(col); g.lineWidth = Math.max(0.5, w * z); g.beginPath();
+    const TH = 2.4;                                                        // dahinter neigt sich die Tonne vom Betrachter weg – sonst schienen Rippen der Rückseite durch
+    for (let i = 0; i <= n; i++) { const s = -L + 2 * L * i / n; for (let j = 0; j <= 12; j++) { const p = pt(s, TH * j / 12); j ? g.lineTo(...p) : g.moveTo(...p); } }
+    for (const th of [0.5, 1.0, 1.57, 2.14]) { g.moveTo(...pt(-L, th)); g.lineTo(...pt(L, th)); }
+    g.stroke();
+    return pt;
+  }
+  // Fächerfenster in einem runden Giebel: Mitte unten bei (a, b) in Höhe top, halbe Breite r längs der Wand (axis: Wand läuft längs 'a' oder 'b')
+  function fan(K, a, b, r, top, roofH, axis, col, rim, shadeSide) {
+    const z = K.z, pt = (th, k) => axis === 'a' ? K.P(a + Math.cos(th) * r * k, b, top + Math.sin(th) * roofH * k) : K.P(a, b + Math.cos(th) * r * k, top + Math.sin(th) * roofH * k);
+    const outline = []; for (let j = 0; j <= 20; j++) outline.push(pt(Math.PI * j / 20, 1));
+    poly(outline, C(shadeSide ? shade(GLASS, -0.2) : GLASS));
+    const [cx0, cy0] = pt(0, 0);
+    g.strokeStyle = C(shadeSide ? shade(col, -0.12) : col); g.lineWidth = Math.max(0.5, 0.7 * z); g.beginPath();
+    for (let i = 0; i <= 8; i++) { g.moveTo(cx0, cy0); g.lineTo(...pt(Math.PI * i / 8, 1)); }
+    for (const k of [0.35, 0.7, 1]) for (let j = 0; j <= 16; j++) { const p = pt(Math.PI * j / 16, k); j ? g.lineTo(...p) : g.moveTo(...p); }
+    g.stroke();
+    if (rim) { g.strokeStyle = C(rim); g.lineWidth = Math.max(0.6, 1.1 * z); g.beginPath(); outline.forEach((p, j) => j ? g.lineTo(...p) : g.moveTo(...p)); g.stroke(); }
+  }
+  const ground = (K, la, lb, col) => K.rect(-la / 2, -lb / 2, la / 2, lb / 2, C(col));
+
+  // A: Kristallpalast – Stufe 1 nur das untere Langhaus und ein niedriges Querschiff; 2: zweites Geschoss mit Tonne, Querschiff hoch;
+  // 3: Fächerfenster mit Goldkante, Fahnen auf dem Querschiff, Laternchen am First
+  function kristall(K, stufe = 3) {
+    const z = K.z, s2 = stufe >= 2, s3 = stufe >= 3;
+    K.block({ a: 0, b: 0, ha: 1.95, hb: 1.45, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
+    // unteres Langhaus
+    const H1 = 12;
+    K.block({ a: 0, b: 0, ha: 1.8, hb: 1.25, h: H1, lift: 3, wall: GLASS, type: 'flat', roof: shade(GLASS, 0.06) });
+    glassFace(wallOf(K, 1.25, 'b', -1.8, 1.8, 3, 'b'), 0, H1, 24, [H1 * 0.55], 6, false);
+    glassFace(wallOf(K, 1.8, 'a', -1.25, 1.25, 3, 'a'), 0, H1, 16, [H1 * 0.55], 3, true);
+    // Dachfläche des Langhauses: Glasrauten
+    { const P = (a, b) => K.P(a, b, 3 + H1); g.strokeStyle = C(FRAME); g.lineWidth = Math.max(0.5, 0.4 * z); g.beginPath();
+      for (let i = 0; i <= 12; i++) { const a = -1.8 + 3.6 * i / 12; g.moveTo(...P(a, -1.25)); g.lineTo(...P(a, 1.25)); } g.stroke(); }
+    // oberes Langhaus mit Tonne längs
+    if (s2) {
+      const H2 = 8, top = 3 + H1 + H2;
+      K.block({ a: 0, b: 0, ha: 1.8, hb: 0.72, h: H2, lift: 3 + H1, wall: GLASS, roof: shade(GLASS, 0.04), roofH: 9, type: 'barrel', ridge: 'a', over: 1 });
+      barrelRibs(K, 0, 0, 1.8, 0.72, top, 9, true, 14, FRAME);
+      glassFace(wallOf(K, 0.72, 'b', -1.8, 1.8, 3 + H1, 'b'), 0, H2, 24, [], 0, false);
+      glassFace(wallOf(K, 1.8, 'a', -0.72, 0.72, 3 + H1, 'a'), 0, H2, 8, [], 0, true);
+      fan(K, 1.8, 0, 0.72, top, 9, 'b', FRAME, s3 ? GOLD : null, true);   // Ende rechts: Glas mit Fächer statt Blechdeckel
+    }
+    // Querschiff (nach +b, zur Schauseite): hohe Tonne quer, vorn das große Fächerfenster
+    const qa = 0, qha = 0.46, qhb = 1.32, qH = s2 ? 22 : 12, qRoof = s2 ? 14 : 8, qtop = 3 + qH;
+    K.block({ a: qa, b: 0, ha: qha, hb: qhb, h: qH, lift: 3, wall: GLASS, roof: shade(GLASS, 0.05), roofH: qRoof, type: 'barrel', ridge: 'b', over: 1 });
+    barrelRibs(K, qa, 0, qha, qhb, qtop, qRoof, false, 10, FRAME);
+    const Fq = wallOf(K, qhb, 'b', qa - qha, qa + qha, 3, 'b');
+    glassFace(Fq, 0, qH, 6, [qH * 0.5], 0, false);
+    glassFace(wallOf(K, qa + qha, 'a', -qhb, qhb, 3, 'a'), 0, qH, 12, [qH * 0.5], 0, true);
+    fan(K, qa, qhb, qha, qtop, qRoof, 'a', s3 ? GOLD : FRAME, s3 ? GOLD : null, false);   // großes Fächerfenster vorn
+    // Eingang unten im Querschiff
+    arch(Fq, 0.3, 0.7, 0, 8, C(shade('#8a5a3c', 0.1)));
+    if (s3) for (const sb of [-1, 1]) {                                    // Fahnen auf dem First des Querschiffs (vorn und hinten)
+      const [fx, fy] = K.P(qa, sb * qhb * 0.85, qtop + qRoof);
+      g.strokeStyle = C('#9a8a78'); g.lineWidth = Math.max(0.5, 0.5 * z); g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx, fy - 12 * z); g.stroke();
+      poly([[fx, fy - 12 * z], [fx + 7 * z, fy - 10 * z], [fx, fy - 8 * z]], C(sb > 0 ? '#e8604f' : '#5f8fe8'));
+    }
+    if (lit()) { glowP(Fq(0.5, 10), 26 * z); glowP(wallOf(K, 1.25, 'b', -1.8, 1.8, 3, 'b')(0.2, 6), 18 * z); glowP(wallOf(K, 1.25, 'b', -1.8, 1.8, 3, 'b')(0.8, 6), 18 * z); }
+  }
+
+  // B: Grand Palais – Steinflügel vorn mit Säulenreihe und großem Bogentor, dahinter das lange Glasdach (Tonne) und die Glaskuppel
+  function grandpalais(K, stufe = 3) {
+    const z = K.z, s2 = stufe >= 2, s3 = stufe >= 3;
+    K.block({ a: 0, b: 0, ha: 1.95, hb: 1.45, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
+    // Halle hinten: Steinwände, Glastonne längs
+    const hH = 12, htop = 3 + hH, hR = s2 ? 13 : 9;
+    K.block({ a: 0, b: -0.35, ha: 1.75, hb: 0.95, h: hH, lift: 3, wall: STONE2, roof: GLASS, roofH: hR, type: 'barrel', ridge: 'a', over: 1 });
+    barrelRibs(K, 0, -0.35, 1.75, 0.95, htop, hR, true, 16, shade('#7d8f96', 0), 0.6);
+    // Kuppel über der Mitte (Stufe 2)
+    if (s2) {
+      const [dx, dy] = K.P(0, -0.35, htop + hR - 6), R = 0.62 * Math.SQRT2 * TW / 2 * z;   // Tambour steckt im Glasdach, oben ein Kragen
+      cyl(dx, dy, R, R / 2, 10 * z, STONE2);
+      ellipse(dx, dy - 10 * z, R * 1.06, R * 0.53, C(s3 ? GOLD : shade(STONE2, -0.1)));
+      dome(dx, dy - 10 * z, R, R / 2, 20 * z, GLASS);
+      g.strokeStyle = C('#7d8f96'); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath();
+      for (const k of [-0.75, -0.4, 0, 0.4, 0.75]) for (let j = 0; j <= 10; j++) { const t = j / 10, x = dx + k * R * Math.cos(t * Math.PI / 2), y = dy - 10 * z - 20 * z * Math.sin(t * Math.PI / 2) + Math.sqrt(1 - k * k) * R / 2 * Math.cos(t * Math.PI / 2); j ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke();
+      if (s3) { cyl(dx, dy - 30 * z, 2.6 * z, 1.3 * z, 4 * z, GOLD); circle(dx, dy - 35.5 * z, 1.6 * z, lit() ? '#fff1a8' : C(GOLD_L)); }
+    }
+    // Steinflügel vorn (+b): Säulenreihe, Bogentor in der Mitte, Attika
+    const fH = 15, fb = 1.02, fhb = 0.26;
+    K.block({ a: 0, b: fb, ha: 1.85, hb: fhb, h: fH, lift: 3, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : shade(STONE2, -0.08) });
+    const Fb = wallOf(K, fb + fhb, 'a', -1.85, 1.85, 3, 'b'), Fa = wallOf(K, 1.85, 'b', fb - fhb, fb + fhb, 3, 'a');
+    for (let i = 0; i < 12; i++) { const t = 0.04 + i * 0.08; if (t > 0.42 && t < 0.58) continue; arch(Fb, t, t + 0.045, 3, 11, C('#9fc3e3')); }
+    // Säulenreihe vor der Fassade (Paare zwischen den Fenstern), von hinten nach vorn
+    const cols = []; for (let i = 0; i <= 12; i++) { const t = 0.02 + i * 0.08; if (t > 0.4 && t < 0.6) continue; cols.push(-1.85 + 3.7 * t); }
+    cols.sort((p, q) => K.depth(p, fb + fhb + 0.06) - K.depth(q, fb + fhb + 0.06)).forEach(a => column(K, a, fb + fhb + 0.06, 3, fH - 2, '#f6efe0', s3));
+    K.block({ a: 0, b: fb + fhb + 0.02, ha: 1.85, hb: 0.08, h: 2.2, lift: 3 + fH - 2, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : null });   // Gebälk über den Säulen
+    K.block({ a: 0, b: fb + fhb - 0.03, ha: 1.85, hb: 0.05, h: 2.6, lift: 3 + fH, wall: shade(STONE2, 0.03), type: 'flat', roof: shade(STONE2, 0.1) });   // Attika an der Vorderkante
+    // Portikus in der Mitte: springt vor, höher, mit flachem Giebel; Tor mittelbraun, darüber Glas im Bogen
+    const pb = fb + fhb + 0.16;
+    K.block({ a: 0, b: pb, ha: 0.32, hb: 0.14, h: fH + 3, lift: 3, wall: shade(STONE2, 0.04), type: 'flat', roof: shade(STONE2, 0.1), trim: s3 ? GOLD : shade(STONE2, -0.08) });
+    const Fp = wallOf(K, pb + 0.14, 'a', -0.32, 0.32, 3, 'b');
+    poly([Fp(-0.04, fH + 3), Fp(1.04, fH + 3), Fp(0.5, fH + 8)], C(shade(STONE2, 0.06)));   // flacher Giebel vorn
+    g.strokeStyle = C(s3 ? GOLD : shade(STONE2, -0.12)); g.lineWidth = Math.max(0.5, 0.8 * z); g.beginPath(); g.moveTo(...Fp(-0.04, fH + 3)); g.lineTo(...Fp(0.5, fH + 8)); g.lineTo(...Fp(1.04, fH + 3)); g.stroke();
+    arch(Fp, 0.22, 0.78, 0, 14, C('#8a5a3c'));
+    arch(Fp, 0.3, 0.7, 7, 13.2, C('#9fc3e3'));
+    for (const t of [0.08, 0.92]) fRect(Fp, t - 0.04, t + 0.04, 0, fH + 1, C(shade(STONE2, 0.1)));
+    arch(Fa, 0.25, 0.75, 3, 11, C(shade('#9fc3e3', -0.1)));
+    if (s3) {                                                             // goldene Kugeln auf der Attika, Goldkranz über dem Tor
+      for (const a of [-1.75, -0.9, 0.9, 1.75]) { const [ux, uy] = K.P(a, fb + fhb - 0.03, 3 + fH + 2.6); box(ux, uy, 2.2 * z, 1.1 * z, 1.5 * z, GOLD_D, null, 0); circle(ux, uy - 3.4 * z, 1.9 * z, C(GOLD)); }
+    }
+    if (lit()) { glowP(Fp(0.5, 9), 24 * z); for (const t of [0.2, 0.8]) glowP(Fb(t, 7), 14 * z); }
+  }
+
+  window.PRACHT = { opernhaus, semper, garnier, kristall, grandpalais };
   window.prachtEntwurf = (opts = {}) => {
     document.getElementById('cmp')?.remove();
     const Wv = innerWidth, Hv = innerHeight, cv = document.createElement('canvas'); cv.id = 'cmp'; cv.width = Wv * 2; cv.height = Hv * 2;
     Object.assign(cv.style, { position: 'fixed', inset: 0, width: Wv + 'px', height: Hv + 'px', zIndex: 99999, background: opts.night ? '#1f2846' : '#fffaf0' });
     document.body.appendChild(cv);
-    const ctx = cv.getContext('2d'); ctx.scale(2, 2);
+    const ctx = cv.getContext('2d'); ctx.scale(2, 2); ctx.fillStyle = opts.night ? '#1f2846' : '#fffaf0'; ctx.fillRect(0, 0, Wv, Hv);   // Hintergrund auch im PNG
     const prev = g, n0 = night, sp0 = SPRITE_PAINT; g = ctx; night = opts.night ? NIGHT_MAX : 0; SPRITE_PAINT = true;   // isLive(): Licht wie im Spiel
     const z = opts.z || 2, stufen = opts.stufen || [1, 2, 3], cw = (Wv - 12 * (stufen.length + 1)) / stufen.length;
     try {
       stufen.forEach((st, i) => {
         const x = 12 + i * (cw + 12), cx = x + cw / 2, cy = Hv - 40 - 48 * z;
-        diamond(cx, cy, 96 * z, 48 * z, opts.night ? '#33405e' : '#b4dd8c');
+        const fl = (opts.flaeche || [])[i] || opts.flaeche1;
+        if (fl) ground(kit(cx, cy, z, 0), fl[0] + 0.3, fl[1] + 0.3, opts.night ? '#33405e' : '#b4dd8c'); else diamond(cx, cy, 96 * z, 48 * z, opts.night ? '#33405e' : '#b4dd8c');
         PRACHT[(opts.baus || [])[i] || opts.bau || 'opernhaus'](kit(cx, cy, z, 0), st, { buehne: (opts.varianten || [])[i] || opts.buehne });
         ctx.fillStyle = opts.night ? '#f1e3cf' : '#6b4f3a'; ctx.font = '700 15px system-ui'; ctx.fillText(opts.titel ? opts.titel[i] : opts.varianten ? 'Variante ' + opts.varianten[i] : 'Stufe ' + st, x + 4, 22);
       });
