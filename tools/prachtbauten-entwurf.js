@@ -437,7 +437,8 @@
         TB({ a, b, ha: 0.075, hb: 0.09, h: POST_H, lift: h0, wall: shade(STONE2, 0.05), type: 'flat', roof: shade(STONE2, 0.12), trim: s3 ? GOLD : shade(STONE2, -0.06) });
         if (s3 && deco) deco(...K.P(a, b, h0 + POST_H));
       };
-      const POSTS = [[-1.78, be, (x, y) => pegasus(x, y, 1.25, -1)], [-0.62, be, (x, y) => vase(x, y, 0.9)], [0.62, be, (x, y) => vase(x, y, 0.9)], [1.78, be, (x, y) => pegasus(x, y, 1.25, 1)]];
+      // innere Sockel direkt neben dem Vordach – dazwischen blieben sonst Geländer-Reste zwischen Dachkante und Sockel sichtbar
+      const POSTS = [[-1.78, be, (x, y) => pegasus(x, y, 1.25, -1)], [-0.5, be, (x, y) => vase(x, y, 0.9)], [0.5, be, (x, y) => vase(x, y, 0.9)], [1.78, be, (x, y) => pegasus(x, y, 1.25, 1)]];
       const parts = [];                                                   // [Tiefe, Zeichnen]
       const cuts = POSTS.map(p => p[0]);
       for (let i = 0; i + 1 < cuts.length; i++) { const a0 = cuts[i] + 0.075, a1 = cuts[i + 1] - 0.075; parts.push([(a0 + a1) / 2 + be, front(a0, a1)]); }
@@ -452,18 +453,20 @@
     // hinten, hinten auf Linie mit den anderen – ein Vordach/Entree“): zwei Reihen hoher Säulen (hinten auf der Säulenlinie des Flügels)
     // tragen Gebälk und Giebeldach über die ganze Tiefe; in der Wand dahinter das Bogentor; davor zwei Stufen bis zur Kante der Grundfläche.
     // Reihenfolge: Tor (in der Wand) → alle Säulen von hinten nach vorn → Gebälk → Giebeldach → Stufen
-    const pHa = 0.46, ptop = 3 + fH + 1, pBack = fb + fhb + 0.06, pFront = 1.4;   // halbe Breite, Unterkante Gebälk, Säulenreihen
+    // Säulen und Gebälk genau so hoch wie am Flügel: das Gebälk läuft als ein Band durch und biegt nach vorn um das Vordach (vorher saß es
+    // höher, das Band des Flügels stieß auf halber Höhe gegen die Säulen – Nutzer: „da wo die Leiste über den Säulen anbindet“)
+    const pHa = 0.46, ptop = 3 + fH - 2, pBack = fb + fhb + 0.06, pFront = 1.4;   // halbe Breite, Unterkante Gebälk, Säulenreihen
     const pcB = (fb + fhb + pFront + 0.04) / 2, pHb = (pFront + 0.04 - fb - fhb) / 2;  // Gebälk von der Wand bis knapp vor die vordere Reihe
     const Fp = wallOf(K, fb + fhb, 'a', -pHa, pHa, 3, 'b');                // Torwand = Wand des Flügels hinter den Säulen
-    if (s3) arch(Fp, 0.26, 0.74, 0, 14.6, C(GOLD));                         // Goldrahmen ums Tor
-    arch(Fp, 0.28, 0.72, 0, 14, C(shade('#8a5a3c', 0.05)));                 // Tor: zwei Flügel
-    fRect(Fp, 0.497, 0.503, 0, 8.6, C(shade('#8a5a3c', -0.2)));
-    arch(Fp, 0.33, 0.67, 8.8, 13.4, C('#9fc3e3'));                          // Oberlicht im Bogen
+    if (s3) arch(Fp, 0.26, 0.74, 0, 12.8, C(GOLD));                         // Goldrahmen ums Tor
+    arch(Fp, 0.28, 0.72, 0, 12.2, C(shade('#8a5a3c', 0.05)));               // Tor: zwei Flügel (unter dem Gebälk)
+    fRect(Fp, 0.497, 0.503, 0, 7.4, C(shade('#8a5a3c', -0.2)));
+    arch(Fp, 0.33, 0.67, 7.6, 11.7, C('#9fc3e3'));                          // Oberlicht im Bogen
     const pcols = []; for (const b of [pBack, pFront]) for (const a of [-0.4, -0.135, 0.135, 0.4]) pcols.push([a, b]);
     pcols.sort((p, q) => K.depth(...p) - K.depth(...q)).forEach(([a, b]) => column(K, a, b, 3, ptop - 3, '#f6efe0', s3));
-    TB({ a: 0, b: pcB, ha: pHa, hb: pHb, h: 2.6, lift: ptop, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : shade(STONE2, -0.08) });   // Gebälk
-    TB({ a: 0, b: pcB, ha: pHa, hb: pHb, h: 0.01, lift: ptop + 2.6, wall: STONE2, roof: '#f4ecdd', roofH: 7, type: 'gable', ridge: 'b', over: 1.0 });   // Giebeldach, Dreieck nach vorn
-    { const Fg = wallOf(K, pcB + pHb, 'a', -pHa, pHa, ptop + 2.6, 'b');                                    // Giebelrahmen
+    TB({ a: 0, b: pcB, ha: pHa, hb: pHb, h: 2.2, lift: ptop, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : shade(STONE2, -0.08) });   // Gebälk
+    TB({ a: 0, b: pcB, ha: pHa, hb: pHb, h: 0.01, lift: ptop + 2.2, wall: STONE2, roof: '#f4ecdd', roofH: 7, type: 'gable', ridge: 'b', over: 1.0 });   // Giebeldach, Dreieck nach vorn
+    { const Fg = wallOf(K, pcB + pHb, 'a', -pHa, pHa, ptop + 2.2, 'b');                                    // Giebelrahmen
       g.strokeStyle = C(s3 ? GOLD : shade(STONE2, -0.12)); g.lineWidth = Math.max(0.5, 0.8 * z); g.lineJoin = 'round'; g.beginPath(); g.moveTo(...Fg(0, 0)); g.lineTo(...Fg(0.5, 7)); g.lineTo(...Fg(1, 0)); g.stroke(); }
     for (const [bb, hh, w] of [[1.4625, 2, 0.5], [1.4875, 1, 0.54]]) TB({ a: 0, b: bb, ha: w, hb: 0.0125, h: hh, wall: shade(STONE2, -0.1), type: 'flat', roof: shade(STONE2, 0.14) });   // Stufen bis zur Kante
     arch(Fa, 0.25, 0.75, 3, 11, C(shade('#9fc3e3', -0.1)));
