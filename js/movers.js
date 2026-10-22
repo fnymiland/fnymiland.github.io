@@ -855,10 +855,11 @@ function trainOnHills(m, k) {
   // der ganz auf dieser Seite ihrer Wand liegt
   const occ = [], la = m.len / 2, wb = trainHalfW(tr), oD = trainTileOrder(D[0], D[1]);
   const C4 = [[-la, -wb], [la, -wb], [la, wb], [-la, wb]].map(([a, b]) => [m.px + m.du * a - m.dv * b, m.py + m.dv * a + m.du * b]);
+  const ss = rampFresh().s > 0;                                           // Treppen davor (157l, 22.10.2026): ihr Keil, gerade Treppen
   for (const [px, py] of cells) for (const [ex, ey] of [[0, 1], [1, 0]]) {
-    const qx = px + ex, qy = py + ey;
-    if (trainTileOrder(qx, qy) >= oD || !hillAt(qx, qy) || cells.some(c => c[0] === qx && c[1] === qy) || occ.some(o => o[0] === qx && o[1] === qy)) continue;
-    if (C4.every(([u, v]) => (ex ? u : v) <= (ex ? qx : qy) - 0.5 + 0.02)) occ.push([qx, qy, hillLift(qx, qy)]);
+    const qx = px + ex, qy = py + ey, st = ss && !hillAt(qx, qy) ? stairAt(qx, qy) : null;
+    if (trainTileOrder(qx, qy) >= oD || !(hillAt(qx, qy) || (st && !st.ecke)) || cells.some(c => c[0] === qx && c[1] === qy) || occ.some(o => o[0] === qx && o[1] === qy)) continue;
+    if (C4.every(([u, v]) => (ex ? u : v) <= (ex ? qx : qy) - 0.5 + 0.02)) occ.push(st ? [qx, qy, hillLift(qx, qy), stairRotOf(st)] : [qx, qy, hillLift(qx, qy)]);
   }
   const ha = surfaceHeight(pa[0], pa[1]), hb = surfaceHeight(pb[0], pb[1]);   // ein Ende schon knapp auf dem Fuß: auch angehoben (sonst ein Sprung)
   up = up || ha > 0 || hb > 0;
@@ -867,14 +868,27 @@ function trainOnHills(m, k) {
   m.hill = { up, base: hillLift(D[0], D[1]), ha, hb, occ, ramp };
   return up ? D.join() : k;
 }
+// Umriss eines Felds davor, das der Wagen nicht zudeckt (S: Weltpunkt + Höhe → Bildschirm): Anhöhe [qx, qy, qh] = Block bis qh; Treppe
+// [qx, qy, Boden, rot] (157l) = ihr Keil – hinten an der Wand so hoch wie die Anhöhe, vorn eine Stufe (Linie der Stufenkanten)
+function occOutline(o, S) {
+  const [qx, qy, qh, rot] = o;
+  if (rot == null) return [S(qx - 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, 0), S(qx + 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, qh)];
+  const [Du, Dv] = STAIR_UP[rot & 3], pts = [];
+  for (const [cu, cv] of [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]]) {
+    const u = qx + cu, v = qy + cv, back = cu * Du + cv * Dv > 0;
+    pts.push(S(u, v, qh), S(u, v, qh + (back ? HILL_H : HILL_H / STAIR_N)));
+    if (back) pts.push(S(u - Du / STAIR_N, v - Dv / STAIR_N, qh + HILL_H));
+  }
+  return hull(pts);
+}
 // Wagen auf Anhöhe/Rampe: nicht über die Anhöhen davor (je Anhöhe ein Ausschnitt, genau ihr Umriss – darüber zeigte sich sonst der Boden), danach
 // die Teile der Rampe vor ihm. g ist um den Hub des Felds angehoben (render.js moverLive) – Punkte also relativ zu ihm
 function drawTrainCarHill(car, z, now) {
   const hl = car.hill, S = (u, v, h) => { const p = toScreen(u, v); return [p.x, p.y - (h - hl.base) * z]; };
   g.save();
   try {
-    for (const [qx, qy, qh] of hl.occ) {
-      const pts = [S(qx - 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, 0), S(qx + 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, qh)];
+    for (const o of hl.occ) {
+      const pts = occOutline(o, S);
       g.beginPath(); g.rect(-1e4, -1e4, 3e4, 3e4);
       pts.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.closePath();
       g.clip('evenodd');                                                  // nacheinander: zusammen nie dort, wo eine der Anhöhen liegt
@@ -905,7 +919,7 @@ function trainAt(sx, sy) {
       pts.push(S(u, v, hz(a)), S(u, v, hz(a) + H + 1));
     }
     if (!ptInConvex(hull(pts), sx, sy)) continue;
-    if (hl.occ.some(([qx, qy, qh]) => ptInConvex([S(qx - 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, 0), S(qx + 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, qh)], sx, sy))) continue;
+    if (hl.occ.some(o => ptInConvex(occOutline(o, S), sx, sy))) continue;
     if (!best || m.px + m.py > best.car.px + best.car.py) best = { x: Math.round(m.px), y: Math.round(m.py), car: m, ...(m.deck && bkAt(Math.round(m.px), Math.round(m.py)) ? { deck: true } : {}) };   // über dem Deck: die Brücke (160b)
   }
   return best;

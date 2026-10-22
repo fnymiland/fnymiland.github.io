@@ -211,3 +211,34 @@ describe('8 Gleis-Rampe in ✋-Gruppen und ⧉ Kopien: Ablegen an der Wand wie d
     game("setTool('look'); rampNewForm = 'a'");
   });
 });
+
+describe('6 Treppen vor einem Zug werden ausgespart', () => {
+  const rails = cells => game(`for (const [x, y] of ${JSON.stringify(cells)}) build('schiene', x, y, true); recalc()`);
+  const fakeTrain = keys => game(`(() => {
+    trains.length = 0;
+    const route = railPolyline(${JSON.stringify(keys.map(k => k.join()))}), kind = { ...TRAIN_KIND.regio, n: TRAIN_KIND.regio.n };
+    const half = kind.n * (kind.len + kind.gap) / 2;
+    trains.push({ id: 'probe', route, stops: [half, route.len - half], powered: true, model: 'regio', col: 0, kind, c: half, dir: 1, wait: 0, next: 1 });
+    return route.len;
+  })()`);
+  it('Gleis unten längs einer Anhöhe, davor eine Treppe (früher gezeichnet): occ mit ihrem Keil, der Wagen malt nicht darüber', () => {
+    hills(block(8, 14, 20, 16));
+    game("build('huegeltreppe', 11, 13); build('huegeltreppe', 15, 13)");
+    expect(game('[stairRotOf(stairAt(11, 13)), stairRotOf(stairAt(15, 13))]')).toEqual([2, 2]);
+    const keys = []; for (let x = 6; x <= 22; x++) keys.push([x, 12]);
+    rails(keys); const len = fakeTrain(keys);
+    const seen = new Set();
+    for (let c = 0.5; c <= len - 0.5; c += 0.05) {
+      const occ = JSON.parse(game(`(() => { trains[0].c = ${c}; return JSON.stringify(trainCars().flatMap(m => { trainOnHills(m, Math.round(m.px) + ',' + Math.round(m.py)); return m.hill ? m.hill.occ : []; })); })()`));
+      for (const q of occ) if (q[3] != null) { expect([q[1], q[3]]).toEqual([13, 2]); seen.add(q[0]); }
+    }
+    expect([...seen].sort()).toEqual([11, 15]);
+    // Umriss: Keil – hinten (an der Wand) so hoch wie die Anhöhe, vorn eine Stufe
+    const o = game(`(() => { const S = (u, v, h) => { const p = toScreen(u, v); return [p.x, p.y - h]; }; return occOutline([11, 13, 0, 2], S); })()`);
+    const inside = (u, v, h) => game(`(p => ptInConvex(${JSON.stringify(o)}, p.x, p.y - ${h}))(toScreen(${u}, ${v}))`);
+    expect([inside(11, 13.45, 24), inside(11, 12.55, 2), inside(11, 12.55, 20)]).toEqual([true, true, false]);   // vorn über der untersten Stufe frei
+    // zeichnen ohne Fehler
+    expect(() => game(`trains[0].c = ${len / 2}; render(1e6)`)).not.toThrow();
+    game('trains.length = 0; syncTrains.sig = null');
+  });
+});
