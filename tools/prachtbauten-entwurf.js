@@ -345,18 +345,33 @@
     barrelRibs(K, 0, HBc, HA, HB, htop, hR, true, 16, RIBC, RIBW);
     if (s2 && !show) { cyl(dx, dy, R, R / 2, dr * z, STONE2); ellipse(dx, dy - dr * z, R * 1.06, R * 0.53, C(s3 ? GOLD : shade(STONE2, -0.1))); dome(dx, dy - dr * z, R, R / 2, 20 * z, GLASS); domeRibs(); lantern(); }
     if (s2 && show) {
-      ellipse(dx, dy, R, R / 2, C(shade(STONE2, -0.02)));                          // Boden der Vitrine
+      // Gerüst der Vitrine ringsum (Nutzer: „die goldenen Leisten gehen nicht ganz rum – das sieht man, weil das Glas durchsichtig ist“):
+      // ein Rahmen aus 10 Meridianen, Tambour-Pfosten, Ringen; erst die hintere Hälfte (gedämpft, durchs Glas), dann Stück, Glas, vordere Hälfte
+      const DH = 20 * z, y0 = dy - dr * z, NM = 10;
+      const dp = (lat, ph) => [dx + R * Math.cos(lat) * Math.sin(ph), y0 + R / 2 * Math.cos(lat) * Math.cos(ph) - DH * Math.sin(lat)];
+      const ringPt = (yy, ph) => [dx + R * Math.sin(ph), yy + R / 2 * Math.cos(ph)];
+      const frame = front => {                                            // front: Teile mit cos φ ≥ 0 (zum Betrachter), sonst die Rückseite
+        const inHalf = ph => (Math.cos(ph) >= -1e-6) === front, col = front ? RIBC : shade(RIBC, 0.25);
+        g.strokeStyle = C(col); g.lineWidth = Math.max(0.5, (front ? RIBW : RIBW * 0.8) * z); g.beginPath();
+        for (let m = 0; m < NM; m++) { const ph = m * 2 * Math.PI / NM; if (!inHalf(ph)) continue;
+          for (let j = 0; j <= 12; j++) { const p = dp(Math.PI / 2 * j / 12, ph); j ? g.lineTo(...p) : g.moveTo(...p); }       // Meridian
+          const [x, y] = ringPt(dy, ph); g.moveTo(x, y); g.lineTo(x, y - dr * z); }                                          // Pfosten
+        const arc = (fn) => { let on = false; for (let j = 0; j <= 48; j++) { const ph = 2 * Math.PI * j / 48; if (!inHalf(ph)) { on = false; continue; } const p = fn(ph); on ? g.lineTo(...p) : g.moveTo(...p); on = true; } };
+        arc(ph => dp(0.7, ph)); arc(ph => ringPt(dy, ph));                // Ring auf der Kuppel, Fußring
+        g.stroke();
+        g.strokeStyle = C(s3 ? (front ? GOLD : shade(GOLD, 0.2)) : col); g.lineWidth = Math.max(0.5, (s3 ? 1.3 : RIBW) * z); g.beginPath();
+        arc(ph => ringPt(dy - dr * z, ph)); g.stroke();                   // Kranz oben am Tambour
+      };
+      ellipse(dx, dy, R, R / 2, C(shade(STONE2, -0.02)));                // Boden der Vitrine
+      frame(false);
       cyl(dx, dy - 0.2 * z, R * 0.42, R * 0.21, 2.5 * z, shade(STONE2, 0.05));       // Sockel
       ellipse(dx, dy - 2.7 * z, R * 0.43, R * 0.215, C(s3 ? GOLD : shade(STONE2, 0.1)));
       const id = opt.stueck || 'mon_pagode', sc = Math.min(0.32, 27 / ((ITEMS[id] && ITEMS[id].h) || 60));
       if (lit()) glowP([dx, dy - 12 * z], 30 * z);
       drawObject(id, dx, dy - 2.7 * z, z * sc, 1e6, 0, 0, 1, { b: id, rot: 0 });
       g.globalAlpha = 0.2; cyl(dx, dy, R, R / 2, dr * z, GLASS); dome(dx, dy - dr * z, R, R / 2, 20 * z, GLASS); g.globalAlpha = 1;
-      g.strokeStyle = C(RIBC); g.lineWidth = Math.max(0.5, RIBW * z); g.beginPath();   // Tambour: Pfosten (wenige, das Stück soll frei zu sehen sein)
-      for (let m = -2; m <= 2; m++) { const ph = m * Math.PI / 5, x = dx + R * Math.sin(ph), y = dy + R / 2 * Math.cos(ph); g.moveTo(x, y); g.lineTo(x, y - dr * z); }
-      g.stroke();
-      for (const [yy, w] of [[dy - dr * z, s3 ? 1.3 : RIBW]]) { g.lineWidth = Math.max(0.5, w * z); g.strokeStyle = C(s3 ? GOLD : RIBC); g.beginPath(); g.ellipse(dx, yy, R * 1.02, R * 0.51, 0, 0, Math.PI); g.stroke(); }
-      domeRibs(true); lantern();
+      frame(true);
+      lantern();
     }
     // Steinflügel vorn (+b): Säulenreihe, Bogentor in der Mitte, Attika
     const fH = 15, fb = 1.02, fhb = 0.26;
