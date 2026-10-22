@@ -320,25 +320,27 @@
   // B: Grand Palais – Steinflügel vorn mit Säulenreihe und großem Bogentor, dahinter das lange Glasdach (Tonne) und die Glaskuppel.
   // Stufe 1: Steinflügel mit Portikus, niedrige Glashalle · 2: Säulenreihe, höhere Tonne, Kuppel · 3: Gold (Kanten, Kugeln, Kuppelring, Laterne)
   function grandpalais(K, stufe = 3, opt = {}) {
-    // Goldschmuck Stufe 3 (Nutzer 22.10.: „nochmal etwas anders“): A goldenes Glasdach, B Kuppelkrone & Vasen, C Fahnen & Fries
-    const z = K.z, s2 = stufe >= 2, s3 = stufe >= 3, gv = opt.buehne || 'A', RIB = '#7d8f96';
+    // Stufe 3 (Nutzer 22.10.): goldenes Glasdach und goldene Kuppel („geil“); Schmuck der Fassade zur Wahl: 'vasen' (auf Sockeln, mit
+    // Girlanden – einzeln „plump, fad“) oder 'pferde' (goldene Flügelpferde wie die Pferdegruppen in Paris, ohne Menschen)
+    const z = K.z, s2 = stufe >= 2, s3 = stufe >= 3, gv = opt.buehne || 'vasen', RIB = '#7d8f96', RIBC = s3 ? GOLD_D : RIB, RIBW = s3 ? 0.75 : 0.6;
     K.block({ a: 0, b: 0, ha: 1.95, hb: 1.45, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
     // Halle hinten: Steinwände, Glastonne längs
     const hH = 12, htop = 3 + hH, hR = s2 ? 13 : 9;
     K.block({ a: 0, b: -0.35, ha: 1.75, hb: 0.95, h: hH, lift: 3, wall: STONE2, roof: GLASS, roofH: hR, type: 'barrel', ridge: 'a', over: 1 });
-    barrelRibs(K, 0, -0.35, 1.75, 0.95, htop, hR, true, 16, s3 && gv === 'A' ? GOLD_D : RIB, s3 && gv === 'A' ? 0.75 : 0.6);
+    barrelRibs(K, 0, -0.35, 1.75, 0.95, htop, hR, true, 16, RIBC, RIBW);
     // Kuppel über der Mitte (Stufe 2)
     if (s2) {
       const [dx, dy] = K.P(0, -0.35, htop + hR - 6), R = 0.62 * Math.SQRT2 * TW / 2 * z;   // Tambour steckt im Glasdach, oben ein Kragen
       cyl(dx, dy, R, R / 2, 10 * z, STONE2);
       ellipse(dx, dy - 10 * z, R * 1.06, R * 0.53, C(s3 ? GOLD : shade(STONE2, -0.1)));
       dome(dx, dy - 10 * z, R, R / 2, 20 * z, GLASS);
-      g.strokeStyle = C(s3 && gv !== 'C' ? GOLD_D : RIB); g.lineWidth = Math.max(0.5, (s3 && gv !== 'C' ? 0.8 : 0.6) * z); g.beginPath();
-      for (const k of [-0.75, -0.4, 0, 0.4, 0.75]) for (let j = 0; j <= 10; j++) { const t = j / 10, x = dx + k * R * Math.cos(t * Math.PI / 2), y = dy - 10 * z - 20 * z * Math.sin(t * Math.PI / 2) + Math.sqrt(1 - k * k) * R / 2 * Math.cos(t * Math.PI / 2); j ? g.lineTo(x, y) : g.moveTo(x, y); }
+      // Rippen wie auf der Tonne: Meridiane und Ringe auf der sichtbaren Hälfte, gleiche Farbe und Stärke
+      const DH = 20 * z, y0 = dy - 10 * z, dp = (lat, ph) => [dx + R * Math.cos(lat) * Math.sin(ph), y0 + R / 2 * Math.cos(lat) * Math.cos(ph) - DH * Math.sin(lat)];
+      g.strokeStyle = C(RIBC); g.lineWidth = Math.max(0.5, RIBW * z); g.beginPath();
+      for (let m = -4; m <= 4; m++) { const ph = m * Math.PI / 10; for (let j = 0; j <= 12; j++) { const p = dp(Math.PI / 2 * j / 12, ph); j ? g.lineTo(...p) : g.moveTo(...p); } }
+      for (const lat of [0.35, 0.78]) for (let j = 0; j <= 24; j++) { const p = dp(lat, -Math.PI / 2 + Math.PI * j / 24); j ? g.lineTo(...p) : g.moveTo(...p); }
       g.stroke();
-      if (s3 && gv === 'A') { cyl(dx, dy - 30 * z, 2.6 * z, 1.3 * z, 4 * z, GOLD); circle(dx, dy - 35.5 * z, 1.6 * z, lit() ? '#fff1a8' : C(GOLD_L)); }
-      if (s3 && gv === 'B') crown(dx, dy - 30 * z, z, 1.1);
-      if (s3 && gv === 'C') { cyl(dx, dy - 30 * z, 1.8 * z, 0.9 * z, 2 * z, GOLD_D); cone(dx, dy - 32 * z, 1.8 * z, 0.9 * z, 10 * z, GOLD); circle(dx, dy - 42.5 * z, 1.2 * z, C(GOLD_L)); }
+      if (s3) { cyl(dx, dy - 30 * z, 2.6 * z, 1.3 * z, 4 * z, GOLD); cone(dx, dy - 34 * z, 3 * z, 1.5 * z, 3.5 * z, GOLD_D); circle(dx, dy - 38.5 * z, 1.4 * z, lit() ? '#fff1a8' : C(GOLD_L)); }
     }
     // Steinflügel vorn (+b): Säulenreihe, Bogentor in der Mitte, Attika
     const fH = 15, fb = 1.02, fhb = 0.26;
@@ -363,23 +365,46 @@
     for (const t of [0.08, 0.92]) fRect(Fp, t - 0.04, t + 0.04, 0, fH + 1, C(shade(STONE2, 0.1)));
     arch(Fa, 0.25, 0.75, 3, 11, C(shade('#9fc3e3', -0.1)));
     const attic = a => K.P(a, fb + fhb - 0.03, 3 + fH + 2.6);
-    if (s3 && gv === 'B') {                                               // Vasen auf der Attika, Strahlenkranz im Giebel
-      for (const a of [-1.75, -0.9, 0.9, 1.75]) { const [ux, uy] = attic(a); box(ux, uy, 1.6 * z, 0.8 * z, 1 * z, GOLD_D, null, 0);
-        ellipse(ux, uy - 3 * z, 2.3 * z, 2.6 * z, C(GOLD)); ellipse(ux + 0.7 * z, uy - 3.6 * z, 0.8 * z, 1.4 * z, C(GOLD_L)); ellipse(ux, uy - 5.8 * z, 1.5 * z, 0.6 * z, C(GOLD_D)); }
-      g.strokeStyle = C(GOLD); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath();
-      for (let k = 0; k <= 6; k++) { const th = 0.35 + (Math.PI - 0.7) * k / 6; g.moveTo(...Fp(0.5, fH + 3.4)); g.lineTo(...Fp(0.5 + Math.cos(th) * 0.3, fH + 3.4 + Math.sin(th) * 3.4)); }
-      g.stroke(); const [sx, sy] = Fp(0.5, fH + 3.4); circle(sx, sy - 0.6 * z, 1.4 * z, C(GOLD));
+    // Vase (Amphora) auf einem Sockel: Fuß, bauchiger Körper mit Glanz, Hals, Henkel, Deckel mit Knauf
+    const vase = (a, sc = 1) => {
+      K.block({ a, b: fb + fhb - 0.03, ha: 0.07 * sc, hb: 0.07 * sc, h: 3 * sc, lift: 3 + fH + 2.6, wall: shade(STONE2, 0.05), type: 'flat', roof: GOLD });
+      const [x, y] = K.P(a, fb + fhb - 0.03, 3 + fH + 5.6 * sc), u = z * sc;
+      poly([[x - 1.2 * u, y], [x + 1.2 * u, y], [x + 0.7 * u, y - 1 * u], [x - 0.7 * u, y - 1 * u]], C(GOLD_D));       // Fuß
+      ellipse(x, y - 3.6 * u, 2.4 * u, 2.9 * u, C(GOLD));                                                                // Bauch
+      ellipse(x - 0.8 * u, y - 4.4 * u, 0.7 * u, 1.5 * u, C(GOLD_L));                                                   // Glanz (Licht von links)
+      poly([[x - 1 * u, y - 6 * u], [x + 1 * u, y - 6 * u], [x + 1.3 * u, y - 7.6 * u], [x - 1.3 * u, y - 7.6 * u]], C(GOLD_D));   // Hals
+      g.strokeStyle = C(GOLD_D); g.lineWidth = Math.max(0.5, 0.6 * u); g.beginPath();
+      g.moveTo(x - 1.2 * u, y - 7.1 * u); g.quadraticCurveTo(x - 3.4 * u, y - 7.2 * u, x - 2.2 * u, y - 4.6 * u);           // Henkel
+      g.moveTo(x + 1.2 * u, y - 7.1 * u); g.quadraticCurveTo(x + 3.4 * u, y - 7.2 * u, x + 2.2 * u, y - 4.6 * u); g.stroke();
+      ellipse(x, y - 7.7 * u, 1.6 * u, 0.6 * u, C(GOLD)); circle(x, y - 8.6 * u, 0.7 * u, C(GOLD_L));                   // Deckel, Knauf
+      return [x, y];
+    };
+    // Flügelpferd, steigend, Blick nach links vorn (Seitenansicht), auf Sockel; s: Größe, dir 1/−1
+    const pegasus = (px, py, s, dir = 1) => {
+      const P = (x, y) => [px + dir * (x - 5) * s * z, py - y * s * z];
+      const body = [[3.2, 0], [3.6, 3.2], [2.6, 5.4], [1.0, 4.4], [0.6, 5.2], [1.4, 6.4], [3.4, 6.8], [5.8, 7.6], [6.6, 9.4], [7.8, 10.6], [9.4, 10.0], [9.6, 9.3],
+        [8.5, 9.0], [7.6, 8.2], [7.9, 7.1], [9.3, 7.6], [9.8, 6.7], [8.8, 6.5], [8.6, 5.6], [7.4, 5.4], [5.6, 4.9], [4.8, 3.0], [4.6, 0]];
+      const wing = [[5.0, 7.4], [3.0, 11.6], [4.4, 11.0], [3.8, 12.8], [5.4, 11.6], [5.2, 13.4], [6.6, 11.4], [6.6, 8.2]];
+      poly(wing.map(q => P(...q)), C(GOLD_D));
+      poly(body.map(q => P(...q)), C(GOLD));
+      poly([[5.4, 7.6], [3.6, 11.0], [4.6, 10.8], [4.4, 12.0], [5.6, 11.0], [5.8, 12.4], [6.4, 10.6], [6.2, 8.0]].map(q => P(...q)), C(GOLD_L));   // vorderer Flügel hell
+      circle(...P(8.6, 9.9), 0.35 * s * z, C(GOLD_D));                                                                     // Auge
+    };
+    if (s3 && gv === 'vasen') {                                           // Vasen auf Sockeln über den Säulenpaaren, Girlanden dazwischen
+      const as = [-1.75, -1.15, -0.55, 0.55, 1.15, 1.75], tops = as.map(a => vase(a));
+      g.strokeStyle = C(GOLD); g.lineWidth = Math.max(0.5, 0.7 * z); g.beginPath();
+      for (let i = 0; i + 1 < tops.length; i++) { if (as[i] < 0 && as[i + 1] > 0) continue; const [x0, y0] = tops[i], [x1, y1] = tops[i + 1];
+        for (let k = 0; k <= 12; k++) { const t = k / 12, x = x0 + (x1 - x0) * t, y = y0 + (y1 - y0) * t - 3 * z + Math.sin(Math.PI * t) * 3.2 * z; k ? g.lineTo(x, y) : g.moveTo(x, y); } }
+      g.stroke();
+      for (let i = 0; i + 1 < tops.length; i++) { if (as[i] < 0 && as[i + 1] > 0) continue; const [x0, y0] = tops[i], [x1, y1] = tops[i + 1];
+        for (const t of [0.25, 0.5, 0.75]) circle(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t - 3 * z + Math.sin(Math.PI * t) * 3.2 * z, 0.75 * z, C(t === 0.5 ? '#e8a0b4' : GOLD_L)); }
+      { const [sx, sy] = Fp(0.5, fH + 8); vase(0, 1.15); }                 // große Vase auf dem Giebel des Portikus
     }
-    if (s3 && gv === 'C') {                                               // Fahnen auf der Attika und dem Portikus, goldener Fries unter dem Gesims
-      for (let t = 0.02; t < 0.99; t += 0.03) { if (t > 0.4 && t < 0.6) continue; const [fx, fy] = Fb(t, fH - 1); circle(fx, fy, 0.7 * z, C(GOLD)); }
-      const COLS = ['#e8604f', '#5f8fe8', '#f2efe6', '#5f8fe8', '#e8604f'];
-      [[-1.75, 0], [-0.9, 1], [0.9, 3], [1.75, 4]].map(([a, i]) => [attic(a), COLS[i]]).concat([[Fp(0.5, fH + 8), '#f5c84b']]).forEach(([[px, py], col]) => {
-        g.strokeStyle = C(GOLD_D); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 11 * z); g.stroke();
-        circle(px, py - 11.5 * z, 0.8 * z, C(GOLD));
-        poly([[px, py - 10.5 * z], [px + 7 * z, py - 9 * z], [px, py - 6.5 * z]], C(col));
-      });
+    if (s3 && gv === 'pferde') {                                          // Flügelpferde: zwei auf den Ecken, eines (größer) über dem Portikus; Vasen dazwischen
+      for (const [a, d] of [[-1.72, 1], [1.72, -1]]) { K.block({ a, b: fb + fhb - 0.03, ha: 0.08, hb: 0.06, h: 2.5, lift: 3 + fH + 2.6, wall: shade(STONE2, 0.05), type: 'flat', roof: shade(STONE2, 0.12), trim: GOLD }); const [x, y] = K.P(a, fb + fhb - 0.03, 3 + fH + 5.1); pegasus(x, y, 1.25, d); }
+      for (const a of [-0.9, 0.9]) vase(a, 0.9);
+      { K.block({ a: 0, b: pb - 0.02, ha: 0.08, hb: 0.06, h: 2.5, lift: 3 + fH + 3, wall: shade(STONE2, 0.05), type: 'flat', roof: shade(STONE2, 0.12), trim: GOLD }); const [x, y] = K.P(0, pb - 0.02, 3 + fH + 5.5); pegasus(x, y, 1.7, 1); }
     }
-    if (s3 && gv === 'A') for (const a of [-1.75, 1.75]) { const [ux, uy] = attic(a); box(ux, uy, 2.2 * z, 1.1 * z, 1.5 * z, GOLD_D, null, 0); circle(ux, uy - 3.4 * z, 1.9 * z, C(GOLD)); }   // A: nur an den Ecken
     if (lit()) { glowP(Fp(0.5, 9), 24 * z); for (const t of [0.2, 0.8]) glowP(Fb(t, 7), 14 * z); }
   }
 
