@@ -259,7 +259,7 @@ html, body {
 #goal .task:active { transform: translateY(2px); box-shadow: 0 0 0 var(--shadow); }
 #goal .t-ic { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 9px; background: var(--cream2); display: grid; place-items: center; font-size: 16px; }
 #goal .t-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-#goal .t-main b { font-size: 12px; font-weight: 900; line-height: 1.2; }
+#goal .t-main b { font-size: 12px; font-weight: 900; line-height: 1.2; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }   /* lange Wörter („Schmetterlingsinsel“) trennen statt unter „Los!“ zu laufen */
 #goal .t-sub { font-size: 11px; font-weight: 700; color: var(--brown2); line-height: 1.25; }
 #goal .t-bar { height: 5px; background: var(--cream2); border-radius: 99px; margin-top: 3px; overflow: hidden; }
 #goal .t-bar i { display: block; height: 100%; background: #f2b53a; border-radius: 99px; }

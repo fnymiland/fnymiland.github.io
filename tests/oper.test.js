@@ -67,7 +67,7 @@ describe('Opernhaus', () => {
   });
   it('ohne Ton: freundlicher Hinweis statt Fehler', () => {
     game('state.muted = true');
-    expect(game('operPlay(1)')).toBe(false);
+    expect(game('operPlay()')).toBe(false);
     expect(game('operPlaying()')).toBe(false);
     game('state.muted = false');
   });

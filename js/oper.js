@@ -3,18 +3,19 @@
 // 🎭 Opernhaus (Prachtbau, Block 161f, Nutzer 22.10.2026): nach der Semperoper – Rundbau mit Bögen, Saal mit Kuppel, Portal als
 // erhöhtes Stück des Rings nach links vorn. Einmal im Spiel, 3×3, kostet Taler, drei Stufen (Ausbau per Knopf im Infofenster).
 // Wirkung: „Deine Insel als Lied“ – Antippen → ▶ spielt die Insel wie eine Spieluhr ab, ein goldener Streifen läuft von links nach
-// rechts mit. Je Stufe mehr Instrumente. Bild aus tools/prachtbauten-entwurf.js (semper, abgenommen), Lied aus tools/insel-lied.js
+// rechts mit. Bild aus tools/prachtbauten-entwurf.js (semper, abgenommen), Lied aus tools/insel-lied.js
 // (Klangset Spieluhr, weicher Bass – Nutzer: „nur Spieluhr, das klingt toll“; gezupfter Kontrabass klang „scheiße“).
 // ---------------------------------------------------------------------------
+// Ausbau = schöneres Gebäude und mehr 🌸; das Lied ist in jeder Stufe nur die Spieluhr (Nutzer 22.10.2026: „ja auch nur spieluhr“)
 const OPER_STAGES = [
-  { name: 'Opernhaus', lied: 'Spieluhr' },
-  { name: 'Großes Opernhaus', lied: 'Spieluhr, Bass und Takt', cost: { money: 1.5e9 } },
-  { name: 'Prachtoper', lied: 'ganzes Orchester: dazu Harfe, Holz und Streicher', cost: { money: 4e9 } },
+  { name: 'Opernhaus', look: 'Rundbau mit Bögen' },
+  { name: 'Großes Opernhaus', look: 'zweites Geschoss und grüne Kuppel', cost: { money: 1.5e9 } },
+  { name: 'Prachtoper', look: 'Gold, Lyra und Krone', cost: { money: 4e9 } },
 ];
 ITEMS.oper = { cat: 'deko', name: 'Opernhaus', size: [3, 3], cost: 500e6, needs: 'grass', h: 82, beauty: 100, festival: true, unique: true, the: 'Das Opernhaus',
   operStages: OPER_STAGES, desc: 'Rundbau mit Bögen und grüner Kuppel. Antippen: Das Opernhaus spielt deine Insel als Lied.' };
 FX.oper = '🎶 spielt deine Insel · 🌸 je Stufe';
-ITEM_TIPS.oper = 'Einmal im Spiel, braucht 3×3 Felder Wiese. Antippen und ▶ – das Opernhaus spielt deine Insel als Lied. Ausbauen bringt mehr Instrumente.';
+ITEM_TIPS.oper = 'Einmal im Spiel, braucht 3×3 Felder Wiese. Antippen und ▶ – das Opernhaus spielt deine Insel als Lied, und Bauen klingt nach deiner Insel.';
 { const fz = MENU.find(m => m.id === 'freizeit'), kultur = fz && fz.groups.find(gr => gr.id === 'kultur'); if (kultur) kultur.items.push('oper'); }
 
 const OPER_ART = (() => {
@@ -100,7 +101,7 @@ function operUpgrade(x, y) {
   recalc();
   sparkle(x + 1.5, y + 1.5);
   confettiBurst(); sfx('star');
-  toast(`🎉 ${nx.name}! Das Lied hat jetzt: ${nx.lied}.`);
+  toast(`🎉 ${nx.name}: ${nx.look}!`);
   save();
   return true;
 }
@@ -109,10 +110,10 @@ function operInfoHtml(t) {
   if (t.b !== 'oper') return '';
   const lvl = t.lvl || 1, nx = operNext(t);
   return `<div class="label">${OPER_STAGES[lvl - 1].name} · Stufe ${lvl} von ${OPER_STAGES.length}</div>
-    <p class="muted">🎶 Spielt deine Insel als Lied: ${OPER_STAGES[lvl - 1].lied}. Was du baust, verändert die Melodie.</p>
+    <p class="muted">🎶 Spielt deine Insel als Lied auf der Spieluhr. Was du baust, verändert die Melodie, und Bauen klingt nach deiner Insel.</p>
     <div class="row"><button class="btn" id="p-oper-lied">${operPlaying() ? '■ Anhalten' : '▶ Lied spielen'}</button></div>
     ${nx ? `<div class="label">Nächste Stufe: ${nx.name}</div>
-      <p class="muted">Größerer Bau und mehr Musik: ${nx.lied}.</p>
+      <p class="muted">${nx.look[0].toUpperCase() + nx.look.slice(1)} · 🌸 +${ITEMS.oper.beauty}.</p>
       <div class="stats">${costSpans(nx.cost.money, {})}</div>
       <div class="row"><button class="btn" id="p-oper-up" ${canPay(nx.cost) ? '' : 'disabled'}>✨ Ausbauen</button></div>`
     : '<p class="ok">Höchste Stufe – prächtiger geht es nicht!</p>'}`;
@@ -122,14 +123,12 @@ function operInfoHtml(t) {
 // „Deine Insel als Lied“: jede Bildschirm-Spalte (x − y) ist ein Schlag, je 8 ein Takt (Akkorde C – a – d – G). Töne nur aus der
 // Dur-Fünftonleiter (C D E G A), damit nie etwas schief klingt. Je Takt ein kurzes Motiv nach dem, was dort am häufigsten steht
 // (Wohnen ruhig, Läden lebhaft, Wahrzeichen/Kultur als Fanfare, Betriebe tief klopfend, Grün lang und tief); ein Motivton erklingt nur,
-// wo die Spalte etwas hat. Stufe 1: Spieluhr · 2: + Bass, Holzblock für Wege · 3: + Harfe fürs Meer, Marimba für Bäume, Streicher.
+// wo die Spalte etwas hat. Nur die Spieluhr (Bass, Holzblock, Harfe, Marimba, Streicher je Stufe: Nutzer „auch nur spieluhr“).
 // ---------------------------------------------------------------------------
 const OPER_LIED = (() => {
   const SCALE = [0, 2, 4, 7, 9];
   const hz = (i, base = 261.63) => base * 2 ** ((12 * Math.floor(i / 5) + SCALE[((i % 5) + 5) % 5]) / 12);
   const STEP = 0.2;                                                     // Sekunden je Spalte
-  const BASS = [0, -1, 1, -2];                                          // C, A, D, G (Stufen der Fünftonleiter)
-  const CHORD = [[0, 2, 3], [-1, 0, 2], [1, 3, 4], [-2, 1, 3]];
   const ANCHOR = [5, 4, 6, 3];                                          // Ausgangston je Akkord (C5, A4, D5, G4)
   const MOTIF = {                                                       // 8 Schläge, Stufen über dem Ausgangston, null = Pause
     fest:  { n: [0, 2, 3, null, 5, null, 3, null], len: 1.1, vol: 0.17 },
@@ -181,7 +180,7 @@ const OPER_LIED = (() => {
     return { steps, first, last, bars, yMin, yMax };                  // yMin/yMax: Bildschirm-Höhe der Insel (für den Streifen)
   }
 
-  // Klänge: Spieluhr-Zungen, weicher Bass, Holzblock, Marimba, gezupfte Harfe (Karplus-Strong), Streicher-Fläche – alles mit Hall
+  // Klang: Spieluhr-Zungen (Grundton, leicht verstimmter Zwilling, Obertöne, feiner Klick) mit Hall
   function rig(ctx, dest) {
     const rate = ctx.sampleRate, out = ctx.createGain(); out.gain.value = 0.9;
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4;
@@ -192,63 +191,32 @@ const OPER_LIED = (() => {
     let seed = 99; const rnd = () => (seed = (seed * 16807) % 2147483647) / 1073741823 - 1;
     const noise = ctx.createBuffer(1, rate, rate); { const d = noise.getChannelData(0); for (let i = 0; i < rate; i++) d[i] = rnd(); }
     const env = (node, t0, dur, vol, att = 0.006) => { const gn = ctx.createGain(); gn.gain.setValueAtTime(0.0001, t0); gn.gain.exponentialRampToValueAtTime(vol, t0 + att); gn.gain.exponentialRampToValueAtTime(0.0001, t0 + dur); node.connect(gn); return gn; };
-    const osc = (f, t0, dur, type, vol, to = out, att) => { const o = ctx.createOscillator(); o.type = type; o.frequency.value = f; env(o, t0, dur, vol, att).connect(to); o.start(t0); o.stop(t0 + dur + 0.05); };
-    const burst = (t0, dur, vol, type, freq, q) => { const src = ctx.createBufferSource(), fl = ctx.createBiquadFilter(); src.buffer = noise; fl.type = type; fl.frequency.value = freq; fl.Q.value = q; src.connect(fl); env(fl, t0, dur, vol, 0.002).connect(out); src.start(t0, Math.abs(rnd()) * 0.5); src.stop(t0 + dur + 0.02); };
-    const ks = new Map();                                                // gezupfte Saite: Rauschen in einer Verzögerungsschleife; Tonhöhe genau über playbackRate
-    const pluck = (f, t0, dur, vol) => {
-      const N = Math.max(4, Math.floor(rate / f - 0.5));
-      if (!ks.has(N)) {
-        const n = Math.ceil(dur * rate), b = ctx.createBuffer(1, n, rate), d = b.getChannelData(0), loop = new Float32Array(N);
-        let lp = 0; for (let i = 0; i < N; i++) { lp += 0.55 * (rnd() - lp); loop[i] = lp; }
-        for (let i = 0; i < n; i++) { const j = i % N, v = loop[j]; d[i] = v; loop[j] = 0.997 * 0.5 * (v + loop[(j + 1) % N]); }
-        ks.set(N, b);
-      }
-      const src = ctx.createBufferSource(), gn = ctx.createGain(); src.buffer = ks.get(N); src.playbackRate.value = f / (rate / (N + 0.5));
-      gn.gain.value = vol * 2.4; src.connect(gn).connect(out); src.start(t0);
-    };
-    const lowpass = freq => { const fl = ctx.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = freq; fl.connect(out); return fl; };
-    const bassBus = lowpass(900), padBus = lowpass(1500);
-    return {
-      mel: (f, t, dur, vol) => { osc(f, t, dur * 1.3, 'sine', vol); osc(f * 1.003, t, dur * 1.3, 'sine', vol * 0.5); osc(f * 4.1, t, dur * 0.3, 'sine', vol * 0.16); osc(f * 9.7, t, 0.08, 'sine', vol * 0.05); burst(t, 0.015, vol * 0.25, 'highpass', 5000, 0.7); },
-      bass: (f, t, dur, vol) => { osc(f, t, dur, 'sine', vol, bassBus, 0.02); osc(f * 2, t, dur * 0.7, 'triangle', vol * 0.18, bassBus, 0.02); },
-      tick: (t, vol) => { burst(t, 0.05, vol * 3, 'bandpass', 1700, 9); osc(1200, t, 0.03, 'sine', vol * 0.6); },
-      tree: (f, t, vol) => { osc(f, t, 0.5, 'sine', vol, out, 0.003); osc(f * 4, t, 0.09, 'sine', vol * 0.35, out, 0.002); osc(f * 10, t, 0.03, 'sine', vol * 0.1, out, 0.002); },
-      harp: (f, t, vol) => pluck(f, t, 1.2, vol),
-      pad: (fs, t, dur, vol) => { for (const f of fs) for (const dt of [-0.004, 0, 0.004]) { const o = ctx.createOscillator(), gn = ctx.createGain(); o.type = 'sawtooth'; o.frequency.value = f * (1 + dt);
-        gn.gain.setValueAtTime(0.0001, t); gn.gain.linearRampToValueAtTime(vol, t + 0.6); gn.gain.setValueAtTime(vol, t + dur - 0.2); gn.gain.linearRampToValueAtTime(0.0001, t + dur + 0.9);
-        o.connect(gn).connect(padBus); o.start(t); o.stop(t + dur + 1); } },
-    };
+    const osc = (f, t0, dur, vol) => { const o = ctx.createOscillator(); o.type = 'sine'; o.frequency.value = f; env(o, t0, dur, vol).connect(out); o.start(t0); o.stop(t0 + dur + 0.05); };
+    const click = (t0, vol) => { const src = ctx.createBufferSource(), fl = ctx.createBiquadFilter(); src.buffer = noise; fl.type = 'highpass'; fl.frequency.value = 5000; fl.Q.value = 0.7; src.connect(fl); env(fl, t0, 0.015, vol, 0.002).connect(out); src.start(t0, Math.abs(rnd()) * 0.5); src.stop(t0 + 0.035); };
+    return { mel: (f, t, dur, vol) => { osc(f, t, dur * 1.3, vol); osc(f * 1.003, t, dur * 1.3, vol * 0.5); osc(f * 4.1, t, dur * 0.3, vol * 0.16); osc(f * 9.7, t, 0.08, vol * 0.05); click(t, vol * 0.25); } };
   }
 
   // alle Töne einplanen; liefert Dauer und Spalten (für den Streifen)
-  function arrange(ctx, dest, t0, stufe, region) {
+  function arrange(ctx, dest, t0, region) {
     const sc = score(region);
     if (!sc) return null;
     const { steps, first, last, bars } = sc, R = rig(ctx, dest);
-    const from = Math.max(0, first - 4), to = Math.min(steps.length - 1, last + 4);   // Meer am Rand: 4 Schläge vor/nach der Insel
-    for (let i = from; i <= to; i++) {
-      const st = steps[i], k = i - from, t = t0 + k * STEP;
-      if (i < first || i > last) { if (stufe >= 3) R.harp(hz(i < first ? 8 + (i - from) * 2 : 14 - (i - last) * 2), t, 0.07); continue; }
+    const from = Math.max(0, first - 4), to = Math.min(steps.length - 1, last + 4);   // Meer am Rand: 4 stille Schläge vor/nach der Insel
+    for (let i = first; i <= last; i++) {
+      const st = steps[i], t = t0 + (i - from) * STEP;
       const j = i - first, bar = bars[Math.floor(j / 8)], beat = j % 8, ch = Math.floor(j / 8) % 4;
       const M = bar.kind && MOTIF[bar.kind], off = M && M.n[beat];
       if (off != null && (st.n || (bar.kind === 'gruen' && st.baum))) {
         const p = ANCHOR[ch] + bar.shift + off;
         R.mel(hz(p), t, M.len, M.vol);
         if (bar.kind === 'fest' && beat === 0) R.mel(hz(p - 2), t + 0.01, 1.4, 0.07);                     // Fanfare: Terz darunter
-        if (stufe >= 3 && st.lvl >= 5 && beat % 2 === 0) R.mel(hz(p + 5), t + STEP / 2, 0.35, 0.04);     // hohe Häuser funkeln
       }
-      if (stufe >= 2 && beat === 0) R.bass(hz(BASS[ch], 65.41), t, STEP * 4.5, 0.3);
-      if (stufe >= 2 && beat === 4) R.bass(hz(BASS[ch] + 3, 65.41), t, STEP * 4, 0.2);
-      if (stufe >= 3 && beat === 0) R.pad(CHORD[ch].map(d => hz(d, 261.63)), t, STEP * 8, 0.012);
-      if (stufe >= 2 && st.weg && beat % 2 === 0) R.tick(t, beat === 0 ? 0.035 : 0.025);
-      if (stufe >= 3 && st.baum >= 2 && beat % 2 === 1) R.tree(hz(CHORD[ch][(beat >> 1) % 3], 130.81), t, Math.min(0.08, 0.03 + st.baum * 0.008));
     }
     const tEnd = t0 + (last + 1 - from) * STEP;                         // Schluss: Akkord
     for (const [d, v] of [[5, 0.12], [7, 0.08], [8, 0.07]]) R.mel(hz(d), tEnd, 2.2, v);
-    if (stufe >= 2) R.bass(hz(0, 65.41), tEnd, 2.4, 0.3);
-    if (stufe >= 3) R.pad([0, 2, 3].map(d => hz(d, 261.63)), tEnd, 2, 0.012);
     return { dur: (to - from + 1) * STEP + 3, from, steps, STEP, yMin: sc.yMin, yMax: sc.yMax };
   }
+
   // Ton an einer Stelle: Motiv des Takts dort, Akkord, Lage (für die Bauklänge). Pause im Motiv → der Ton davor
   function noteAt(x, y) {
     const sc = score(regionAt(x, y));
@@ -258,7 +226,7 @@ const OPER_LIED = (() => {
     const bar = sc.bars[Math.floor(j / 8)], beat = j % 8, ch = Math.floor(j / 8) % 4, M = MOTIF[bar.kind || 'haus'];
     let k = beat; while (k > 0 && M.n[k] == null) k--;
     const base = ANCHOR[ch] + bar.shift;
-    return { f: hz(base + (M.n[k] != null ? M.n[k] : 0)), bass: hz(BASS[ch], 65.41), phrase: M.n.map(o => o == null ? null : hz(base + o)), len: M.len, vol: M.vol };
+    return { f: hz(base + (M.n[k] != null ? M.n[k] : 0)), phrase: M.n.map(o => o == null ? null : hz(base + o)), len: M.len, vol: M.vol };
   }
   return { score, arrange, rig, noteAt, STEP };
 })();
@@ -300,12 +268,12 @@ function operStop() {
   if (r.cv) r.cv.remove();
   try { r.bus.gain.setTargetAtTime(0, r.ctx.currentTime, 0.08); setTimeout(() => r.bus.disconnect(), 600); } catch (e) { /* schon weg */ }
 }
-function operPlay(stufe, region) {
+function operPlay(region) {
   operStop();
   const ctx = audio();
   if (!ctx) { fail('🔇 Der Ton ist aus – in den Einstellungen einschalten'); return false; }
   const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(ctx.destination);
-  const t0 = ctx.currentTime + 0.3, plan = OPER_LIED.arrange(ctx, bus, t0, stufe, region);
+  const t0 = ctx.currentTime + 0.3, plan = OPER_LIED.arrange(ctx, bus, t0, region);
   if (!plan) { bus.disconnect(); return false; }
   const cv = document.createElement('canvas');
   cv.className = 'oper-streifen';

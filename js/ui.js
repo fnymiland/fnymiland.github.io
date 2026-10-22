@@ -2101,7 +2101,7 @@ function openInfo(x, y) {
   if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
   if ($('p-mon')) $('p-mon').onclick = () => { if (monStep(x, y)) openInfo(x, y); };
   if ($('p-oper-up')) $('p-oper-up').onclick = () => { if (operUpgrade(x, y)) openInfo(x, y); };
-  if ($('p-oper-lied')) $('p-oper-lied').onclick = () => { if (operPlaying()) operStop(); else operPlay(t.lvl || 1, regionAt(x, y)); openInfo(x, y); };
+  if ($('p-oper-lied')) $('p-oper-lied').onclick = () => { if (operPlaying()) operStop(); else operPlay(regionAt(x, y)); openInfo(x, y); };
   for (const b of document.querySelectorAll('#panel [data-decree-pick]')) b.onclick = () => { chooseDecree(b.dataset.decreePick); openInfo(x, y); };
   for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (undoable(() => setCrossing(x, y, b.dataset.cross === '1'))) openInfo(x, y); };   // ↶, zuschauen/Besuch gesperrt (160c V2)
   for (const b of el.querySelectorAll('[data-foot]')) b.onclick = () => { if (undoable(() => setCrossing(x, y, true, b.dataset.foot))) openInfo(x, y); };
@@ -3306,7 +3306,7 @@ const NEWS_HISTORY = [
     '🎭 <b>Opernhaus:</b> Unter Freizeit → Kultur gibt es jetzt das Opernhaus, einen runden Prachtbau mit grüner Kuppel. Es kostet 500 Mio. Taler, braucht 3×3 Felder Wiese und steht nur einmal im Spiel.',
     '🎶 <b>Deine Insel als Lied:</b> Tipp das Opernhaus an und drück „▶ Lied spielen“. Dann spielt es deine Insel ab wie eine Spieluhr, und ein goldener Lichtstreifen wandert dabei über die Insel. Häuser klingen ruhig, Läden lebhaft, Wahrzeichen wie eine Fanfare. Wenn du etwas baust, verändert sich die Melodie.',
     '🔔 <b>Bauen klingt nach deiner Insel:</b> Solange das Opernhaus steht, spielt jedes Bauen den Ton, der an dieser Stelle im Lied liegt. Beim Ausbauen erklingt der ganze Takt. Eine Häuserreihe wird so zu einer kleinen Spieluhr-Melodie.',
-    '✨ <b>Ausbauen:</b> Für 1,5 Mrd. bekommt das Opernhaus ein zweites Geschoss und eine Kuppel, dann spielen Bass und Takt mit. Für 4 Mrd. wird es golden, und ein ganzes Orchester mit Harfe und Streichern ist dabei.',
+    '✨ <b>Ausbauen:</b> Für 1,5 Mrd. bekommt das Opernhaus ein zweites Geschoss und eine grüne Kuppel. Für 4 Mrd. wird es golden, mit Lyra und Krone. Mit jeder Stufe macht es die Insel schöner.',
   ] },
   { id: '2026-10-22-glitzer', date: '22. Oktober', title: 'Glitzerwege und Perlmutt', items: [
     '✨ <b>Glitzerwege:</b> Vier neue Meisterstücke in der Kunstakademie: Silber-, Gold-, Perl- und Regenbogenglitzer, je 150 ✨. Feine Pünktchen liegen im Weg, und wenn du nah heranzoomst, blitzen immer wieder kleine Funkel auf. Den Glitzer gibt es in jeder Wegfarbe.',

@@ -2768,7 +2768,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] **Opernhaus** (22.10.2026, js/oper.js, tests/oper.test.js): nach der Semperoper (Garnier und eigener Entwurf verworfen –
         „sieht aus wie ein Rucksack“), Portal als erhöhtes Stück des Rundbaus nach links vorn (nicht als angesetzter Kasten, nicht schräg
         nach vorn). 3×3, einmal, nach dem Laternenfest, Freizeit → Kultur; 500 Mio, Ausbau 1,5 / 4 Mrd. Wirkung „ganz was Neues“ statt
-        Boosts: **Deine Insel als Lied** (Spieluhr, Stufe 2 + Bass/Holzblock, Stufe 3 + Harfe/Marimba/Streicher), goldener Streifen
+        Boosts: **Deine Insel als Lied** (nur Spieluhr – Bass/Harfe/Streicher je Stufe verworfen), goldener Streifen
         über der Insel. Offen: Notenblatt im Tagebuch (Idee).
         Nutzer: „klickt einmal drauf und es ist vergessen“ → Hintergrundmusik („zu unruhig“), Abendvorstellung und Liederbuch verworfen;
         gewählt **B: Bauklänge** – Bauen spielt den Ton der Stelle aus dem Insellied, Ausbauen den Takt – immer nur Spieluhr (Bass/Harfe je Stufe: „Stufe 1 klingt viel cooler“).
