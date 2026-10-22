@@ -326,23 +326,58 @@
     const TB = ({ trim, ...o }) => { const r = K.block(o); if (trim) for (const f of Object.values(r.faces)) if (f) faceQuad(f.P, f.Q, 0, 1, f.H - 1.4 * K.z, f.H, C(K.turn(...f.n)[0] > 0.5 ? shade(trim, LIGHT.side) : trim)); return r; };
     const z = K.z, s2 = stufe >= 2, s3 = stufe >= 3, RIB = '#7d8f96', RIBC = s3 ? GOLD_D : RIB, RIBW = s3 ? 0.75 : 0.6;
     TB({ a: 0, b: 0, ha: 1.95, hb: 1.45, h: 3, wall: '#cfc3a5', type: 'flat', roof: '#e2d8c0' });
-    // Halle hinten: Steinwände, Glastonne längs
-    const hH = 12, htop = 3 + hH, hR = s2 ? 13 : 9;
-    TB({ a: 0, b: -0.35, ha: 1.75, hb: 0.95, h: hH, lift: 3, wall: STONE2, roof: GLASS, roofH: hR, type: 'barrel', ridge: 'a', over: 1 });
-    barrelRibs(K, 0, -0.35, 1.75, 0.95, htop, hR, true, 16, RIBC, RIBW);
-    // Kuppel über der Mitte (Stufe 2)
-    if (s2) {
-      const [dx, dy] = K.P(0, -0.35, htop + hR - 6), R = 0.62 * Math.SQRT2 * TW / 2 * z;   // Tambour steckt im Glasdach, oben ein Kragen
-      cyl(dx, dy, R, R / 2, 10 * z, STONE2);
-      ellipse(dx, dy - 10 * z, R * 1.06, R * 0.53, C(s3 ? GOLD : shade(STONE2, -0.1)));
-      dome(dx, dy - 10 * z, R, R / 2, 20 * z, GLASS);
-      // Rippen wie auf der Tonne: Meridiane und Ringe auf der sichtbaren Hälfte, gleiche Farbe und Stärke
-      const DH = 20 * z, y0 = dy - 10 * z, dp = (lat, ph) => [dx + R * Math.cos(lat) * Math.sin(ph), y0 + R / 2 * Math.cos(lat) * Math.cos(ph) - DH * Math.sin(lat)];
+    // Halle hinten: Steinwände, Glastonne längs. opt.buehne 'ausstellung' (Konzept „Dein Ausstellungsstück“, Nutzer 22.10.2026): das Glas
+    // ist halb durchsichtig – drinnen Boden, Innenwände und Sockel mit kleinen Modellen (Stufe 1: einer unter der Kuppel, 2: drei, 3: fünf)
+    const hH = 12, htop = 3 + hH, hR = s2 ? 13 : 9, HA = 1.75, HB = 0.95, HBc = -0.35, show = (opt.buehne || '').includes('ausstellung');
+    const d0 = show ? -2 : -6, dr = show ? 6 : 10;                         // Tambour: Fuß und Höhe (Ausstellung: beginnt am First, sonst sah man Pfosten in der Halle)
+    const [dx, dy] = K.P(0, HBc, htop + hR + d0), R = 0.62 * Math.SQRT2 * TW / 2 * z;   // Kuppel: Tambour steckt im Glasdach
+    const domeRibs = () => {                                              // Rippen wie auf der Tonne: Meridiane und Ringe auf der sichtbaren Hälfte
+      const DH = 20 * z, y0 = dy - dr * z, dp = (lat, ph) => [dx + R * Math.cos(lat) * Math.sin(ph), y0 + R / 2 * Math.cos(lat) * Math.cos(ph) - DH * Math.sin(lat)];
       g.strokeStyle = C(RIBC); g.lineWidth = Math.max(0.5, RIBW * z); g.beginPath();
       for (let m = -4; m <= 4; m++) { const ph = m * Math.PI / 10; for (let j = 0; j <= 12; j++) { const p = dp(Math.PI / 2 * j / 12, ph); j ? g.lineTo(...p) : g.moveTo(...p); } }
       for (const lat of [0.35, 0.78]) for (let j = 0; j <= 24; j++) { const p = dp(lat, -Math.PI / 2 + Math.PI * j / 24); j ? g.lineTo(...p) : g.moveTo(...p); }
       g.stroke();
-      if (s3) { cyl(dx, dy - 30 * z, 2.6 * z, 1.3 * z, 4 * z, GOLD); cone(dx, dy - 34 * z, 3 * z, 1.5 * z, 3.5 * z, GOLD_D); circle(dx, dy - 38.5 * z, 1.4 * z, lit() ? '#fff1a8' : C(GOLD_L)); }
+    };
+    const lantern = () => { if (s3) { const t = dy - (dr + 20) * z; cyl(dx, t, 2.6 * z, 1.3 * z, 4 * z, GOLD); cone(dx, t - 4 * z, 3 * z, 1.5 * z, 3.5 * z, GOLD_D); circle(dx, t - 8.5 * z, 1.4 * z, lit() ? '#fff1a8' : C(GOLD_L)); } };
+    if (!show) {
+      TB({ a: 0, b: HBc, ha: HA, hb: HB, h: hH, lift: 3, wall: STONE2, roof: GLASS, roofH: hR, type: 'barrel', ridge: 'a', over: 1 });
+      barrelRibs(K, 0, HBc, HA, HB, htop, hR, true, 16, RIBC, RIBW);
+      if (s2) { cyl(dx, dy, R, R / 2, dr * z, STONE2); ellipse(dx, dy - dr * z, R * 1.06, R * 0.53, C(s3 ? GOLD : shade(STONE2, -0.1))); dome(dx, dy - dr * z, R, R / 2, 20 * z, GLASS); domeRibs(); lantern(); }
+    } else {
+      // von hinten nach vorn: Boden, Innenseiten der hinteren Wände, Ausstellungsstücke, vordere Wände, Glasdach, Kuppel
+      K.rect(-HA, HBc - HB, HA, HBc + HB, C(shade(STONE2, -0.04)), 3);
+      g.strokeStyle = C(shade(STONE2, -0.1)); g.lineWidth = Math.max(0.5, 0.3 * z); g.beginPath();   // Bodenfliesen
+      for (let a = -HA; a <= HA + 0.01; a += 0.25) { g.moveTo(...K.P(a, HBc - HB, 3)); g.lineTo(...K.P(a, HBc + HB, 3)); }
+      for (let b = HBc - HB; b <= HBc + HB + 0.01; b += 0.25) { g.moveTo(...K.P(-HA, b, 3)); g.lineTo(...K.P(HA, b, 3)); } g.stroke();
+      poly([K.P(-HA, HBc - HB, 3), K.P(HA, HBc - HB, 3), K.P(HA, HBc - HB, htop), K.P(-HA, HBc - HB, htop)], C(shade(STONE2, -0.1)));   // hintere Wand innen
+      poly([K.P(-HA, HBc - HB, 3), K.P(-HA, HBc + HB, 3), K.P(-HA, HBc + HB, htop), K.P(-HA, HBc - HB, htop)], C(shade(STONE2, LIGHT.side - 0.06)));   // linke Wand innen
+      // Ausstellungsstücke: rundes Podest, darauf ein Modell (verkleinertes Spielbild); nachts angestrahlt
+      const EX = [[0, 'mon_pagode', s2 ? 0.26 : 0.13],   // ohne Kuppel (Stufe 1) kleiner – sonst stieß die Pagode durchs Glasdach
+         [-0.95, 'mon_stern', 0.17], [0.95, 'mon_obelisk', 0.13], [-1.4, 'mon_brunnen', 0.22], [1.4, 'mon_leuchte', 0.14]].slice(0, s3 ? 5 : s2 ? 3 : 1);
+      EX.sort((p, q) => p[0] - q[0]).forEach(([a, id, sc]) => {
+        const [px, py] = K.P(a, HBc, 3), r = (a ? 0.2 : 0.3) * Math.SQRT2 * TW / 2 * z;
+        cyl(px, py, r, r / 2, 2.5 * z, shade(STONE2, 0.05)); ellipse(px, py - 2.5 * z, r * 1.02, r * 0.51, C(s3 ? GOLD : shade(STONE2, 0.1)));
+        if (lit()) glowP([px, py - 8 * z], (a ? 16 : 26) * z);
+        drawObject(id, px, py - 2.5 * z, z * sc, 1e6, 0, 0, 1, { b: id, rot: 0 });
+      });
+      poly([K.P(HA, HBc - HB, 3), K.P(HA, HBc + HB, 3), K.P(HA, HBc + HB, htop), K.P(HA, HBc - HB, htop)], C(shade(STONE2, LIGHT.side)));   // rechte Wand außen
+      poly([K.P(-HA, HBc + HB, 3), K.P(HA, HBc + HB, 3), K.P(HA, HBc + HB, htop), K.P(-HA, HBc + HB, htop)], C(STONE2));                       // vordere Wand außen
+      // Glastonne halb durchsichtig, rundes Ende rechts ebenso
+      const pt = (sA, th, k = 1) => K.P(sA, HBc + Math.cos(th) * HB * k, htop + Math.sin(th) * hR * k);
+      g.globalAlpha = 0.38;
+      for (let i = 0; i < 12; i++) { const t0 = Math.PI * i / 12, t1 = Math.PI * (i + 1) / 12; poly([pt(-HA, t0), pt(HA, t0), pt(HA, t1), pt(-HA, t1)], C(shade(GLASS, Math.cos((t0 + t1) / 2) * 0.06))); }
+      poly(Array.from({ length: 13 }, (_, i) => pt(HA, Math.PI * i / 12, 0.97)), C(shade(GLASS, LIGHT.side)));
+      g.globalAlpha = 1;
+      barrelRibs(K, 0, HBc, HA, HB, htop, hR, true, 16, RIBC, RIBW);
+      g.strokeStyle = C(RIBC); g.lineWidth = Math.max(0.5, RIBW * z); g.beginPath(); for (let i = 0; i <= 12; i++) { const p = pt(HA, Math.PI * i / 12, 0.97); i ? g.lineTo(...p) : g.moveTo(...p); } g.stroke();
+      if (s2) {                                                           // Kuppel: Tambour und Glas halb durchsichtig – das große Stück ragt hinein
+        g.globalAlpha = 0.45; cyl(dx, dy, R, R / 2, dr * z, shade(GLASS, -0.05)); g.globalAlpha = 0.38; dome(dx, dy - dr * z, R, R / 2, 20 * z, GLASS); g.globalAlpha = 1;
+        g.strokeStyle = C(RIBC); g.lineWidth = Math.max(0.5, RIBW * z); g.beginPath();   // Tambour: Pfosten, Ring unten und oben (nur Linien – eine volle Fläche färbte die Kuppel gelb)
+        for (let m = -4; m <= 4; m++) { const ph = m * Math.PI / 10, x = dx + R * Math.sin(ph), y = dy + R / 2 * Math.cos(ph); g.moveTo(x, y); g.lineTo(x, y - dr * z); }
+        g.stroke();
+        for (const [yy, w] of [[dy, RIBW], [dy - dr * z, s3 ? 1.3 : RIBW]]) { g.lineWidth = Math.max(0.5, w * z); g.strokeStyle = C(s3 ? GOLD : RIBC); g.beginPath(); g.ellipse(dx, yy, R * 1.02, R * 0.51, 0, 0, Math.PI); g.stroke(); }
+        domeRibs(); lantern();
+      }
     }
     // Steinflügel vorn (+b): Säulenreihe, Bogentor in der Mitte, Attika
     const fH = 15, fb = 1.02, fhb = 0.26;
