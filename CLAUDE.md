@@ -456,6 +456,8 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Schräge werden von links nach rechts gemalt. Ragt ein Wagen längs x nach links oben ins vorige Feld, malte er über die Bäume vorn links –
     dieses Stück kommt mit dem Feld (T, y−1) (`trainBackPieces`, `car.cut`/`gbK` wie die Brücken-Stücke). Der Wagenkasten ist oben geschlossen
     (eine Fläche über C4 in Höhe H, Dach darauf) – sonst sieht man neben dem eingerückten Dach durch den Wagen (nur sichtbare Seiten werden gemalt).
+    In der Kurve (Enden nicht auf einer Linie, `trainCarBend`) zwei Hälften ab der Mitte auf dem Gleis, mit Gehrung (`drawTrainCarBent`); nicht bei
+    abgeschnittenen Stücken, Anhöhe, Portal. Schatten nur über `trainShadow` (Ellipse in Wagenrichtung); Stücke mit `noShadow` malen keinen eigenen.
 29h. **🌿 Botanischer Garten als Gebäude + echter Garten** (js/botgarten.js): Das Wunder ist nur noch das Gebäude (2×5, Rotunde mit zwei
     Glasflügeln, `BG_ART`, Entwurf `botgartenNeu` in tools/prachtbauten-entwurf.js), steht direkt auf dem Boden – keine Platte, auch keine
     Steinkante („immer noch eine Platte, nur zurechtgeschnitten“). Den Garten drumherum legt `bgGarden(x, y, rot)` beim Bauen

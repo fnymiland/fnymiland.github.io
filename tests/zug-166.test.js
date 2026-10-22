@@ -34,3 +34,30 @@ describe('Wagenkasten oben geschlossen', () => {
     expect(tops([-0.31, 0.05])).toBe(true);
   });
 });
+
+describe('Wagen in der Kurve (knickt) und Schatten', () => {
+  // Strecke: gerade nach +x, dann ein Viertelkreis (Radius 0,5) nach +y, dann gerade
+  const route = `(() => { const pts = [[0, 5]]; for (let x = 1; x <= 5; x++) pts.push([x, 5]); for (let i = 1; i <= 8; i++) { const t = i / 8 * Math.PI / 2; pts.push([5 + Math.sin(t) * 0.5, 5.5 - Math.cos(t) * 0.5]); }
+    for (let y = 6; y <= 10; y++) pts.push([5.5, y]); const cum = [0]; for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    return { pts, cum, len: cum[cum.length - 1], loop: false }; })()`;
+  const onRoute = d => `(() => { const r = ${route}, [u, v, du, dv] = railPoint(r, ${d}); return { train: { kind: TRAIN_KIND.schnell, col: 0, model: 'schnell', route: r }, px: u, py: v, du, dv, i: 1, n: 4, len: TRAIN_KIND.schnell.len, d: ${d}, mv: 1 }; })()`;
+  it('auf der Geraden: ganz wie bisher; in der Kurve: zwei Hälften, die sich auf dem Gleis treffen und je zu ihrem Ende zeigen', () => {
+    expect(game(`trainCarBend(${onRoute(2)})`)).toBe(null);
+    const b = game(`(() => { const r = trainCarBend(${onRoute(5.4)}); return r && { J: r.J.slice(0, 2), f: r.f, b: r.b, lf: r.lf, lb: r.lb }; })()`);
+    expect(b).not.toBe(null);
+    expect(b.f[1]).toBeGreaterThan(b.b[1] + 0.3);                          // vordere Hälfte schon mehr nach +y gedreht als die hintere
+    const cuts = game(`(() => { const out = [], f = drawTrainCarBody; drawTrainCarBody = (m, ...a) => { out.push([m.cut, m.noShadow, m.du, m.dv]); return f(m, ...a); };
+      try { drawTrainCar(${onRoute(5.4)}, 1, 0); } finally { drawTrainCarBody = f; } return out; })()`);
+    expect(cuts).toHaveLength(2);
+    for (const [cut, noShadow] of cuts) { expect(noShadow).toBe(true); expect(cut[0]).toBeLessThan(0.05); expect(cut[1]).toBeGreaterThan(-0.05); }   // überlappen an der Mitte (Gehrung)
+    expect(game(`trainBackPieces(${onRoute(5.4)}, '5,5')`)).toBe(null);   // gebogen: nicht zusätzlich zerteilen
+  });
+  it('Schatten folgt der Richtung des Wagens (quer im Bild nicht breiter als der Wagen lang ist)', () => {
+    const w = (du, dv) => game(`(() => { const out = [], p = poly; poly = (pts, fill) => { if (fill === 'rgba(40,50,70,0.2)') out.push(pts); return p(pts, fill); };
+      try { trainShadow({ train: { kind: TRAIN_KIND.schnell, model: 'schnell' }, px: 5, py: 5, du: ${du}, dv: ${dv}, len: TRAIN_KIND.schnell.len }, 1); } finally { poly = p; }
+      const xs = out[0].map(q => q[0]), ys = out[0].map(q => q[1]); return [Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)]; })()`);
+    const S = Math.SQRT1_2, [vw, vh] = w(S, S), [hw] = w(1, 0);
+    expect(vh).toBeGreaterThan(vw * 0.6);                                 // senkrecht im Bild: eher hoch als breit
+    expect(vw).toBeLessThan(hw);
+  });
+});

@@ -3307,6 +3307,7 @@ const NEWS_HISTORY = [
   { id: '2026-10-22-zuege', date: '22. Oktober', title: 'Ordentlichere Züge', items: [
     '🚆 <b>Züge:</b> Die Wagen sind oben jetzt geschlossen. Vorher sah man neben dem Dach durch den Wagen hindurch auf die Schienen, und das Dach schien zu schweben.',
     '🌳 <b>Bäume vor dem Gleis:</b> Fährt ein Zug vorbei, schneidet er die Bäume davor nicht mehr ab.',
+    '↪️ <b>Kurven:</b> Ein Wagen in der Kurve knickt jetzt in der Mitte und folgt dem Gleis, statt quer über den anderen Wagen zu stehen. Auch der Schatten zeigt in die Richtung des Wagens.',
   ] },
   { id: '2026-10-22-glaspalast', date: '22. Oktober', title: 'Der Glaspalast', items: [
     '🏛️ <b>Glaspalast:</b> Unter Freizeit → Kultur gibt es jetzt den zweiten Prachtbau, eine lange Glashalle hinter einer Säulenfassade, nach dem Grand Palais in Paris. Er kostet 1 Mrd. Taler, braucht 4×3 Felder Wiese und steht nur einmal im Spiel.',

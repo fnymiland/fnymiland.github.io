@@ -2808,6 +2808,10 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         vorige Feld ragen (die Felder einer Schräge kommen von links nach rechts) – Stück im vorigen Feld mit dem Feld (T, y−1) (`trainBackPieces`);
         in der Testwelt an der Achterbahn sichtbar (sie schob die Bäume näher ans Gleis). [x] „Lücken im Waggon“ (Nutzer: „das Dach schwebt“):
         Oberseite des Kastens war offen – jetzt eine Fläche darüber, Dach darauf. Abstand zwischen den Wagen bleibt (Nutzer: „darf Abstand sein“;
-        Faltenbalg/Fahrgestell als Entwurf gezeigt und verworfen). Offen: weitere Wünsche zum Aussehen von Wagen und Loks.
+        Faltenbalg/Fahrgestell als Entwurf gezeigt und verworfen).
+      → **Prüfdurchgang (Nutzer: „ich dachte du bist hier der Prüferprofi“, v1197):** alle Modelle × 8 Richtungen, Tag/Nacht, nah/weit, Bahnhof,
+        Brücke. [x] Kurve: starre Wagen standen quer über den Nachbarn – Entwurf A (knickt in der Mitte, `trainCarBend`/`drawTrainCarBent`,
+        Gehrung) gewählt; auf der engen Brückenkurve bleibt eine leichte Überschneidung. [x] Schatten folgt der Wagenrichtung (`trainShadow`, war ein
+        Kreis). Unauffällig: Geraden, Bahnhöfe, Nachtlichter, Scheinwerfer, weite Ansicht.
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

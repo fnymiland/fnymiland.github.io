@@ -759,7 +759,35 @@ function drawTrainCar(car, z, now) {
   if (car.portal && car.portal.ramp) { g.save(); rampClip(car.portal, z); try { drawTrainCarBody(car, z, now); } finally { g.restore(); } return; }   // Rampe (Block 136)
   if (car.portal && car.portal.bp) return drawCarPortal(car, z, now);    // Bergportal (157m, hills.js): im Berg nur durch die Öffnung
   if (car.hill) return drawTrainCarHill(car, z, now);                  // Anhöhe, Gleis-Rampe (trainOnHills)
+  const bend = trainCarBend(car);
+  if (bend) return drawTrainCarBent(car, bend, z, now);
   drawTrainCarBody(car, z, now);
+}
+// Wagen in der Kurve (166): Die Gleiskurven drehen in einem Feld um 90°, ein starrer Wagen stand dann quer über den Nachbarn. Zwei Hälften,
+// die sich auf dem Gleis unter der Wagenmitte treffen und je zu ihrem Ende auf dem Gleis zeigen. → null (gerade, abgeschnitten, Anhöhe, ohne Route)
+function trainCarBend(car) {
+  const tr = car.train;
+  if (car.cut || car.hill || car.portal || car.d == null || !tr || !tr.route || !tr.route.pts) return null;
+  const la = car.len / 2, mv = car.mv || 1, J = railPoint(tr.route, car.d), F = railPoint(tr.route, car.d + la * mv), B = railPoint(tr.route, car.d - la * mv);
+  const lf = Math.hypot(F[0] - J[0], F[1] - J[1]), lb = Math.hypot(J[0] - B[0], J[1] - B[1]);
+  if (lf < 0.05 || lb < 0.05) return null;                                // am Ende der Strecke
+  const f = [(F[0] - J[0]) / lf, (F[1] - J[1]) / lf], b = [(J[0] - B[0]) / lb, (J[1] - B[1]) / lb], cos = f[0] * b[0] + f[1] * b[1];
+  return cos > 0.999 ? null : { J, f, b, lf, lb, cos };
+}
+function drawTrainCarBent(car, { J, f, b, lf, lb, cos }, z, now) {
+  trainShadow(car, z);
+  const e = trainHalfW(car.train) * Math.tan(Math.acos(Math.max(-1, Math.min(1, cos))) / 2) + 0.004;   // Gehrung: außen kein Spalt
+  const front = { ...car, px: J[0], py: J[1], du: f[0], dv: f[1], len: 2 * lf, cut: [-e, lf], noShadow: true };
+  const back = { ...car, px: J[0], py: J[1], du: b[0], dv: b[1], len: 2 * lb, cut: [-lb, e], noShadow: true };
+  const depth = (m, s) => m.px + m.du * s + m.py + m.dv * s;               // weiter hinten zuerst
+  for (const m of depth(front, lf / 2) < depth(back, -lb / 2) ? [front, back] : [back, front]) drawTrainCarBody(m, z, now);
+}
+// Schatten unter dem Wagen (166): flache Ellipse in Richtung des Wagens (früher ein Kreis – quer im Bild ragte er seitlich heraus)
+function trainShadow(car, z, P0) {
+  const la = car.len / 2, wb = trainHalfW(car.train), P = P0 || ((a, b) => { const p = toScreen(car.px + car.du * a - car.dv * b, car.py + car.dv * a + car.du * b); return [p.x, p.y]; });
+  const pts = [];
+  for (let i = 0; i < 20; i++) { const t = i / 20 * Math.PI * 2; pts.push(P((la + 0.1) * Math.cos(t), (wb + 0.13) * Math.sin(t))); }
+  poly(pts.map(([x, y]) => [x, y + 1 * z]), 'rgba(40,50,70,0.2)');
 }
 const trainHalfW = tr => (tr.model === 'tram' ? 0.19 : 0.17);          // halbe Breite eines Wagens (Feld)
 // car.cut: nur das Stück [lo, hi] längs des Wagens (am Tunnelportal steckt der Rest schon im Berg) – Fenster und Dach sitzen, wo sie am ganzen
@@ -773,12 +801,11 @@ function drawTrainCarBody(car, z, now) {
   const la = car.len / 2, wb = trainHalfW(tr), lit = night > 0.15 && isLive();
   const [lo, hi] = car.cut || [-la, la], am = (lo + hi) / 2;
   const body = tr.model === 'modern' || tr.model === 'schnell' ? '#f5f5f2' : tr.model === 'tram' ? shade(col, 0.35) : col;
-  const [cx, cy] = P(0, 0);
-  if (!car.cut || car.shadow || car.gbK) {                              // Schatten (zerlegter Wagen: das Stück mit shadow); auf Damm/Viadukt nicht an ihrer Wand (rampShadowClip, hills.js)
+  if (!car.noShadow && (!car.cut || car.shadow || car.gbK)) {          // Schatten (zerlegter Wagen: das Stück mit shadow); auf Damm/Viadukt nicht an ihrer Wand (rampShadowClip, hills.js)
     const sc = !!hl && !!hl.ramp, cl = car.gbK ? keyXY(car.gbK) : null;   // Gleisbrücke (160c E1c): je Stück auf der Raute seines Felds – ganz, wie ungeschnitten
     if (sc) { g.save(); rampShadowClip(hl.ramp[0], hl.ramp[1], (u, v, h) => { const p = toScreen(u, v); return [p.x, p.y - (h - hl.base) * z]; }); }
     if (cl) { g.save(); g.beginPath(); [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].forEach(([du0, dv0], i) => { const p = toScreen(cl[0] + du0, cl[1] + dv0); i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y); }); g.closePath(); g.clip(); }
-    try { ellipse(cx, cy + 1 * z, (la + 0.1) * TW * 0.5 * z, (la + 0.1) * TH * 0.5 * z, 'rgba(40,50,70,0.2)'); } finally { if (cl) g.restore(); if (sc) g.restore(); }
+    try { trainShadow(car, z, (a, b) => P(a, b)); } finally { if (cl) g.restore(); if (sc) g.restore(); }
   }
   const C4 = [[lo, -wb], [hi, -wb], [hi, wb], [lo, wb]];
   const faces = [0, 1, 2, 3].map(i => {
@@ -838,7 +865,7 @@ const trainTileOrder = (x, y) => (x + y) * 1e5 + x;                     // Maler
 // links davon (T−1, y+1) also vor dem Feld des Wagens (T, y) – der ganze Wagen malte über dessen Bäume. Das Stück im vorigen Feld kommt darum
 // mit dem Feld (T, y−1): nach allem dahinter, vor dem Feld vorn links. Längs y, schräg oder ganz in einem Feld: null (wie bisher)
 function trainBackPieces(m, k) {
-  if (Math.abs(m.dv) > 1e-3 || Math.abs(Math.abs(m.du) - 1) > 1e-3) return null;
+  if (Math.abs(m.dv) > 1e-3 || Math.abs(Math.abs(m.du) - 1) > 1e-3 || trainCarBend(m)) return null;   // gebogen (Kurve): ganz, in Hälften
   const [T, y] = keyXY(k), la = m.len / 2, ab = (T - 0.5 - m.px) / m.du;     // a der Feldgrenze links oben
   if (m.du > 0 ? ab <= -la + 0.01 : ab >= la - 0.01) return null;
   const back = m.du > 0 ? [-la, ab] : [ab, la], rest = m.du > 0 ? [ab, la] : [-la, ab];

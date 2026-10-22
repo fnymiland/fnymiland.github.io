@@ -54,13 +54,13 @@ describe('Gleisbrücken übers Wasser: Wagen in Stücken (160c E1c)', () => {
   it('im Bild: jedes Stück genau einmal, in seinem Feld; Schatten je Stück auf der Raute seines Felds', () => {
     szene();
     const log = game(`(() => {
-      const log = [], tc = trainCars, sm = syncMovers, body = drawTrainCarBody, el = ellipse, cl = g.clip;
+      const log = [], tc = trainCars, sm = syncMovers, body = drawTrainCarBody, el = poly, cl = g.clip;
       trainCars = () => [${car(4.4, 5, 1, 0)}]; syncMovers = () => {};
       drawTrainCarBody = (c, ...a) => { log.push('car ' + (c.gbK || '-') + ' ' + (c.cut ? c.cut.map(v => v.toFixed(2)).join('..') : 'ganz')); return body(c, ...a); };
-      ellipse = (...a) => { if (a[4] === 'rgba(40,50,70,0.2)') log.push('schatten'); return el(...a); };
+      poly = (...a) => { if (a[1] === 'rgba(40,50,70,0.2)') log.push('schatten'); return el(...a); };   // Schatten: Fläche in Richtung des Wagens (166)
       g.clip = function (...a) { log.push('clip'); return cl.apply(this, a); };
       try { cam = state.cam; cam.z = 2; const p = iso(4.5, 5); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6); }
-      finally { trainCars = tc; syncMovers = sm; drawTrainCarBody = body; ellipse = el; g.clip = cl; spriteForce = null; }
+      finally { trainCars = tc; syncMovers = sm; drawTrainCarBody = body; poly = el; g.clip = cl; spriteForce = null; }
       return log; })()`);
     const cars = log.filter(e => e.startsWith('car'));
     expect(cars).toEqual(['car 4,5 -0.39..0.10', 'car 5,5 0.10..0.39']);
