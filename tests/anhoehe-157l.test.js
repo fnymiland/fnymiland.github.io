@@ -186,3 +186,28 @@ describe('11 Fußgängerbrücken, die schon vor der Regel an einer Kante standen
     expect(t()).toEqual([true, 'holz']);
   });
 });
+
+describe('8 Gleis-Rampe in ✋-Gruppen und ⧉ Kopien: Ablegen an der Wand wie die einzelne Rampe', () => {
+  it('angetipptes Feld an der Wand: die Gruppe rückt so, dass die Rampe dort an der Wand steht (passt die Mitte schon, bleibt sie)', () => {
+    hills(block(10, 10, 13, 13)); hills(block(20, 10, 23, 13));
+    game("rampNewForm = 'b'; build('huegelrampe', 11, 14); build('schiene', 11, 17, true); recalc()");
+    expect(game('rampAt(11, 16) && rampAt(11, 16).i')).toBe(0);
+    // ⧉ Kopie nur der Rampe (Griff = Mitte, 11,15): an der Wand der zweiten Anhöhe (21,14 = oberstes Feld) angetippt
+    game("setTool('verschieben'); startCopy(11, 14, 11, 16)");
+    expect(game("moving && moving.kind === 'group' && moving.copy")).toBe(true);
+    expect(game('rampTool()')).toBe(true);
+    expect(game('groupErrors(21, 14).first')).not.toBe(null);                          // am Griff abgelegt: läge zur Hälfte auf der Anhöhe
+    expect(game('rampAnchor(21, 14)')).toEqual([21, 15]);
+    expect(game('rampAnchor(21, 15)')).toEqual([21, 15]);                              // passt schon: bleibt
+    expect(game('dropAt(21, 15)')).toBe(true);
+    expect(game('[rampAt(21, 16) && rampAt(21, 16).i, rampAt(21, 14) && rampAt(21, 14).i]')).toEqual([0, 2]);
+    if (game('!!moving')) game('cancelMove()');
+    // ✋-Gruppe Rampe + Schiene davor (Griff 11,16): an der Wand angetippt
+    game("setTool('verschieben'); pickUpGroup(11, 14, 11, 17)");
+    expect(game("moving && moving.kind === 'group' && !moving.copy")).toBe(true);
+    expect(game('rampAnchor(22, 14)')).toEqual([22, 16]);
+    expect(game('dropAt(22, 16)')).toBe(true);
+    expect(game("[rampAt(22, 16) && rampAt(22, 16).i, bAt(22, 17)]")).toEqual([0, 'schiene']);
+    game("setTool('look'); rampNewForm = 'a'");
+  });
+});

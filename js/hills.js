@@ -1307,8 +1307,20 @@ function rampSnap(x, y, form = rampFormNow()) {
 // Bauen und Ablegen (tap, setHover; wie einAnchor der Tunneleinfahrt): passt die Rampe mit dem angetippten Feld als Anker, bleibt es (wie bisher);
 // sonst gilt es als Feld an der Wand (rampSnap) – an Wänden hinten (hinauf nach +x/+y) läge der Anker sonst bis zu 3 Felder davor. Ohne Anhöhen:
 // (x, y). rampTool: gerade eine Gleis-Rampe bauen oder eine getragene (✋, einzeln) ablegen
-const rampTool = () => tool === 'huegelrampe' || (tool === 'verschieben' && !!moving && moving.kind === 'tile' && isRamp(moving.t));
+// ✋-Gruppe und ⧉ Kopie mit Rampe (157l, 22.10.2026): genauso – passt die Gruppe mit ihrer Mitte auf dem angetippten Feld, bleibt es; sonst gilt es
+// als Feld an der Wand ihrer (ersten) Rampe, in ihrer Drehung, und die Gruppe rückt entsprechend (nur, wenn sie dort passt). Vorher lag sie am Griff
+const rampGroup = () => tool === 'verschieben' && !!moving && moving.kind === 'group' && moving.items.some(it => it.kind === 'tile' && isRamp(it.t));
+const rampTool = () => tool === 'huegelrampe' || (tool === 'verschieben' && !!moving && moving.kind === 'tile' && isRamp(moving.t)) || rampGroup();
+function rampGroupAnchor(x, y) {
+  if (!groupErrors(x, y).first) return [x, y];
+  const it = moving.items.find(i => i.kind === 'tile' && isRamp(i.t)), P = groupPlaced(it), form = rampFormOf(P.t), F = RAMP_FORMS[form];
+  const rot = (P.t.rot || 0) & 3, [Du, Dv] = STAIR_UP[rot], len = F.len, iw = len - Math.max(1, F.cut);
+  const fx = x - iw * Du, fy = y - iw * Dv, ax = Math.min(fx, fx + (len - 1) * Du), ay = Math.min(fy, fy + (len - 1) * Dv);
+  const nx = x + ax - (x - moving.cx + P.dx), ny = y + ay - (y - moving.cy + P.dy);
+  return groupErrors(nx, ny).first ? [x, y] : [nx, ny];
+}
 function rampAnchor(x, y) {
+  if (state.hills && state.hills.size && rampGroup()) return rampGroupAnchor(x, y);
   if (!state.hills || !state.hills.size || rampDirs(x, y).length) return [x, y];
   const s = rampSnap(x, y);
   return s ? [s.ax, s.ay] : [x, y];
