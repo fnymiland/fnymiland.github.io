@@ -24,7 +24,7 @@
   // Säule: Schaft (links hell, rechts im Schatten), Basis und Kapitell
   function column(K, a, b, lift, h, col, gold) {
     const z = K.z, [px, py0] = K.P(a, b, lift), w = 2.3 * z, H = h * z, py = py0;
-    ellipse(px, py, w * 1.35, w * 0.6, C(shade(col, -0.12)));
+    ellipse(px, py, w * 1.2, w * 0.55, C(shade(col, -0.12)));          // Fuß: Radius ≈ 0,06 Felder – Säulen stehen mindestens so weit von Wand und Kante
     g.fillStyle = C(col); g.fillRect(px - w, py - H, w, H);
     g.fillStyle = C(shade(col, -0.18)); g.fillRect(px, py - H, w, H);
     for (const k of [-0.5, 0.5]) { g.fillStyle = C(shade(col, -0.06)); g.fillRect(px + k * w - 0.25 * z, py - H, 0.5 * z, H); }   // Kanneluren
@@ -390,7 +390,7 @@
     const cols = []; for (let i = 0; i <= 12; i++) { const t = 0.02 + i * 0.08; if (t > 0.36 && t < 0.64) continue; cols.push(-1.85 + 3.7 * t); }
     if (s2) {                                                             // Stufe 2: Säulenreihe mit Gebälk
       // hintere Reihe des Vordachs steht auf derselben Linie und gehört hierher – nach dem Gebälk gezeichnet lagen ihre Kapitelle darüber
-      [...cols, ...PCOL_A].sort((p, q) => K.depth(p, fb + fhb + 0.06) - K.depth(q, fb + fhb + 0.06)).forEach(a => column(K, a, fb + fhb + 0.06, 3, fH - 2, '#f6efe0', s3));
+      [...cols, ...PCOL_A].sort((p, q) => K.depth(p, fb + fhb + 0.07) - K.depth(q, fb + fhb + 0.07)).forEach(a => column(K, a, fb + fhb + 0.07, 3, fH - 2, '#f6efe0', s3));   // 0,07 vor der Wand: der Fuß ragt nicht in sie hinein
       TB({ a: 0, b: fb + fhb + 0.02, ha: 1.85, hb: 0.08, h: 2.2, lift: 3 + fH - 2, wall: STONE2, type: 'flat', roof: shade(STONE2, 0.06), trim: s3 ? GOLD : null });   // Gebälk über den Säulen
     }
     // Dach des Steinflügels (Nutzer 22.10.: „so ein Geländer oben, das machen solche Gebäude da immer – dann Figuren auf Sockel, aber
@@ -464,7 +464,7 @@
     // Gebälk und Giebeldach des Vordachs → Stufen
     // Säulen und Gebälk genau so hoch wie am Flügel: das Gebälk läuft als ein Band durch und biegt nach vorn um das Vordach (vorher saß es
     // höher, das Band des Flügels stieß auf halber Höhe gegen die Säulen – Nutzer: „da wo die Leiste über den Säulen anbindet“)
-    const ptop = 3 + fH - 2, pBack = fb + fhb + 0.06, pFront = 1.4;           // Unterkante Gebälk, Säulenreihen
+    const ptop = 3 + fH - 2, pBack = fb + fhb + 0.07, pFront = 1.38;   // vorn 0,07 vor der Sockelkante (1,45)           // Unterkante Gebälk, Säulenreihen
     // Gebälk und Dach beginnen dort, wo das Gebälk des Flügels vorn endet (fb + fhb + 0,1) – reichten sie bis an die Wand, lag ihr hinteres
     // Stück (zuletzt gezeichnet) über dem Band des Flügels und stand an der Ecke versetzt heraus (Nutzer: „sieht das komisch aus?“)
     const pB0 = fb + fhb + 0.1, pcB = (pB0 + pFront + 0.04) / 2, pHb = (pFront + 0.04 - pB0) / 2;
