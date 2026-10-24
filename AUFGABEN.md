@@ -2769,6 +2769,12 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         goldenes Glasdach und Kuppel, Balustrade mit Flügelpferden/Vasen auf Sockeln („übertreibs nicht“), Vordach mit zwei Säulenreihen.
         4×3, 1 / 3 / 8 Mrd. Wirkung: „Dein Ausstellungsstück“ in der Kuppel-Vitrine (ganzes Glasdach durchsichtig: „sieht scheiße aus“) – nur Seltenes
         aus dem Basar und Pokale/Besonderes für Erfolge (Häuser, Läden: „stupid“).
+  - [x] **Riesenrad und Sternwarte neu** (24.10.2026, js/wundergarten.js, tests/wundergarten.test.js): wie der Botanische Garten. Riesenrad
+        3×3 nach echten Vorbildern (Nutzer: „an der Realität orientieren – Vorplatz oder Wiese?“): gepflasterter Platz, breite Wege ringsum
+        („wieso Graskante und dann nochmal Weg“), Zaun ganz herum mit Tor („wieso nicht komplett rum“), ein Tickethäuschen in der Absperrung
+        (zwei gehen nicht: rechts vom Tor steht ein Standbein). Erste Entwürfe: Häuschen am Standbein, Turm zu dick (ragte ins Institut) –
+        nachgerechnet und korrigiert. Sternwarte quer 1×2 gewählt („quere cooler“). Leistung (npm run leistung:neu): Riesenrad 628 → 6056
+        (Pflaster unter dem Rad, Muster über 3×3), dafür Sternwarte 8751 → 174 und Botanischer Garten 12231 → 668 (kein aufgemaltes Pflaster mehr).
   - [x] **Botanischer Garten neu** (22.10.2026, js/botgarten.js, tests/botgarten.test.js): Nutzer: „voll broken“ + „mach das Zeug drumherum zu
         echten Dingen, die automatisch eingefügt, aber auch entfernt werden können“. Gebäude nur noch 2×5 (Rotunde + zwei Glasflügel, richtig
         angesetzt in jeder Drehung; die „grünen Schlangen“ = Palmen ohne Kronen, ersetzt). Garten automatisch: Weg, Hecke (vorn offen), 2 Beete,

@@ -192,6 +192,6 @@ describe('Viele echte Spielzüge (fester Zufall)', () => {
       return { bad, up, upBig };
     })()`);
     expect(r.bad).toEqual([]);
-    expect(r.upBig).toBeGreaterThan(50);                                      // es standen wirklich viele große Gebäude oben
+    expect(r.upBig).toBeGreaterThan(12);                                      // es standen wirklich große Gebäude oben (seit 24.10.2026 bringen Riesenrad und Sternwarte einen Garten mit – weniger Platz, darum weniger als früher 50)
   }, 30000);
 });

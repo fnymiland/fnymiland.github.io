@@ -90,6 +90,7 @@ function tileOut(t) {
   if (t.look) o.look = t.look;
   if (t.stueck) o.stueck = t.stueck;                                                     // Glaspalast: Ausstellungsstück (Block 161f)
   if (t.bg2) o.bg2 = true;                                                               // Botanischer Garten im neuen Zuschnitt (botgarten.js)
+  if (t.g2) o.g2 = true;                                                                 // Riesenrad, Sternwarte im neuen Zuschnitt (wundergarten.js)
   if (t.bridge) o.bridge = true;
   if (t.mini) o.mini = true;                                                             // alter 1×1-Leuchtturm (Block 83)
   if (t.wide) o.wide = true;                                                             // Wegform (Block 77)
@@ -507,6 +508,7 @@ function afterLoad() {
   ensureFar();
   if (state.growLight) for (const t of state.tiles.values()) if (t.b === 'leuchtturm') t.mini = true;   // alter Leuchtturm ist 1×1 – auch fürs Wachsen von Hafen/Rathaus
   const bgs = botgartenUmbau();                    // Botanischer Garten: nur noch das Gebäude, Garten als echte Dinge (botgarten.js)
+  const wgs = wunderUmbau();                       // Riesenrad und Sternwarte ebenso (wundergarten.js)
   const grown = growWonders();
   const hall = growTownHall();
   const ports = growHarbors();
@@ -517,6 +519,7 @@ function afterLoad() {
   nameHouses();
   recalc();
   if (bgs.length) { for (const [bx, by, br] of bgs) bgGarden(bx, by, br); recalc(); setTimeout(() => toast('🌿 Neu: Der Botanische Garten ist umgebaut – Hecke, Weg, Beete, Bäume, Laternen und Teich sind jetzt echte Dinge, die du verändern kannst.'), 3600); }
+  if (wgs.length) { for (const [b, wx, wy, wr] of wgs) wonderGardenFor(b, wx, wy, wr); recalc(); setTimeout(() => toast(`🎡 Neu: ${wgs.map(w => ITEMS[w[0]].name).join(' und ')} ${wgs.length > 1 ? 'sind' : 'ist'} umgebaut – Wege, Zaun, Hecke, Bänke, Bäume und Laternen drumherum sind jetzt echte Dinge, die du verändern kannst.`), bgs.length ? 9000 : 3600); }
   const arches = archHillRecheck();                // Fußgängerbrücken an der Kante einer Anhöhe (157l, hills.js): wieder Schranken
   if (arches) recalc();
   collectAlbum();

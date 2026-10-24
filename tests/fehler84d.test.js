@@ -16,7 +16,7 @@ describe('Zeichnen (84d)', () => {
     game("state.tiles.set('10,10', { b: 'riesenrad', lvl: 1, phase: 99 }); recalc()");
     const n = countDraws('drawObject', "a[0] === 'riesenrad' && PASS === 'object'",
       "cam.z = 1.2; const f = iso(14, 14); cam.x = f.x; cam.y = f.y - (H / 2 + 140) / cam.z");
-    expect(n).toBe(9);                                                  // alle 9 Streifen
+    expect(n).toBe(5);                                                  // alle 5 Streifen (Riesenrad seit 24.10.2026 3×3)
   });
   it('Züge in der Halle eines langen Hauptbahnhofs werden gezeichnet, auch wenn die Ecke nicht im Bild ist', () => {
     game("state.tiles.set('4,4', { b: 'hbf', lvl: 1, rot: 0, gleise: 10 }); recalc()");

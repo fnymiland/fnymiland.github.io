@@ -193,6 +193,7 @@ function build(b, x, y, quiet) {
   }
   recalc();
   if (b === 'botgarten' && state.tiles.get(k)) { state.tiles.get(k).bg2 = true; bgGarden(x, y, rot); recalc(); }   // Garten aus echten Dingen drumherum (botgarten.js)
+  if (WG_PREV[b] && state.tiles.get(k)) { state.tiles.get(k).g2 = true; wonderGardenFor(b, x, y, rot); recalc(); }   // Riesenrad, Sternwarte (wundergarten.js)
   if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost - back), '#d9534a');
   const s = statusOf(x, y);
   if (s && s.how === 'weit' && !quiet) toast(hillNoStair(x, y) ? 'Oben ohne Treppe: nur halbe Kraft. Eine Treppe hinauf hilft.' : 'Weit weg vom Dorf: nur halbe Kraft. Ein Weg zum Dorf hilft.');   // Anhöhe ohne Treppe (157j)

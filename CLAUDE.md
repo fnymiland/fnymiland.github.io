@@ -468,6 +468,13 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     freien eigenen Wiesenfeldern, kostet nichts, alles frei abreißbar ohne Erstattung. `t.bg2` = neuer Bau; alte Stände rückt
     `botgartenUmbau()` beim Laden in die Mitte ihrer alten Fläche und legen dort den Garten an (`growWonders` überspringt `bg2`).
     Andere Gebäude mit aufgemaltem Umfeld (Schloss …) sollen später genauso werden.
+    **Riesenrad (3×3) und Sternwarte (quer 1×2) genauso** (js/wundergarten.js, Entwurf tools/wunder-garten-entwurf.js): `wonderGarden(b, x, y,
+    rot, spec, edge, inner)` legt den Ring in jeder Drehung an (spec im Rahmen des Baus: vorn/hinten/links/rechts, Ecken der Felder als ±1),
+    `t.g2` = neuer Zuschnitt, `wunderUmbau()` rückt alte Stände (5×5/3×3, vor v9 3×3/2×2) beim Laden in die Mitte. Riesenrad wie echte
+    Riesenräder (Nutzer: „an der Realität orientieren“): Pflaster unter dem Rad über COURTS (Belag des Wegs davor, ohne Weg Kies), ringsum
+    **breite** Wege (schmale ließen eine Graskante), Zaun um den Fuß, vorn Tor, Tickethäuschen in der Absperrung. Das Rad steht in **jeder**
+    Drehung in der Bildebene – das Häuschen kommt darum je nach Drehung links oder rechts vom Tor (`rrKiosk`), sonst steht es an einem
+    Standbein. Vor dem Zeichnen Abstände ausrechnen (Füße, Turmradius gegen Fläche/Institut), dann groß ansehen.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

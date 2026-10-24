@@ -3304,6 +3304,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-24-wundergarten', date: '24. Oktober', title: 'Riesenrad und Sternwarte', items: [
+    '🎡 <b>Riesenrad:</b> Es steht jetzt wie ein echtes Riesenrad auf einem gepflasterten Platz, mit einem Zaun um den Fuß, einem Tor und einem Tickethäuschen daneben. Laternen, Bänke, Bäume und der Weg rundherum sind echte Dinge, die du verändern kannst. Wechselst du den Belag des Wegs, wechselt das Pflaster unter dem Rad mit.',
+    '🔭 <b>Sternwarte:</b> Turm und Institut stehen jetzt nebeneinander (1×2). Drumherum gibt es einen Garten aus echten Dingen: einen Weg zur Tür mit Laternen, ein Beet, Bänke zum Sternegucken, Büsche, Bäume und eine Hecke.',
+    '🏗️ <b>Schon gebaut?</b> Riesenrad und Sternwarte werden automatisch umgebaut. Das Gebäude rückt in die Mitte seiner alten Fläche, und der Garten entsteht drumherum.',
+  ] },
   { id: '2026-10-22-zuege', date: '22. Oktober', title: 'Ordentlichere Züge', items: [
     '🚆 <b>Züge:</b> Die Wagen sind oben jetzt geschlossen. Vorher sah man neben dem Dach durch den Wagen hindurch auf die Schienen, und das Dach schien zu schweben.',
     '🌳 <b>Bäume vor dem Gleis:</b> Fährt ein Zug vorbei, schneidet er die Bäume davor nicht mehr ab.',

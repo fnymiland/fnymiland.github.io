@@ -1086,7 +1086,8 @@ const COURTS = {
   kaufhaus: { a: 0.68, b: 0, w: 0.18, own: true, bare: true }, markthalle: { a: -0.98, p: [-1.47, 1.47], own: true },
   moebelhaus: { a: 0.43, p: [-0.6, 0.6], own: true }, hotel: { a: 0.3, p: [-0.62, 0.62], own: true },
   grandhotel: { a: 0.4, p: [-1.15, 1.15], own: true },
-  botgarten: { a: 0.86, b: 0, w: 0.2, own: true },                                    // Weg zur Tür der Rotunde (Rand bei 0,88); zeichnet WONDER_ART selbst
+  botgarten: { a: 0.86, b: 0, w: 0.2, own: true },
+  riesenrad: { a: -1.5, p: [-1.5, 1.5], own: true }, sternwarte: { a: 0.4, b: 0.5, w: 0.15, own: true },   // Platz unter dem Rad, Weg zur Tür des Instituts (wundergarten.js)                                    // Weg zur Tür der Rotunde (Rand bei 0,88); zeichnet WONDER_ART selbst
 };
 // Stücke eines Vorplatzes: { a, s: [quer von, bis], band: schmaler Weg }; s3: anders ab Stufe 3
 const courtParts = (C0, t) => [].concat((t && t.lvl >= 3 && C0.s3) || C0.parts || C0).map(c => ({ a: c.a, s: c.p || [c.b - (c.w || GP_FILL), c.b + (c.w || GP_FILL)], band: !c.p }));
@@ -3244,7 +3245,7 @@ function growWonders() {
   const out = [];
   rebuildCover();
   for (const [k, t] of [...state.tiles]) {
-    if (!OLD_WONDER_SIZE[t.b] || t.bg2) continue;                      // Botanischer Garten: schon von botgartenUmbau gerückt
+    if (!OLD_WONDER_SIZE[t.b] || t.bg2 || t.g2) continue;              // Botanischer Garten, Riesenrad, Sternwarte: schon von botgartenUmbau/wunderUmbau gerückt
     const [x, y] = keyXY(k), [w, h] = sizeOf(t.b, t.rot, t), [ow, oh] = OLD_WONDER_SIZE[t.b];
     state.tiles.delete(k); rebuildCover();
     const tries = [];

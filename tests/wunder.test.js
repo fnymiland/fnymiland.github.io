@@ -76,8 +76,8 @@ describe('Wunderwerke', () => {
     expect(game("readyList().ready.some(e => e.kind === 'wonder')")).toBe(true);
   });
 
-  it('groß: Riesenrad 5×5, Sternwarte 3×3, Botanischer Garten 5×5, Schloss 7×7 – die Seebrücke bleibt', () => {
-    expect(game("['riesenrad', 'sternwarte', 'botgarten', 'schloss', 'seebruecke'].map(b => ITEMS[b].size)")).toEqual([[5, 5], [3, 3], [2, 5], [7, 7], [4, 1]]);
+  it('Größen: Riesenrad 3×3, Sternwarte 1×2, Botanischer Garten 2×5 (je mit echtem Garten drumherum), Schloss 7×7 – die Seebrücke bleibt', () => {
+    expect(game("['riesenrad', 'sternwarte', 'botgarten', 'schloss', 'seebruecke'].map(b => ITEMS[b].size)")).toEqual([[3, 3], [1, 2], [2, 5], [7, 7], [4, 1]]);
   });
 
   it('Preis: Minuten Einkommen beim Aufstellen (mindestens ein Sockel), dazu viel Material', () => {
@@ -105,9 +105,9 @@ describe('Wunderwerke', () => {
   });
 
   it('alte Stände: das Bauwerk wächst um seine Mitte, Natur weicht, der Fortschritt bleibt', () => {
-    game("state.tiles.set('9,9', { b: 'riesenrad', lvl: 1, phase: 2 }); state.terra.set('8,8', 'forest'); state.growWonders = true");
+    game("state.tiles.set('9,9', { b: 'schloss', lvl: 1, phase: 2 }); state.terra.set('8,8', 'forest'); state.growWonders = true");   // Riesenrad/Sternwarte rückt seit 24.10.2026 wunderUmbau (wundergarten.test.js)
     expect(game('growWonders().length')).toBe(1);
-    expect(game("state.tiles.get('8,8')")).toMatchObject({ b: 'riesenrad', phase: 2 });   // 3×3 bei 9,9 → 5×5 bei 8,8
+    expect(game("state.tiles.get('8,8')")).toMatchObject({ b: 'schloss', phase: 2 });     // 4×4 bei 9,9 → 7×7 bei 8,8
     expect(game("terrainAt(8, 8)")).toBe('grass');
     expect(game('state.growWonders')).toBeUndefined();
   });

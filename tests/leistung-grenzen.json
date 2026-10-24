@@ -300,103 +300,103 @@
   "live": 1
  },
  "bruecken-gleis Tag Zoom 0.45": {
-  "ops": 1010,
-  "geo": 3333,
+  "ops": 1018,
+  "geo": 3517,
   "live": 8
  },
  "bruecken-gleis Tag Zoom 0.8": {
-  "ops": 680,
-  "geo": 28237,
+  "ops": 688,
+  "geo": 28421,
   "live": 8
  },
  "bruecken-gleis Tag Zoom 1.2": {
-  "ops": 482,
-  "geo": 27015,
+  "ops": 490,
+  "geo": 27199,
   "live": 5
  },
  "bruecken-gleis Tag Zoom 1.6": {
-  "ops": 3293,
-  "geo": 41945,
+  "ops": 3299,
+  "geo": 42083,
   "live": 12
  },
  "bruecken-gleis Tag Zoom 2.2": {
-  "ops": 2223,
-  "geo": 11059,
+  "ops": 2229,
+  "geo": 11197,
   "live": 10
  },
  "bruecken-gleis Nacht Zoom 0.45": {
-  "ops": 1134,
-  "geo": 3657,
+  "ops": 1142,
+  "geo": 3841,
   "live": 8
  },
  "bruecken-gleis Nacht Zoom 0.8": {
-  "ops": 703,
-  "geo": 28148,
+  "ops": 711,
+  "geo": 28332,
   "live": 8
  },
  "bruecken-gleis Nacht Zoom 1.2": {
-  "ops": 548,
-  "geo": 27107,
+  "ops": 556,
+  "geo": 27291,
   "live": 5
  },
  "bruecken-gleis Nacht Zoom 1.6": {
-  "ops": 3366,
-  "geo": 42105,
+  "ops": 3372,
+  "geo": 42243,
   "live": 12
  },
  "bruecken-gleis Nacht Zoom 2.2": {
-  "ops": 2296,
-  "geo": 11219,
+  "ops": 2302,
+  "geo": 11357,
   "live": 10
  },
  "bruecken-gleis-tx Tag Zoom 0.45": {
-  "ops": 1092,
-  "geo": 3067,
+  "ops": 1100,
+  "geo": 3251,
   "live": 6
  },
  "bruecken-gleis-tx Tag Zoom 0.8": {
-  "ops": 599,
-  "geo": 2065,
+  "ops": 604,
+  "geo": 2180,
   "live": 1
  },
  "bruecken-gleis-tx Tag Zoom 1.2": {
-  "ops": 194,
-  "geo": 504,
+  "ops": 196,
+  "geo": 550,
   "live": 2
  },
  "bruecken-gleis-tx Tag Zoom 1.6": {
-  "ops": 1998,
-  "geo": 9140,
+  "ops": 2000,
+  "geo": 9186,
   "live": 1
  },
  "bruecken-gleis-tx Tag Zoom 2.2": {
-  "ops": 1267,
-  "geo": 5636,
+  "ops": 1268,
+  "geo": 5659,
   "live": 0
  },
  "bruecken-gleis-tx Nacht Zoom 0.45": {
-  "ops": 1090,
-  "geo": 2881,
+  "ops": 1098,
+  "geo": 3065,
   "live": 7
  },
  "bruecken-gleis-tx Nacht Zoom 0.8": {
-  "ops": 622,
-  "geo": 2105,
+  "ops": 627,
+  "geo": 2220,
   "live": 1
  },
  "bruecken-gleis-tx Nacht Zoom 1.2": {
-  "ops": 205,
-  "geo": 520,
+  "ops": 207,
+  "geo": 566,
   "live": 2
  },
  "bruecken-gleis-tx Nacht Zoom 1.6": {
-  "ops": 2006,
-  "geo": 9156,
+  "ops": 2008,
+  "geo": 9202,
   "live": 1
  },
  "bruecken-gleis-tx Nacht Zoom 2.2": {
-  "ops": 1273,
-  "geo": 5644,
+  "ops": 1274,
+  "geo": 5667,
   "live": 0
  }
 }
