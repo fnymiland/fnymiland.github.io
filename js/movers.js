@@ -318,12 +318,23 @@ function drawBubble(z) {
   }
   const tw = Math.max(...lines.map(l => g.measureText(l).width)), lh = size * 1.25, w = tw + size * 1.4, h = size * 0.75 + lines.length * lh;
   const bx = Math.max(8, Math.min(W - w - 8, hx - w / 2)), by = hy - (bubble.w.label ? labelOff(bubble.w) * FIG_SCALE + 6 : 8 * FIG_SCALE) * z - h;   // über dem Namensschild
-  g.fillStyle = 'rgba(107,79,58,0.18)'; g.beginPath(); g.roundRect(bx, by + 2, w, h, Math.min(h / 2, size)); g.fill();
-  g.fillStyle = '#fffdf6'; g.beginPath(); g.roundRect(bx, by, w, h, Math.min(h / 2, size)); g.fill();
+  // Plättchen wie die Oberfläche (Aussehen, ui-look.js): flache Oberseite, Dicke unten, von Hand geschnitten bzw. rund (Wolken); Emojis als Bild
+  const cloud = typeof uiLookId !== 'undefined' && uiLookId === 'wolke', top = cloud ? '#ffffff' : '#f8f0dc', side = cloud ? '#c7d4e8' : '#cdb68b';
+  const r = Math.min(h / 2, size), R = cloud ? r : [r * 0.8, r * 1.1, r * 0.9, r];
+  g.fillStyle = 'rgba(60,40,20,0.16)'; g.beginPath(); g.roundRect(bx, by + 6, w, h, R); g.fill();
+  g.fillStyle = side; g.beginPath(); g.roundRect(bx, by + 3, w, h, R); g.fill();
+  g.beginPath(); g.moveTo(hx - 4, by + h + 2); g.lineTo(hx + 4, by + h + 2); g.lineTo(hx, by + h + 9); g.fill();
+  g.fillStyle = top; g.beginPath(); g.roundRect(bx, by, w, h, R); g.fill();
   g.beginPath(); g.moveTo(hx - 4, by + h - 1); g.lineTo(hx + 4, by + h - 1); g.lineTo(hx, by + h + 6); g.fill();
-  g.strokeStyle = 'rgba(107,79,58,0.35)'; g.lineWidth = 1; g.beginPath(); g.roundRect(bx, by, w, h, Math.min(h / 2, size)); g.stroke();
-  g.fillStyle = '#6b4f3a'; g.textBaseline = 'middle'; g.textAlign = 'left';
-  lines.forEach((l, i) => g.fillText(l, bx + size * 0.7, by + size * 0.375 + lh * (i + 0.5)));
+  g.fillStyle = cloud ? '#3b4763' : '#5a3d24'; g.textBaseline = 'middle'; g.textAlign = 'left';
+  lines.forEach((l, i) => {
+    const ly = by + size * 0.375 + lh * (i + 0.5);
+    let lx = bx + size * 0.7;
+    for (const sg of typeof pillSegs === 'function' ? pillSegs(l) : [{ t: l }]) {
+      if (sg.pic) { const ih = size * 1.3, iw = ih * Math.min(1.25, sg.pic.width / sg.pic.height); g.drawImage(sg.pic, lx, ly - ih * 0.6, iw, ih); lx += iw; }
+      else { g.fillText(sg.t, lx, ly); lx += g.measureText(sg.t).width; }
+    }
+  });
 }
 // Angetippte Figur (nur Bewohner mit Haus): die nächste in der Nähe des Fingers
 function walkerAt(sx, sy) {

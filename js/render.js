@@ -59,14 +59,15 @@ function pillSegs(text) {
   if (last < text.length) out.push({ t: text.slice(last) });
   return out;
 }
-function pill(text, x, y, bg, fg, size, fit) {
+const FLOAT_TINT = { '#d9534a': '#ffb8ac', '#3f8f43': '#c9f0b4', '#f2c14e': '#ffe27a' };
+function pill(text, x, y, bg, fg, size, fit, tint) {
   const segs = pillSegs(text), font = s => `800 ${s * 1.12}px 'Alegreya Sans', Nunito, system-ui, sans-serif`;
   const segW = (sg, s) => sg.pic ? s * 1.5 * Math.min(1.25, sg.pic.width / sg.pic.height) : g.measureText(sg.t).width;
   const widthAt = s => { g.font = font(s); return segs.reduce((a, sg) => a + segW(sg, s), 0); };
   let w = widthAt(size);
   while (fit && w + size > W - 16 && size > 9) { size--; w = widthAt(size); }
   if (fit) x = Math.max(w / 2 + 8, Math.min(W - w / 2 - 8, x));
-  const h = size * 1.7, col = PILL_TINT[bg] || '#fff7e6';
+  const h = size * 1.7, col = tint || PILL_TINT[bg] || '#fff7e6';
   g.font = font(size); g.textBaseline = 'middle'; g.textAlign = 'left'; g.lineJoin = 'round';
   let cx = x - w / 2;
   for (const sg of segs) {
@@ -2505,11 +2506,10 @@ function render(now) {
     const p = toScreen(f.x, f.y);
     if (HILLS) p.y -= liftAt(f.x, f.y);                                   // Anhöhe (Block 157): über dem, was oben steht
     g.globalAlpha = a < 0.8 ? 1 : (1 - a) / 0.2;
-    g.font = `900 ${Math.max(12, 12 * z)}px Nunito, system-ui, sans-serif`;
-    g.textBaseline = 'middle';
-    g.lineWidth = 4; g.strokeStyle = '#fffaf0'; g.lineJoin = 'round';
     const fy = p.y - 30 * z - a * 26 * z;
-    g.fillStyle = f.color; centerText(f.text, p.x, fy, true);
+    // wie die Schilder: Umriss-Schrift, Geld mit Taler-Bildchen (Aussehen, 25.10.2026)
+    const money = /^[+−]\d/.test(f.text) && (f.color === '#d9534a' || f.color === '#3f8f43');
+    pill(f.text + (money ? ' 🪙' : ''), p.x, fy, null, null, Math.max(12, 12 * z), false, FLOAT_TINT[f.color] || '#fff7e6');
     g.globalAlpha = 1;
   }
 
