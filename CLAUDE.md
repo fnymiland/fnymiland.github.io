@@ -536,7 +536,13 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     `#modal-card:not(.basar-night)` – der Sternenbasar bleibt dunkel). `.btn`/`.look` sind überall Plättchen. Emojis in Texten: `setHtml`
     und `openModal` schicken HTML durch `wiText` (`WI_TEXT`: 🪙 📦 👥 💡 🔒 🌸 → `<i class="wt">🪙</i>` mit Bild aus `--wt-…`). Das
     Zeichen bleibt im Text (Tests, Vorlesen); nur Text zwischen Tags wird ersetzt, nie Attribute. Neue Zuordnung: Symbol in `UI_DRAW`
-    oder ein Ding, Eintrag in `WI_TEXT` – nur eindeutige Emojis (✨ ist mal Sternstaub, mal Glitzer → nicht).
+    oder ein Ding, Eintrag in `WI_TEXT`. Gezeichnete Symbole stehen in js/ui-symbole.js (`Object.assign(UI_DRAW, …)`, 64×64, Boden y≈56),
+    Tiere als `'tier:N'` (über `figPreview`, friends.js – erst zur Laufzeit da). Bilder für Texte malt `wtEnsure` erst bei Bedarf (nie alle beim
+    Start). Leisten, die selbst Text setzen (Hinweis, Auswahl, Erfolg, Lager …), wandelt ein Beobachter um (`WI_WATCH`); die Leiste oben
+    schreibt über `setWiText` (hudtap.test: sonst Schreiben ohne Änderung). Globale Muster mit `g`-Flag nie mit `.test()` prüfen
+    (`WI_TEXT_HAS` ohne g) – die gemerkte Position ließ den Beobachter endlos umbauen. Karte: Symbole über Häusern und Schilder (`pill`, ohne
+    Pille, Umriss-Schrift) zeichnen Emojis als `uiIconCanvas` (fertige Leinwand, nie ein noch ladendes Bild – sonst kein Bildchen-Speicher).
+    Knopf „Du“: eigene Figur (`youFaceSync`). Kleine Leisten/Meldungen: Plättchen über `--cut`, `--plate…` (je Aussehen in style.css).
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

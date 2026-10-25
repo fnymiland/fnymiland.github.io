@@ -231,13 +231,17 @@ function uiTrim(src, pad = 2) {
 const UI_ICON_CACHE = new Map(), UI_ICON_CNV = new Map();              // Bild-Adresse bzw. fertige Leinwand je Symbol
 function uiIcon(name) {
   if (UI_ICON_CACHE.has(name)) return UI_ICON_CACHE.get(name);
+  if (name.startsWith('tier:') && typeof figPreview !== 'function') return '';   // friends.js noch nicht geladen: später nochmal (nicht leer merken)
   const S = 3;
   let c = document.createElement('canvas'), url = '';
   const x = c.getContext('2d');
   if (x) {
     const prev = g, fog = FOG;
     try {
-      if (UI_DRAW[name]) {
+      if (name.startsWith('tier:') && typeof figPreview === 'function') {   // Bewohner-Tier wie auf der Insel (Standard-Fell und -Hemd)
+        c.width = 64 * S; c.height = 80 * S;
+        figPreview(c, figFrom(+name.slice(5), {}, ''), 2.6 * S);
+      } else if (UI_DRAW[name]) {
         c.width = c.height = 64 * S; x.scale(S, S); g = x; FOG = false;
         UI_DRAW[name]();
       } else {
@@ -330,6 +334,9 @@ const WI_TEXT = {
   '🪓': 'axt', '🧭': 'kompass', '🧹': 'besen', '🌊': 'welle', '🪜': 'leiter', '🏗': 'kran', '👷': 'kran', '⭐': 'stern', '✋': 'haken', '👁': 'glaskugel',
   '👆': 'lupe', '🌐': 'freundesbank', '☰': 'wegweiser', '🛤': 'wegweiser', '⛰': 'stein', '⛱': 'pavillon',
   '🏛': 'rathaus', '🚆': 'station', '🚉': 'station', '🏠': 'haus:1', '🏘': 'reihenhaus', '🌉': 'seebruecke', '🌳': 'baum', '🌲': 'baum', '🎡': 'riesenrad',
+  '🐾': 'tier:2', '👀': 'lupe', '⛩': 'bogen', '🌫': 'wolke', '🚧': 'kran', '🐠': 'fischer', '🦋': 'schmetterlingsgarten', '📩': 'briefkasten',
+  '🌅': 'sonne', '🧰': 'kiste', '⛺': 'pavillon',
+  '🐱': 'tier:0', '🐻': 'tier:1', '🐰': 'tier:2', '🐿': 'tier:3', '🦔': 'tier:4', '🦊': 'tier:5', '🦒': 'tier:6', '🐘': 'tier:7', '🦆': 'tier:8',
   '🏰': 'fz_schloss', '🎢': 'fz_looping', '🌿': 'busch', '🕘': 'uhrturm', '🏭': 'fabrik', '🚇': 'ubahn', '🗼': 'leuchtturm', '💾': 'truhe',
   '🛍': 'blumenladen', '🛒': 'korb', '🌬': 'windrad', '🪑': 'bank', '📍': 'pin', '🖌': 'palette', '🚂': 'station', '🚋': 'station', '🚃': 'station', '🚈': 'station',
   '🚄': 'station', '🐟': 'fischer', '🏆': 'pokal_gold', '🚡': 'seilbahn', '🌠': 'funkel', '🌟': 'funkel', '⚓': 'hafen', '♨': 'geothermie', '🌷': 'blumen',
@@ -342,10 +349,16 @@ const WI_TEXT_RE = new RegExp(`(?:${Object.keys(WI_TEXT).join('|')})\uFE0F?`, 'g
 const WI_TEXT_HAS = new RegExp(WI_TEXT_RE.source, 'u');                  // zum Prüfen: ohne g, merkt sich keine Position zwischen Aufrufen
 const wiTextName = e => WI_TEXT[e.replace(/\uFE0F/g, '')];
 const wtVar = name => '--wt-' + name.replace(/[^a-z0-9]/g, '');
+const WT_SET = new Set();                                                  // Bild schon am Dokument (erst bei Bedarf gemalt)
+function wtEnsure(name) {
+  if (WT_SET.has(name) || typeof document === 'undefined') return;
+  const u = uiIcon(name);
+  if (u) { document.documentElement.style.setProperty(wtVar(name), `url(${u})`); WT_SET.add(name); }
+}
 function wiText(html) {
   if (typeof html !== 'string' || !WI_TEXT_HAS.test(html)) return html;
   return html.split(/(<[^>]*>)/).map(part => part.startsWith('<') ? part
-    : part.replace(WI_TEXT_RE, e => `<i class="wt" style="background-image:var(${wtVar(wiTextName(e))})">${e}</i>`)).join('');
+    : part.replace(WI_TEXT_RE, e => { const n = wiTextName(e); wtEnsure(n); return `<i class="wt" style="background-image:var(${wtVar(n)})">${e}</i>`; })).join('');
 }
 
 // Leisten, die ihren Text selbst setzen (Hinweis, Auswahl, Erfolg …): Textknoten nachträglich umwandeln. Nicht für Fenster, die
@@ -370,6 +383,22 @@ function watchUiEmojis() {
   for (const id of WI_WATCH) { const el = document.getElementById(id); if (el) { wiTextNodes(el); wiWatch.observe(el, { childList: true, subtree: true, characterData: true }); } }
 }
 
+// Knopf „Du“ oben: die eigene Figur (mit Hut, Brille …) statt des Tier-Emojis; neu gemalt, wenn sich das Aussehen ändert
+let youFaceSig = null;
+function youFaceSync() {
+  const el = document.getElementById('you-face');
+  if (!el || typeof meFigLook !== 'function' || typeof figPreview !== 'function') return;
+  let fig, sig;
+  try { fig = meFigLook(); sig = JSON.stringify(fig); } catch (e) { return; }
+  if (sig === youFaceSig) return;
+  youFaceSig = sig;
+  const S = 3, c = document.createElement('canvas'); c.width = 64 * S; c.height = 84 * S;
+  let url = '';
+  try { figPreview(c, { ...fig, label: null }, 2.6 * S); url = uiTrim(c).toDataURL(); } catch (e) { url = ''; }
+  el.classList.toggle('drawn', !!url);
+  el.style.backgroundImage = url ? `url(${url})` : '';
+}
+
 // ---------- anwenden ----------
 function applyUiLook() {
   const b = document.body;
@@ -377,7 +406,6 @@ function applyUiLook() {
   for (const id of Object.keys(UI_LOOKS)) b.classList.toggle('look-' + id, id === uiLookId);
   fillUiIcons();
   watchUiEmojis();
-  for (const name of new Set(Object.values(WI_TEXT))) { const u = uiIcon(name); if (u) document.documentElement.style.setProperty(wtVar(name), `url(${u})`); }
   lookSlab(document.getElementById('modal-card'), 'paper', true);        // große Fenster
   lookSlab(document.getElementById('cats-isle'), 'bar');                 // Bauleiste: Beet in der Hecke bzw. Wolke
   lookSlab(document.getElementById('sheet'), 'paper', true);              // aufklappendes Feld (scrollt selbst: Platte als Hintergrund)

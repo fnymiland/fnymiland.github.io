@@ -20,6 +20,7 @@ describe('Schilder', () => {
   });
   it('Emojis im Schild werden gezeichnete Spiel-Symbole, der Text bleibt dazwischen (Aussehen, 25.10.2026)', () => {
     const r = game(`(() => {
+      uiIconCanvas('🏛'); uiIconCanvas('🏮');                             // Symbole vorher malen (das Malen selbst zählt hier nicht)
       const out = [], f = g.fillText, d = g.drawImage;
       g.fillText = t => out.push(t); g.drawImage = () => out.push('[Bild]');
       pill('🏛 Alte Ruine 🏮', 200, 50, '#fff', '#000', 12);
