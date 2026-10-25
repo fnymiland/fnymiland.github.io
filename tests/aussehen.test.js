@@ -95,4 +95,14 @@ describe('Aussehen', () => {
     expect(game("document.getElementById('modal-card').dataset.slabIn")).toBe('1');
     game('closeModal()');
   });
+
+  it('Vorschaubild ragt über den Rand → kleiner neu gemalt (Märchenschloss, Torturm …), danach wieder normal', () => {
+    const r = game(`(() => {
+      const o = thumbOverflow, raw = thumbRaw; let n = 0, k = 0; const fits = [];
+      thumbOverflow = () => k++ < 2; thumbRaw = (...a) => { n++; fits.push(thumbFit); return raw(...a); };
+      try { thumb('fz_schloss'); } finally { thumbOverflow = o; thumbRaw = raw; }
+      return [n, fits.map(f => Math.round(f * 100)), thumbFit];
+    })()`);
+    expect(r).toEqual([3, [100, 80, 64], 1]);
+  });
 });

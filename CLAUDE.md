@@ -546,6 +546,7 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Läden (SHOPS) und Naturtiere (NATURE) tragen sich selbst in `WI_TEXT` ein (Emoji → echtes Laden-Gebäude bzw. `'natur:id'` über
     `drawCritter`). Der Sternenbasar ist hell wie alle Fenster (Klasse `basar`, die alten `.basar-night`-Regeln greifen nicht mehr).
     Bewusst Text geblieben: ♥ ↔ ▶ ⬆ ➕ ℹ und die Farbquadrate 🟥🟦🟨🟩 (Farbwahl). Emojis in Gebäudezeichnungen (Ladenschilder) gehören zur Welt.
+    Vorschaubilder (`thumb`) passen sich ein: ragt etwas über den Rand (`thumbOverflow`), malt `thumbRaw` mit `thumbFit` kleiner neu (um den Fuß).
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

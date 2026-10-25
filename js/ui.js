@@ -45,9 +45,28 @@ function toast(msg) {
 }
 
 // Vorschaubild; ein Fehler in einer Zeichnung lässt nur dieses Bild leer – das Spiel startet trotzdem
+// Ragt das Bild über den Rand (hohe oder breite Gebäude: Märchenschloss, Torturm, Hauptbahnhof …, Nutzer 25.10.2026: „manche Icons
+// abgeschnitten“), wird es kleiner neu gemalt – um den Fuß unten in der Mitte, höchstens sechsmal
+let thumbFit = 1;
+function thumbOverflow(c) {
+  const x = c.getContext && c.getContext('2d');
+  if (!x) return false;
+  const W = c.width, H = c.height, img = x.getImageData(0, 0, W, H), d = img && img.data;
+  if (!d) return false;
+  const a = (i, j) => d[(j * W + i) * 4 + 3] > 20;
+  let n = 0;
+  for (let i = 0; i < W; i++) if (a(i, 0) || a(i, 1)) n++;
+  for (let j = 0; j < H; j++) { if (a(0, j)) n++; if (a(W - 1, j)) n++; }
+  return n > 2;
+}
 function thumb(type, lvl = 1, tile = null, scale = 1) {
   const prev = g;
-  try { return thumbRaw(type, lvl, tile, scale); } catch (e) { g = prev; reportError(e); const c = document.createElement('canvas'); c.width = 112 * scale; c.height = 88 * scale; return c; }
+  try {
+    let c = thumbRaw(type, lvl, tile, scale);
+    for (let k = 0; k < 6 && thumbOverflow(c); k++) { thumbFit *= 0.8; c = thumbRaw(type, lvl, tile, scale); }
+    return c;
+  } catch (e) { g = prev; reportError(e); const c = document.createElement('canvas'); c.width = 112 * scale; c.height = 88 * scale; return c; }
+  finally { thumbFit = 1; }
 }
 // scale: größer gemalt (Karte in der Kunstakademie); tile.style: Weg/Hecke/Zaun/Mauer in diesem Stil statt des gewählten (Block 125)
 function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
@@ -56,6 +75,7 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   const cx0 = c.getContext('2d');
   if (!cx0) return c;                                  // kein Speicher (iPad): leeres Bild statt „Hoppla“ (Block 124)
   if (scale !== 1) cx0.scale(scale, scale);
+  if (thumbFit !== 1) { cx0.translate(56, 82); cx0.scale(thumbFit, thumbFit); cx0.translate(-56, -82); }   // kleiner, um den Fuß (thumb)
   const prev = g; g = cx0; FOG = false;
   const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type), monH = ITEMS[type] && (ITEMS[type].mon || ITEMS[type].prachtStages) ? ITEMS[type].h : 0;   // Monumente, Prachtbauten: ganz ins Bild
   const z = monH ? Math.min(0.55, 60 / monH) : type === 'leuchtturm' ? 0.36 : big ? 0.72 : tall ? 0.95 : type === 'pb_station' ? 1 : 1.3, cx = type === 'pb_station' ? 66 : 56, cy = monH ? 66 : type === 'leuchtturm' ? 64 : tall ? 70 : type === 'pb_station' ? 62 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
