@@ -1344,3 +1344,31 @@ body.phone:not(.phone-land) #panel.slab-in { bottom: calc(var(--bar, 57px) + var
 body.phone:not(.phone-land) #panel.slab-in.tall { max-height: calc(100dvh - var(--bar, 57px) - 64px - var(--isle-over)); }
 body.phone.phone-land #panel.slab-in { bottom: calc(var(--bar, 57px) + 8px + var(--isle-over)); max-height: calc(100dvh - var(--bar, 57px) - 64px - var(--isle-over)); }
 @media (max-width: 600px) { #panel.slab-in { max-height: calc(100dvh - var(--bar, 160px) - 110px - var(--isle-over)); } }
+
+/* Restliche Knöpfe und Wahl-Chips im neuen Stil (Nutzer: „immer noch genug Buttons vom alten Theme“): Plättchen in den Farben des
+   Aussehens (--plate…), gewählt hell hervorgehoben (--plate-hi…) statt Creme mit brauner Kante bzw. Gelb */
+.look, .set-btn, .look-pick button, .arrange-btn, .arrange-mv, #goal .task-chips .chip, .store-row .keep, .sub, .wopt, #visit-band .btn,
+.hall-quick .look, .fr-btns .btn.ghost {
+  background: var(--plate); color: var(--brown); border-radius: var(--cut); box-shadow: 0 3px 0 var(--plate-side); }
+.look.on, .look-pick button.on, .sub.active, .wopt.on, .look.art-more, .fr-btns .btn.on {
+  background: var(--plate-hi); color: var(--brown); box-shadow: 0 3px 0 var(--plate-hi-side); }
+.look-pick button.on { box-shadow: 0 3px 0 var(--plate-hi-side), inset 0 0 0 2px var(--plate-hi-side); }
+@media (hover: hover) { .set-btn:hover, .look:not(.on):hover { background: var(--plate-hi); } }
+.set-btn b { background: rgba(255, 255, 255, .65); border-radius: 7px; }
+.hint-info { background: var(--plate-hi); border-radius: var(--cut); box-shadow: 0 2px 0 var(--plate-hi-side); }
+.arrange-row { background: var(--plate); border-radius: var(--cut); box-shadow: 0 2px 0 var(--plate-side); }
+.sw { border-radius: var(--cut); box-shadow: 0 2px 0 var(--plate-side); }
+.design { background: rgba(255, 255, 255, .45); border-radius: var(--cut); box-shadow: none; }
+body.look-wolke .design { background: rgba(120, 160, 230, .08); }
+.design.on, .design.active { background: var(--plate-hi); box-shadow: inset 0 0 0 2px var(--plate-hi-side); }
+.tool { border-radius: var(--cut); }
+/* Knöpfe mit eigener Dicke (Auswahl-Leiste): Kante in der Farbe des Knopfs statt braun */
+.btn { --bside: #93432a; } .btn.ghost { --bside: #b48c5c; } .btn.danger { --bside: #842e27; } .btn:disabled { --bside: #b9ab90; }
+body.look-wolke .btn { --bside: #46699f; } body.look-wolke .btn.ghost { --bside: #b3c3dd; } body.look-wolke .btn.danger { --bside: #a8443a; } body.look-wolke .btn:disabled { --bside: #c3cbd8; }
+#sel-bar .btn { box-shadow: 0 4px 0 var(--bside), 0 6px 14px rgba(60, 40, 20, .15); }
+.design.have { background: rgba(127, 184, 90, .16); }          /* schon gekauft: leicht grasgrün statt Kachel (✓ steht darunter) */
+body.look-wolke .design.have { background: rgba(107, 149, 216, .16); }
+/* Eingabefelder (Suche in der Hilfe, Name, Freundescode …): Plättchen mit Kante statt weißem Feld mit dünnem Rand */
+#modal-card input[type="text"], #modal-card input[type="search"], #modal-card input:not([type]), #modal-card textarea, #modal-card .lx-q, #panel input[type="text"] {
+  background: var(--plate); color: var(--brown); border: 2px solid var(--plate-side); border-radius: var(--cut); box-shadow: inset 0 2px 0 rgba(60, 40, 20, .06); outline: none; }
+#modal-card input:focus, #modal-card textarea:focus, #panel input:focus { border-color: var(--plate-hi-side); }
