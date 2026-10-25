@@ -120,4 +120,15 @@ describe('Aussehen', () => {
     })()`);
     expect(r).toEqual([0, 2, 3, 'object', 0]);
   });
+
+  it('Knöpfe: Hecke = Holzbrett (CSS), Wolken = Wölkchen per border-image; Bildmaße passen zu den Zahlen in style.css', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    expect(css).toMatch(/body\.look-hecke \.btn, body\.look-hecke #goal \.task\.ready \.t-go,[^{]*\{[^}]*var\(--grain\)/);
+    // Ecke = r + P/2, unten + Dicke; im Bild doppelt so groß (k = 2)
+    const [c, b] = game('[(CLOUD_KNOB_R + CLOUD_KNOB_P / 2) * 2, (CLOUD_KNOB_R + CLOUD_KNOB_P / 2 + CLOUD_KNOB_DEPTH) * 2]');
+    expect(css).toContain(`border-image: var(--ck) ${c} ${c} ${b} ${c} fill / ${c / 2}px ${c / 2}px ${b / 2}px ${c / 2}px round`);
+    for (const id of game('Object.keys(CLOUD_KNOB)')) expect(css).toContain(`var(--cloud-${id})`);
+    game("setUiLook('wolke')");
+    expect(game("Object.keys(CLOUD_KNOB).map(id => document.body.style.getPropertyValue('--cloud-' + id).startsWith('url('))")).toEqual([true, true, true, true, true]);
+  });
 });

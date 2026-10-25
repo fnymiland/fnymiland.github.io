@@ -1410,3 +1410,62 @@ body.look-wolke .cats-isle { padding: 11px 18px 10px; }
 .sw { background-color: var(--chip); }                  /* Felder mit Zeichen (Flagge); echte Farbfelder setzen ihre Farbe selbst */
 .sw.on { box-shadow: 0 2px 0 var(--chip-on-side), 0 0 0 3px var(--chip-on); }
 .card.basar .btn.small.basar-try { background: var(--chip); color: var(--brown); box-shadow: 0 3px 0 var(--chip-side); }
+
+/* ===== Knöpfe je Aussehen (Nutzer 25.10.2026: „A auf jeden Fall für Holz, das ist klasse“ – „für Wolken: W1“) =====
+   Hecke = Holzbrett: Maserung, Nagelköpfe an Haupt-/Nebenknöpfen, kantig. Wolken = Wölkchen mit Buckeln ringsum (Bilder aus
+   cloudKnobs, js/ui-look.js, als border-image – wächst mit jeder Knopfgröße, die Buckel werden nur wiederholt). Reihenfolge zählt:
+   Haupt → Neben/Wahl → gewählt → Abreißen → gesperrt (das Spätere gewinnt bei gleichem Gewicht). Stehen zuletzt in der Datei */
+body.look-hecke { --wood: #d7a868; --wood-d: #8a5a34; --wood-tx: #5a3d24;
+  --grain: repeating-linear-gradient(178deg, rgba(0, 0, 0, .06) 0 2px, transparent 2px 6px, rgba(255, 255, 255, .07) 6px 7px); }
+body.look-hecke .btn, body.look-hecke #goal .task.ready .t-go,
+body.look-hecke :is(.look, .set-btn, .look-pick button, .arrange-btn, .arrange-mv, .store-row .keep, .sub, .wopt, .style-chip, .kat-item),
+body.look-hecke #goal .task-chips .chip, body.look-hecke #visit-band .btn {
+  border-radius: 4px; border: 1.5px solid var(--kd); box-shadow: 0 2px 0 var(--kd); color: var(--kt); background: var(--grain), var(--k);
+  --k: var(--wood); --kd: var(--wood-d); --kt: var(--wood-tx); }
+/* Haupt- und Nebenknöpfe: dicker, mit Nagelköpfen links und rechts */
+body.look-hecke .btn, body.look-hecke #goal .task.ready .t-go {
+  border-width: 2px; box-shadow: 0 3px 0 var(--kd);
+  background: radial-gradient(circle at 7px 50%, var(--kd) 1.6px, transparent 2.2px), radial-gradient(circle at calc(100% - 7px) 50%, var(--kd) 1.6px, transparent 2.2px),
+    var(--grain), var(--k);
+  --k: #c9673f; --kd: #8f4127; --kt: #fff7e8; }
+body.look-hecke .btn.ghost, body.look-hecke #visit-band .btn, body.look-hecke .fr-btns .btn.ghost { --k: var(--wood); --kd: var(--wood-d); --kt: var(--wood-tx); }
+body.look-hecke :is(.look.on, .look-pick button.on, .sub.active, .wopt.on, .style-chip.on, .style-chip.wsel.open, .kat-item.on),
+body.look-hecke .fr-btns .btn.on { --k: #5c9c43; --kd: #3b6c2a; --kt: #fff7e8; }
+body.look-hecke .look.art-more { --k: var(--wood); --kd: var(--wood-d); --kt: var(--wood-tx); }
+body.look-hecke .btn.danger { --k: #b8433a; --kd: #842e27; --kt: #fff7e8; }
+body.look-hecke .btn:disabled, body.look-hecke .arrange-mv:disabled { --k: #d8ccb4; --kd: #b9ab90; --kt: #8a7a62; }
+body.look-hecke .btn:active, body.look-hecke #goal .task.ready .t-go:active { box-shadow: 0 1px 0 var(--kd); }
+body.look-hecke #sel-bar .btn { box-shadow: 0 4px 0 var(--kd), 0 6px 14px rgba(60, 40, 20, .15); }
+body.look-hecke .look-pick button.on { box-shadow: 0 2px 0 var(--kd), 0 0 0 2px var(--kd); }
+@media (hover: hover) {
+  body.look-hecke :is(.btn, .look, .set-btn, .arrange-btn, .style-chip, .sub, .wopt):not(:disabled):hover { background-color: var(--k); filter: brightness(1.06); }
+}
+
+body.look-wolke .btn, body.look-wolke #goal .task.ready .t-go,
+body.look-wolke :is(.look, .set-btn, .look-pick button, .arrange-btn, .arrange-mv, .store-row .keep, .sub, .style-chip),
+body.look-wolke #goal .task-chips .chip, body.look-wolke #visit-band .btn {
+  background: none; box-shadow: none; border-radius: 0; border: 0 solid transparent; padding: 8px 17px 10px;
+  border-image: var(--ck) 31 31 37 31 fill / 15.5px 15.5px 18.5px 15.5px round; color: var(--kt);
+  --ck: var(--cloud-s); --kt: #3b4763; }
+body.look-wolke .btn:not(.small) { padding: 11px 21px 13px; }
+/* kleine Knöpfe: dieselbe Wolke verkleinert (kleinere Buckel), sonst würden sie zu hoch */
+body.look-wolke :is(.btn.small, .arrange-btn, .arrange-mv), body.look-wolke #goal .task.ready .t-go, body.look-wolke #goal .task-chips .chip {
+  padding: 6px 13px 8px; border-image-width: 11px 11px 13px 11px; }
+body.look-wolke .btn, body.look-wolke #goal .task.ready .t-go { --ck: var(--cloud-p); --kt: #fff; }
+body.look-wolke .btn.ghost, body.look-wolke #visit-band .btn, body.look-wolke .fr-btns .btn.ghost { --ck: var(--cloud-s); --kt: #3b4763; }
+body.look-wolke :is(.look.on, .look-pick button.on, .sub.active, .style-chip.on, .style-chip.wsel.open),
+body.look-wolke .fr-btns .btn.on { --ck: var(--cloud-on); --kt: #fff; }
+body.look-wolke .look.art-more { --ck: var(--cloud-s); --kt: #3b4763; }
+body.look-wolke .btn.danger { --ck: var(--cloud-x); --kt: #fff; }
+body.look-wolke .btn:disabled, body.look-wolke .arrange-mv:disabled { --ck: var(--cloud-off); --kt: #8b95aa; }
+body.look-wolke #sel-bar .btn { box-shadow: none; filter: drop-shadow(0 5px 6px rgba(50, 70, 110, .18)); }
+body.look-wolke .look-pick button.on { box-shadow: none; }
+@media (hover: hover) {
+  body.look-wolke :is(.btn, .look, .set-btn, .arrange-btn, .style-chip, .sub):not(:disabled):hover { background: none; filter: brightness(1.04); }
+}
+body.look-wolke #goal .task-chips .chip { padding: 6px 10px 8px; }          /* „Erfolge“ und „Album“ bleiben nebeneinander */
+body.look-hecke #goal .task-chips .chip { padding: 3px 7px; }
+/* ältere, stärkere Regeln (Farbe je Knopfart, Basar-Ausprobieren) hier zurücknehmen bzw. ins Holz setzen */
+body.look-wolke :is(.btn.ghost, .btn.danger, .btn:disabled, .card.basar .btn.small.basar-try, .btn:active) { background: none; box-shadow: none; }
+body.look-hecke .card.basar .btn.small.basar-try { background: radial-gradient(circle at 7px 50%, var(--kd) 1.6px, transparent 2.2px),
+  radial-gradient(circle at calc(100% - 7px) 50%, var(--kd) 1.6px, transparent 2.2px), var(--grain), var(--k); box-shadow: 0 3px 0 var(--kd); color: var(--kt); }

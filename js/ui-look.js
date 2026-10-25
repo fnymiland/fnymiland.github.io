@@ -179,6 +179,46 @@ function lookSlab(el, role, inset = false) {
   drawSlab(el);
 }
 
+// ---------- Knöpfe als Wölkchen (Wolken; Nutzer 25.10.2026 „W1“, Hecke = Holzbrett in style.css) ----------
+// Ein kleines Bild je Knopfart: Buckel ringsum, gleichmäßig, Licht von oben, Unterseite dunkler. style.css legt es per border-image
+// (9 Teile, Ränder „round“) um jeden Knopf – reines CSS, übersteht also das Neuzeichnen des Infofensters (patch nimmt fremde Klassen
+// weg). Maße: Buckel r, Abstand P, Ecke C (= r + P/2, damit die Kanten zwischen zwei Buckeln enden und nahtlos wiederholt werden)
+const CLOUD_KNOB = {
+  p:   ['#6b95d8', '#46699f', '#9dbbea'],                      // Hauptknopf, „Los!“
+  on:  ['#5a86cf', '#3c5f97', '#8fb0e4'],                      // gewählte Wahl
+  s:   ['#e3ecf8', '#b3c3dd', '#ffffff'],                      // Neben-Knöpfe, Wahl-Chips
+  x:   ['#d9655a', '#a8443a', '#ec8c82'],                      // Abreißen & Co.
+  off: ['#e6ebf2', '#c8d0dc', '#f4f6fa'],                      // gesperrt
+};
+const CLOUD_KNOB_R = 8.5, CLOUD_KNOB_P = 14, CLOUD_KNOB_DEPTH = 3;            // Ecke 15,5 px, unten 18,5 px (style.css: border-image 31 31 37 31)
+function cloudKnobImage(top, under, hi) {
+  const r = CLOUD_KNOB_R, P = CLOUD_KNOB_P, C = r + P / 2, W = 2 * C + P, H = W + CLOUD_KNOB_DEPTH, k = 2;
+  const pts = [];
+  for (const a of [r, r + P, W - r]) pts.push([a, r], [a, W - r], [r, a], [W - r, a]);
+  const sil = (x, dy, col) => {
+    x.fillStyle = col;
+    for (const [cx, cy] of pts) { x.beginPath(); x.arc(cx, cy + dy, r, 0, Math.PI * 2); x.fill(); }
+    x.fillRect(r, r + dy, W - 2 * r, W - 2 * r);
+  };
+  const mk = () => { const c = document.createElement('canvas'); c.width = W * k; c.height = H * k; const x = c.getContext('2d'); if (x) x.scale(k, k); return [c, x]; };
+  const [c, x] = mk(), [l, y] = mk();
+  if (!x || !y) return '';
+  sil(x, CLOUD_KNOB_DEPTH, under);
+  sil(y, 0, hi); y.globalCompositeOperation = 'source-atop'; sil(y, 1.6, top);    // heller Rand oben, folgt den Buckeln
+  x.drawImage(l, 0, 0, W, H);
+  try { return c.toDataURL(); } catch (e) { return ''; }
+}
+let cloudKnobsDone = false;
+function cloudKnobs() {
+  if (cloudKnobsDone || !document.body) return;
+  for (const [id, [top, under, hi]] of Object.entries(CLOUD_KNOB)) {
+    const url = cloudKnobImage(top, under, hi);
+    if (!url) return;                                         // ohne Leinwand bleiben die glatten Knöpfe
+    document.body.style.setProperty('--cloud-' + id, `url(${url})`);
+  }
+  cloudKnobsDone = true;
+}
+
 // ---------- Symbole ----------
 // eigene Zeichnungen (64×64, Boden bei y≈56) mit den Grundformen des Spiels: gleiches Licht, gleiche Farben wie die Häuser
 const UI_DRAW = {
@@ -498,6 +538,7 @@ function applyUiLook() {
   fillUiIcons();
   watchUiEmojis();
   wtEnsure('stern'); wtEnsure('drehen');                                                      // Favoriten-Sterne im Baumenü und Infofenster (style.css)
+  if (uiLookId === 'wolke') cloudKnobs();                                                     // Wölkchen für die Knöpfe (style.css, border-image)
   lookSlab(document.getElementById('modal-card'), 'paper', true);        // große Fenster
   lookSlab(document.getElementById('cats-isle'), 'bar');                 // Bauleiste: Beet in der Hecke bzw. Wolke
   lookSlab(document.getElementById('sheet'), 'paper', true);              // aufklappendes Feld (scrollt selbst: Platte als Hintergrund)

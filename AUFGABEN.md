@@ -2833,5 +2833,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] 5c Sprechblase als Plättchen, schwebende Zahlen mit Umriss und Taler, alle Pillen-Rundungen im CSS ersetzt (Balken 3px, sonst --cut),
         Fortschrittsbalken in Gras-/Himmelfarbe (v1240)
   - [x] 5d Sternenbasar hell mit Hecke/Wolken (Nutzer 25.10.2026), seltene Emojis: Läden → Laden-Gebäude, Naturtiere → Zeichnung wie draußen, Rest gezeichnet/zugeordnet (v1245)
+  - [x] 5e Knopf-Formen (Nutzer 25.10.2026, sechs Richtungen im Spiel gezeigt, tools/knopf-im-spiel.js, tools/knopf-wolken.js): Hecke = Holzbrett
+        mit Maserung und Nagelköpfen, Wolken = Schäfchenwölkchen (border-image aus `cloudKnobs`); 40 Fenster/Reiter × 2 Aussehen geprüft (v1275)
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

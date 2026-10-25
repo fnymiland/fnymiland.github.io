@@ -3349,6 +3349,7 @@ const NEWS_HISTORY = [
     '🪵 <b>Bildchen statt Emojis:</b> Rohstoffe, Strom, Laternen, Geschenke, Bewohner und rund 150 weitere Zeichen sind jetzt selbst gezeichnet – in Texten, Meldungen, über den Häusern und auf den Schildern der Karte. Oben beim Knopf „Du“ steht deine eigene Figur.',
     '📜 <b>Große Fenster:</b> Rathaus, Forschung, Einstellungen und die anderen Fenster haben jetzt auch Hecke bzw. Wolke als Rand, und alle Knöpfe sind Plättchen. Taler, Lager, Einwohner, Ideen, Schönheit und das Schloss für Gesperrtes erscheinen in Texten als Spiel-Bildchen.',
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
+    '🪵 <b>Knöpfe:</b> Bei der Hecke sind alle Knöpfe jetzt kleine Holzbretter mit Maserung und Nägeln, bei den Wolken kleine Schäfchenwolken. Was gewählt ist, ist grün bzw. kräftig blau.',
   ] },
   { id: '2026-10-24-wundergarten', date: '24. Oktober', title: 'Riesenrad und Sternwarte', items: [
     '🎡 <b>Riesenrad:</b> Es steht jetzt wie ein echtes Riesenrad auf einem gepflasterten Platz, mit einem Zaun um den Fuß, einem Tor und einem Tickethäuschen daneben. Laternen, Bänke, Bäume und der Weg rundherum sind echte Dinge, die du verändern kannst. Wechselst du den Belag des Wegs, wechselt das Pflaster unter dem Rad mit.',
