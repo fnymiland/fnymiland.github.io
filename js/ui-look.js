@@ -476,6 +476,10 @@ function heldPic(b, tool) {
   const x = b.querySelector('.x');
   if (!x || x.dataset.held === tool) return;
   x.dataset.held = tool;
+  requestAnimationFrame(() => heldPicPaint(x, tool));                     // im nächsten Bild malen, nicht mitten im Werkzeugwechsel
+}
+function heldPicPaint(x, tool) {
+  if (!x.isConnected || x.dataset.held !== tool) return;
   let url = '';
   if (typeof isDragTool === 'function' && isDragTool(tool) && typeof katPic === 'function') {
     try { url = katPic(tool, 34).toDataURL(); } catch (e) { url = ''; }
