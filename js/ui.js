@@ -37,7 +37,7 @@ function reportError(e) {
 window.addEventListener('error', e => { if (!e.error && /ResizeObserver loop/.test(e.message || '')) return; reportError(e.error || e.message); });
 function toast(msg) {
   const el = $('toast');
-  el.textContent = msg;
+  if (typeof wiText === 'function') el.innerHTML = wiText(escHtml(msg)); else el.textContent = msg;   // Emojis als Spiel-Symbole (ui-look.js)
   el.hidden = false;
   el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
   clearTimeout(toastTimer);
@@ -934,13 +934,14 @@ const hudMore = () => { hudMoreUntil = Date.now() + 5000; updateHud(); };
 // Nur schreiben, was sich geändert hat (Block 52): Safari auf dem iPad schluckt sonst den ersten Tipp auf einen Knopf,
 // in dem sich gerade etwas tut (die Leiste frischt alle 0,2 s auf)
 const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+const setWiText = (el, v) => { if (el.textContent !== v) el.innerHTML = typeof wiText === 'function' ? wiText(escHtml(v)) : escHtml(v); };   // dasselbe mit Spiel-Symbolen statt Emojis (ui-look.js)
 const fmtMul = m => String(Math.round(m * 100) / 100).replace('.', ',');   // ×3,9 statt ×3.9000000000000004 (Block 84c)
 function updateHud() {
   setText($('money'), fmtMoney(state.money));
   const bi = boostMul('inc'), bs = boostMul('sci');                        // Jahrmarkt, Erlass: gerade mehr
   setText($('rate'), '+' + fmtWhole(T.inc * bi + saleRate) + '/s' + (bi > 1 ? ` ×${fmtMul(bi)}` : ''));
   setText($('pop'), fmt(T.pop));
-  setText($('jobs'), `💼 ${fmt(T.jobs)}`);                        // Arbeitsplätze
+  setWiText($('jobs'), `💼 ${fmt(T.jobs)}`);                        // Arbeitsplätze
   $('pop-btn').classList.toggle('warn', T.jobs > T.pop);
   setText($('sci'), fmtMoney(state.science));                    // glatt wie das Geld (vorher „1,2 Mio.“)
   if (typeof sdHud === 'function') sdHud();                       // ✨ Sternstaub (Block 161)
@@ -953,7 +954,7 @@ function updateHud() {
   netDotShow();                                                                          // Knopf „Online“: wie viel Neues (Block 106/111)
   setText($('you-face'), ANIMALS[meLook().a].icon);
   const tod = timeOfDay();                                              // Spieluhr (Block 101): Sonne/Mond und Uhrzeit
-  setText($('tod-i'), tod.icon); setText($('tod-t'), ' ' + tod.text);   // Handy: nur Sonne/Mond (CSS)
+  setWiText($('tod-i'), tod.icon); setText($('tod-t'), ' ' + tod.text);   // Handy: nur Sonne/Mond (CSS)
   const todLabel = `Rathaus – ${tod.text} Uhr, ${tod.name}`;
   if ($('town-btn').getAttribute('aria-label') !== todLabel) $('town-btn').setAttribute('aria-label', todLabel);   // nur bei Änderung (Safari, hudtap.test)
   const fl = $('hud-flag');

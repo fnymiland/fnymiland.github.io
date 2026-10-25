@@ -32,7 +32,7 @@ describe('163a Meisterstücke für Sternstaub', () => {
   });
   it('Karten zeigen ✨ statt Taler/Ideen', () => {
     game("state.design = new Set(); openResearch('design')");
-    const html = game("document.querySelector('[data-design=\"wall:12\"]').innerHTML");
+    const html = game("document.querySelector('[data-design=\"wall:12\"]').textContent");   // Text: ✨ steht als Spiel-Symbol im HTML (Aussehen)
     expect(html).toContain(`✨ ${game("designStardust(DESIGN_BY_ID['wall:12'])")}`);
     expect(html).not.toContain('🪙');
     expect(game("designCostText(DESIGN_BY_ID['wall:12'])")).toBe(`✨ ${game("designStardust(DESIGN_BY_ID['wall:12'])")}`);

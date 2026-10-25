@@ -302,21 +302,63 @@ const MENU_ICON = { stadt: 'haus:3', herstellen: 'baecker', freizeit: 'fz_karuss
   fzschloss: 'fz_schloss', wunder: 'riesenrad', hoehen: 'anhoehe', gruen: 'baum', platz: 'laterne', besonderes: 'statue',
   fav: 'stern', recent: 'rathaus' };
 function menuIcon(el, id) {
-  const ic = el.querySelector('.ic'), name = MENU_ICON[id];
+  const ic = el.querySelector('.ic'), name = MENU_ICON[id] || (ic && wiTextName(ic.textContent.trim()));   // sonst über das Emoji (WI_TEXT)
   if (!ic || !name || !uiIcon(name)) return;
   ic.replaceWith(wiEl(name));
 }
 
 // Emojis in Texten → Spiel-Symbole (nur die eindeutigen). Das Zeichen bleibt im Text (Vorlesen, Suchen, Tests), sichtbar ist das Bild
 // (.wt, style.css; Bild über --wt-…, einmal am Dokument gesetzt – so bleibt der Text bei jedem Neuzeichnen gleich und patch() ruhig)
-const WI_TEXT = { '🪙': 'taler', '📦': 'kiste', '👥': 'haus:2', '💡': 'bibliothek', '🔒': 'riegel', '🌸': 'blumen' };
-const WI_TEXT_RE = new RegExp(Object.keys(WI_TEXT).join('|'), 'gu');
+// Schlüssel ohne Variantenzeichen (U+FE0F) – das Muster nimmt es mit, wenn es dabeisteht (⛏️, ❤️, ⚙️ …)
+const WI_TEXT = {
+  '🪙': 'taler', '📦': 'kiste', '👥': 'haus:2', '💡': 'bibliothek', '🔒': 'riegel', '🌸': 'blumen',
+  // Rohstoffe (RES)
+  '🪵': 'holz', '🪨': 'stein', '⛏': 'erz', '🍎': 'obst', '🪚': 'bretter', '🧱': 'quader', '🔩': 'metall', '💎': 'kristall', '☕': 'kaffee', '🍵': 'tee', '🍫': 'kakao',
+  // häufige Zeichen (ui-symbole.js oder ein Ding des Spiels)
+  '⚡': 'blitz', '✨': 'funkel', '🎉': 'funkel', '🎆': 'funkel', '🎨': 'palette', '🖼': 'palette', '🎁': 'geschenk', '🏮': 'laterne', '🗑': 'tonne',
+  '☁': 'wolke', '💭': 'gedanke', '📖': 'buch', '📒': 'buch', '📚': 'bibliothek', '⚙': 'zahnrad', '⛵': 'boot', '🚢': 'boot', '⛴': 'boot', '👑': 'krone',
+  '🏝': 'insel', '🧺': 'korb', '🐌': 'schnecke', '📜': 'rolle', '🌙': 'mond', '❤': 'herz', '💛': 'herz', '🚩': 'flagge', '📬': 'briefkasten', '📌': 'pin',
+  '🪓': 'axt', '🧭': 'kompass', '🧹': 'besen', '🌊': 'welle', '🪜': 'leiter', '🏗': 'kran', '👷': 'kran', '⭐': 'stern', '✋': 'haken', '👁': 'glaskugel',
+  '👆': 'lupe', '🌐': 'freundesbank', '☰': 'wegweiser', '🛤': 'wegweiser', '⛰': 'stein', '⛱': 'pavillon',
+  '🏛': 'rathaus', '🚆': 'station', '🚉': 'station', '🏠': 'haus:1', '🏘': 'reihenhaus', '🌉': 'seebruecke', '🌳': 'baum', '🌲': 'baum', '🎡': 'riesenrad',
+  '🏰': 'fz_schloss', '🎢': 'fz_looping', '🌿': 'busch', '🕘': 'uhrturm', '🏭': 'fabrik', '🚇': 'ubahn', '🗼': 'leuchtturm', '💾': 'truhe',
+  '🛍': 'blumenladen', '🛒': 'korb', '🌬': 'windrad', '🪑': 'bank', '📍': 'pin', '🖌': 'palette', '🚂': 'station', '🚋': 'station', '🚃': 'station', '🚈': 'station',
+  '🚄': 'station', '🐟': 'fischer', '🏆': 'pokal_gold', '🚡': 'seilbahn', '🌠': 'funkel', '🌟': 'funkel', '⚓': 'hafen', '♨': 'geothermie', '🌷': 'blumen',
+  '🌹': 'blumen', '🌻': 'blumen', '🌼': 'blumen', '💐': 'blumen', '🏡': 'haus:2', '📋': 'rolle', '💰': 'taler', '🌱': 'busch', '🍃': 'busch', '🎠': 'fz_karussell',
+  '🔨': 'schmiede', '💧': 'brunnen', '⛲': 'brunnen', '☀': 'sonne', '💌': 'briefkasten', '📮': 'briefkasten', '🔭': 'sternwarte', '💼': 'fabrik', '🔍': 'lupe',
+  '🔬': 'bibliothek', '🎓': 'uni', '🏦': 'rathaus', '🔓': 'riegel', '🗺': 'kompass', '🛳': 'boot', '🚤': 'boot', '🛶': 'boot', '🌴': 'palme', '🏖': 'insel',
+  '🎈': 'fz_ballon', '🪴': 'blumentopf', '🌾': 'feld', '🎭': 'theater', '🏬': 'kaufhaus', '🏨': 'hotel', '🎪': 'markt',
+};
+const WI_TEXT_RE = new RegExp(`(?:${Object.keys(WI_TEXT).join('|')})\uFE0F?`, 'gu');
+const WI_TEXT_HAS = new RegExp(WI_TEXT_RE.source, 'u');                  // zum Prüfen: ohne g, merkt sich keine Position zwischen Aufrufen
+const wiTextName = e => WI_TEXT[e.replace(/\uFE0F/g, '')];
 const wtVar = name => '--wt-' + name.replace(/[^a-z0-9]/g, '');
 function wiText(html) {
-  if (typeof html !== 'string' || !WI_TEXT_RE.test(html)) return html;
-  WI_TEXT_RE.lastIndex = 0;
+  if (typeof html !== 'string' || !WI_TEXT_HAS.test(html)) return html;
   return html.split(/(<[^>]*>)/).map(part => part.startsWith('<') ? part
-    : part.replace(WI_TEXT_RE, e => `<i class="wt" style="background-image:var(${wtVar(WI_TEXT[e])})">${e}</i>`)).join('');
+    : part.replace(WI_TEXT_RE, e => `<i class="wt" style="background-image:var(${wtVar(wiTextName(e))})">${e}</i>`)).join('');
+}
+
+// Leisten, die ihren Text selbst setzen (Hinweis, Auswahl, Erfolg …): Textknoten nachträglich umwandeln. Nicht für Fenster, die
+// patch() alle 0,2 s abgleicht (Infofenster, große Fenster) – die laufen schon über wiText im HTML
+function wiTextNodes(root) {
+  if (!root || typeof document.createTreeWalker !== 'function') return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), hits = [];
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    if (WI_TEXT_HAS.test(n.nodeValue) && !(n.parentElement && n.parentElement.closest('i.wt, canvas, input, textarea'))) hits.push(n);
+  }
+  for (const n of hits) {
+    const t = document.createElement('template');
+    t.innerHTML = wiText(escHtml(n.nodeValue));
+    n.replaceWith(t.content);
+  }
+}
+const WI_WATCH = ['hint', 'sel-bar', 'achv', 'sd-try-bar', 'card-name', 'style-bar', 'toast', 'store'];   // Leiste oben nicht: sie schreibt selbst über setWiText (hudtap.test)
+let wiWatch = null;
+function watchUiEmojis() {
+  if (wiWatch || typeof MutationObserver !== 'function') return;
+  wiWatch = new MutationObserver(ms => { const seen = new Set(); for (const m of ms) { const r = m.target.nodeType === 1 ? m.target : m.target.parentElement; if (r && !seen.has(r)) { seen.add(r); wiTextNodes(r); } } });
+  for (const id of WI_WATCH) { const el = document.getElementById(id); if (el) { wiTextNodes(el); wiWatch.observe(el, { childList: true, subtree: true, characterData: true }); } }
 }
 
 // ---------- anwenden ----------
@@ -325,6 +367,7 @@ function applyUiLook() {
   if (!b) return;
   for (const id of Object.keys(UI_LOOKS)) b.classList.toggle('look-' + id, id === uiLookId);
   fillUiIcons();
+  watchUiEmojis();
   for (const name of new Set(Object.values(WI_TEXT))) { const u = uiIcon(name); if (u) document.documentElement.style.setProperty(wtVar(name), `url(${u})`); }
   lookSlab(document.getElementById('modal-card'), 'paper', true);        // große Fenster
   lookSlab(document.getElementById('cats-isle'), 'bar');                 // Bauleiste: Beet in der Hecke bzw. Wolke
