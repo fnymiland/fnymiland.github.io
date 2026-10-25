@@ -105,7 +105,13 @@ function paintSlab(w, h, role, seed, look = uiLookId) {
   return { canvas: c, pad, depth: L.depth };
 }
 const SLABS = new Set();                                   // Elemente mit Platte
-const slabObs = typeof ResizeObserver === 'function' ? new ResizeObserver(es => { for (const e of es) drawSlab(e.target); }) : null;
+// gemalt wird im nächsten Bild, nicht im Rückruf selbst – sonst meldet der Browser „ResizeObserver loop …“ als Fehler
+const slabDirty = new Set();
+const slabObs = typeof ResizeObserver === 'function' ? new ResizeObserver(es => {
+  const first = !slabDirty.size;
+  for (const e of es) slabDirty.add(e.target);
+  if (first) requestAnimationFrame(() => { const l = [...slabDirty]; slabDirty.clear(); for (const el of l) drawSlab(el); });
+}) : null;
 function drawSlab(el) {
   const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight), key = `${uiLookId}|${w}x${h}`;
   if (!w || !h) return;
@@ -235,6 +241,28 @@ function uiIcon(name) {
   UI_ICON_CACHE.set(name, url);
   return url;
 }
+// Bild eines echten Feldes (Infofenster): mit seinen Farben/Formen, ohne Bodenkachel; je Aussehen des Feldes einmal gemalt
+const HERO_SKIP = new Set(['weg', 'schiene', 'tunnel', 'pb_gleis', 'fzboden', 'graben', 'schuett', 'anhoehe', 'huegeltreppe', 'huegelrampe', 'bruecke', 'dach', 'stuetze', 'dachtreppe']);
+const UI_HERO_CACHE = new Map();
+function uiHero(t) {
+  if (!t || !ITEMS[t.b] || HERO_SKIP.has(t.b) || (typeof isTrack === 'function' && isTrack(t.b))) return '';
+  let key = '';
+  try { key = JSON.stringify(t); } catch (e) { return ''; }
+  if (UI_HERO_CACHE.has(key)) return UI_HERO_CACHE.get(key);
+  const S = 3, big = isBig(t.b), W = big ? 420 : 280, H = big ? 380 : 260;
+  const c = document.createElement('canvas'), x = c.getContext('2d');
+  let url = '';
+  if (x) {
+    c.width = W * S; c.height = H * S; x.scale(S, S);
+    const prev = g, fog = FOG; g = x; FOG = false;
+    try { drawObject(t.b, W / 2, H - 60, big ? 0.8 : 1.3, 0, 3, 7, t.lvl || 1, t); } catch (e) { /* lieber kein Bild */ } finally { g = prev; FOG = fog; }
+    try { url = uiTrim(c).toDataURL(); } catch (e) { url = ''; }
+  }
+  if (UI_HERO_CACHE.size > 120) UI_HERO_CACHE.clear();
+  UI_HERO_CACHE.set(key, url);
+  return url;
+}
+
 // alle <i class="wi" data-ic="…"> mit ihrem Bild füllen
 function fillUiIcons(root = document) {
   for (const el of root.querySelectorAll('i.wi[data-ic]')) {
@@ -277,5 +305,7 @@ function applyUiLook() {
   fillUiIcons();
   lookSlab(document.getElementById('cats-isle'), 'bar');                 // Bauleiste: Beet in der Hecke bzw. Wolke
   lookSlab(document.getElementById('sheet'), 'paper', true);              // aufklappendes Feld (scrollt selbst: Platte als Hintergrund)
+  lookSlab(document.getElementById('panel'), 'paper', true);              // Infofenster (scrollt selbst)
+  lookSlab(document.getElementById('goal'), 'paper');                     // Ziel-Fenster
   for (const el of SLABS) { if (!el.isConnected) { SLABS.delete(el); if (slabObs) slabObs.unobserve(el); continue; } drawSlab(el); }
 }

@@ -32,7 +32,9 @@ function reportError(e) {
   bar.onclick = () => bar.remove();
   document.body.appendChild(bar);
 }
-window.addEventListener('error', e => reportError(e.error || e.message));
+// „ResizeObserver loop …“ ist kein Fehler im Spiel, nur der Hinweis des Browsers, dass eine Größenmeldung aufs nächste Bild rutscht
+// (Leistenhöhe --bar ändert das Infofenster, das die Platten beobachten – ui-look.js)
+window.addEventListener('error', e => { if (!e.error && /ResizeObserver loop/.test(e.message || '')) return; reportError(e.error || e.message); });
 function toast(msg) {
   const el = $('toast');
   el.textContent = msg;
@@ -460,7 +462,7 @@ function renderTools() {
     if (first && top.groups && top.groups.length > 1) {                   // ⇅ Anordnen: rechts in der ersten Überschrift
       const a = document.createElement('button'); a.className = 'arrange-btn'; a.textContent = '⇅ Anordnen';
       a.setAttribute('aria-label', 'Gruppen anordnen');
-      a.onclick = () => { audio(); arrangeMode = true; renderTools(); $('sheet').scrollTop = 0; };
+      a.onclick = () => { audio(); arrangeMode = true; renderTools(); $('sheet').scrollTop = $('tools').scrollTop = 0; };
       h.append(a);
     }
     first = false;
@@ -1260,8 +1262,12 @@ for (const ev of ['pointerup', 'pointercancel']) addEventListener(ev, () => { pr
 function closePanel() { $('panel').hidden = true; $('panel').classList.remove('tall', 'build-info'); panelLive = null; if (buildInfo) { buildInfo = null; updateHint(); } }
 // Handy: das Fenster ist die untere Hälfte (quer: rechte Seite); oben ein Griff – antippen oder hochwischen = ganz groß
 const GRIP = '<button class="grip" aria-label="Fenster größer oder kleiner"></button>';
+let panelHeroNext = null;                                             // Feld, dessen Bild oben im nächsten Infofenster steht (ui-look.js)
 function showPanel(html, live = null, build = null) {
   const el = $('panel'), fresh = el.hidden;
+  const hero = panelHeroNext && typeof uiHero === 'function' ? uiHero(panelHeroNext) : ''; panelHeroNext = null;
+  if (el.heroUrl !== hero) { el.heroUrl = hero; el.style.setProperty('--hero', hero ? `url(${hero})` : 'none'); }   // am Fenster selbst: übersteht das Neuzeichnen alle 0,2 s
+  html = `<div class="p-scroll">${hero ? '<i class="p-hero" aria-hidden="true"></i>' : ''}${html}</div>`;   // innen scrollen: der Rand (Hecke/Wolke) bleibt frei
   if (!liveNow) { el.classList.remove('float'); el.style.left = ''; }
   const was = buildInfo; buildInfo = build;                        // Bau-Infofenster (openBuildInfo) oder ein anderes
   el.classList.toggle('build-info', !!build);
@@ -1989,6 +1995,7 @@ function openInfo(x, y) {
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
   const title = isWegBridge(t) ? wbTitle(x, y) : isGleisBridge(t) ? gbTitle(x, y) : t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
     : (WONDERS[t.b] && !wonderDone(t)) || monSite(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
+  panelHeroNext = t;                                                      // Bild des Gebäudes oben im Fenster (Aussehen, 25.10.2026)
   const el = showPanel(`
     <h3>${title} ${S ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
     ${house}
@@ -3311,6 +3318,7 @@ const NEWS_HISTORY = [
   { id: '2026-10-25-aussehen', date: '25. Oktober', title: 'Neues Aussehen', items: [
     '🌿 <b>Aussehen:</b> Die Oberfläche kommt jetzt aus deiner Welt. Unter ☰ → Einstellungen → Aussehen wählst du zwischen <b>Hecke</b> (Standard) und <b>Wolken</b>.',
     '🏠 <b>Leiste oben:</b> Statt Emojis in Pillen stehen dort jetzt Bildchen, die das Spiel selbst zeichnet: Münzstapel, Haus, Bibliothek, Kristall, Kiste, Freundesbank und ein Wegweiser fürs Menü.',
+    '🪟 <b>Infofenster und Ziele:</b> Beide haben jetzt die Hecke bzw. die Wolke als Rand. Oben rechts im Infofenster steht das angetippte Gebäude so, wie es bei dir aussieht, und die Knöpfe sind kleine Plättchen statt Pillen.',
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
   ] },
   { id: '2026-10-24-wundergarten', date: '24. Oktober', title: 'Riesenrad und Sternwarte', items: [

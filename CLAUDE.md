@@ -527,6 +527,11 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     (`MENU_ICON`; ohne Bild bleibt das Emoji). Das Feld `#sheet` scrollt selbst → Platte als Hintergrund (`lookSlab(el, rolle, true)`,
     Klasse `slab-in`). Höhe der Leiste nie fest annehmen, sondern `--bar` (Minikarte, Drehknopf). Neue Regeln für die Leiste mit
     `#toolbar #cats …` schreiben – die alten Pillen-Regeln sind schwächer, ihre Ausblende-Regeln (drag-open/-tight/-tighter) sind dort wiederholt.
+    Infofenster: `showPanel` packt den Inhalt in `.p-scroll` (scrollt innen, der Rand bleibt frei – nie wieder `#panel` selbst scrollen
+    lassen) und setzt vorn das Bild aus `panelHeroNext` (ein Feld, z. B. in `openInfo`; Bild per `uiHero(t)` mit den Farben des Feldes, als
+    `--hero` am Fenster, damit das Neuzeichnen alle 0,2 s es nicht wegnimmt). Kinder von `#panel` nie per `lookSlab` bemalen: `patch()` nimmt
+    fremde Klassen/Attribute wieder weg – Knöpfe darin sind reines CSS (`#panel .btn`). Wolken färben Braun → Blaugrau über die Variablen
+    (`--brown`, `--brown2` … an `#panel`, `#goal`, `#sheet`). Die Meldung „ResizeObserver loop …“ ist kein Fehler (Melder überspringt sie).
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

@@ -67,4 +67,19 @@ describe('Aussehen', () => {
     expect(game("document.querySelector('#tools .sheet-h[data-group=\"wohnen\"] [data-ic]').dataset.ic")).toBe('haus:2');
     game('setSheet(false)');
   });
+
+  it('Infofenster: Platte als Hintergrund, Inhalt scrollt innen, Bild des Gebäudes oben; Wege ohne Bild; Ziel-Fenster mit Platte', () => {
+    game("state.tiles.set('40,40', { b: 'haus', lvl: 2 }); recalc(); openInfo(40, 40)");
+    expect(game("document.getElementById('panel').classList.contains('slab-in')")).toBe(true);
+    expect(game("!!document.querySelector('#panel > .p-scroll h3')")).toBe(true);
+    expect(game("!!document.querySelector('#panel .p-scroll > .p-hero')")).toBe(true);
+    expect(game("document.getElementById('panel').style.getPropertyValue('--hero')")).toMatch(/^url\(/);
+    game("updateHud()");                                                  // Neuzeichnen: Bild bleibt
+    expect(game("!!document.querySelector('#panel .p-hero')")).toBe(true);
+    game("state.tiles.set('42,42', { b: 'weg', lvl: 1 }); recalc(); openInfo(42, 42)");
+    expect(game("!!document.querySelector('#panel .p-hero')")).toBe(false);
+    expect(game("document.getElementById('panel').style.getPropertyValue('--hero')")).toBe('none');
+    game('closePanel()');
+    expect(game("document.getElementById('goal').dataset.slab")).toBe('paper');
+  });
 });
