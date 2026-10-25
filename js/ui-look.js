@@ -1,0 +1,222 @@
+'use strict';
+// ---------------------------------------------------------------------------
+// Aussehen der Oberfläche (Nutzer, 25.10.2026: „das ganze Spiel sieht KI-generiert aus – Pillen, Emojis, Kacheln“ →
+// Entwurf tools/ui-welt.html, gewählt: „Hecke und Wolken gefallen mir beide – als Themes in den Einstellungen, Hecke als Standard“).
+// Die Oberfläche kommt aus der Welt: Symbole zeichnet das Spiel selbst (eigene Zeichnungen + Gebäude ohne Bodenkachel),
+// Fenster/Leisten sind gemalte Platten (Hecke rundum bzw. Wolke). Wahl je Gerät unter eigenem Schlüssel (nicht in GFX:
+// die Grafik-Einstellungen bleiben, wie sie sind).
+// Platten: lookSlab(el, rolle) malt in ein Bild, das ::before hinter dem Element zeigt (--slab, --slab-pad) – so übersteht
+// es jedes innerHTML. Neu gemalt wird nur, wenn sich die Größe ändert (ResizeObserver) oder das Aussehen wechselt.
+// ---------------------------------------------------------------------------
+const UI_LOOK_KEY = 'kachelhausen_aussehen';
+const UI_LOOKS = {
+  hecke: { name: 'Hecke' },
+  wolke: { name: 'Wolken' },
+};
+let uiLookId = (() => {
+  let v = null;
+  try { v = localStorage.getItem(UI_LOOK_KEY); } catch (e) { /* privates Fenster */ }
+  return UI_LOOKS[v] ? v : 'hecke';
+})();
+function setUiLook(id) {
+  if (!UI_LOOKS[id] || id === uiLookId) return;
+  uiLookId = id;
+  try { localStorage.setItem(UI_LOOK_KEY, id); } catch (e) { /* gilt bis zum Neuladen */ }
+  applyUiLook();
+}
+
+// ---------- Platten ----------
+// Rollen: paper (Fenster), btn (Hauptknopf), btn2 (Nebenknopf), bar (Bauleiste)
+const SLAB_STYLE = {
+  hecke: {
+    paper: { top: '#f8f0dc', depth: 6, r: 18, j: 1.5, pad: 18, deco: 'hecke' },
+    btn:   { top: '#c9673f', side: '#93432a', depth: 4, r: 9, j: 1.1, pad: 10 },
+    btn2:  { top: '#e6cfa3', side: '#b48c5c', depth: 4, r: 9, j: 1.1, pad: 10 },
+    bar:   { top: '#a77c52', depth: 6, r: 22, j: 2, pad: 20, deco: 'hecke', beet: true },
+  },
+  wolke: {
+    paper: { top: '#ffffff', side: '#c7d4e8', depth: 7, r: 20, j: 2, step: 26, pad: 26, deco: 'wolke' },
+    btn:   { top: '#6b95d8', side: '#46699f', depth: 4, r: 12, j: 1, step: 14, pad: 14, deco: 'wolke', bump: 5 },
+    btn2:  { top: '#e3ecf8', side: '#b3c3dd', depth: 4, r: 12, j: 1, step: 14, pad: 14, deco: 'wolke', bump: 5 },
+    bar:   { top: '#ffffff', side: '#c3d0e6', depth: 9, r: 26, j: 3, step: 30, pad: 30, deco: 'wolke' },
+  },
+};
+// fester Zufall je Platte (sieht bei jedem Neumalen gleich aus)
+const slabRnd = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+// Umriss eines abgerundeten Rechtecks, alle `step` px ein Punkt, leicht verschoben – von Hand geschnitten statt border-radius
+function slabOutline(w, h, r, j, R, step = 18) {
+  const pts = [], seg = (x0, y0, x1, y1) => {
+    const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / step));
+    for (let i = 0; i < n; i++) { const t = i / n; pts.push([x0 + (x1 - x0) * t + (R() - .5) * j, y0 + (y1 - y0) * t + (R() - .5) * j * 1.4]); }
+  };
+  const arc = (cx, cy, a0) => { for (let i = 0; i < 4; i++) { const a = a0 + i * Math.PI / 8, rr = r + (R() - .5) * j; pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]); } };
+  seg(r, 0, w - r, 0); arc(w - r, r, -Math.PI / 2); seg(w, r, w, h - r); arc(w - r, h - r, 0);
+  seg(w - r, h, r, h); arc(r, h - r, Math.PI / 2); seg(0, h - r, 0, r); arc(r, r, Math.PI);
+  return pts;
+}
+// weich durch die Punkte (Mittelpunkte als Stützstellen)
+function slabPath(x, pts, dx, dy) {
+  x.beginPath();
+  const m = (a, b) => [(a[0] + b[0]) / 2 + dx, (a[1] + b[1]) / 2 + dy], n = pts.length;
+  const p = m(pts[n - 1], pts[0]); x.moveTo(p[0], p[1]);
+  for (let i = 0; i < n; i++) { const c = pts[i], e = m(c, pts[(i + 1) % n]); x.quadraticCurveTo(c[0] + dx, c[1] + dy, e[0], e[1]); }
+  x.closePath();
+}
+const slabDot = (x, cx, cy, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, Math.max(0.1, r), 0, Math.PI * 2); x.fill(); };
+// malt eine Platte w×h (CSS-Pixel) in eine neue Leinwand; Rückgabe { canvas, pad, depth }
+function paintSlab(w, h, role, seed, look = uiLookId) {
+  const L = { pad: 12, ...SLAB_STYLE[look][role] }, R = slabRnd(seed), pad = L.pad;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const c = document.createElement('canvas');
+  c.width = Math.ceil((w + 2 * pad) * dpr); c.height = Math.ceil((h + 2 * pad + L.depth) * dpr);
+  const x = c.getContext('2d');
+  if (!x) return { canvas: c, pad, depth: L.depth };
+  x.scale(dpr, dpr); x.translate(pad, pad);
+  const pts = slabOutline(w, h, Math.min(L.r, h / 2.2), L.j, R, L.step);
+  if (L.deco === 'wolke') {                                // Wolke: Buckel rundum, Unterseite bläulich
+    const bump = L.bump || 13, B = pts.map(p => [p[0], p[1], bump * (.75 + R() * .5)]);
+    x.save(); x.filter = 'blur(6px)'; x.fillStyle = 'rgba(50,70,110,.18)';
+    for (const [px, py, r] of B) { x.beginPath(); x.arc(px, py + L.depth + 5, r, 0, 7); x.fill(); }
+    x.restore();
+    for (const [px, py, r] of B) slabDot(x, px, py + L.depth, r, L.side);
+    slabPath(x, pts, 0, L.depth); x.fillStyle = L.side; x.fill();
+    for (const [px, py, r] of B) slabDot(x, px, py, r, L.top);
+    slabPath(x, pts, 0, 0); x.fillStyle = L.top; x.fill();
+    const hi = L.top === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,.35)';
+    for (const [px, py, r] of B) if (py < h / 2) slabDot(x, px - r * .25, py - r * .3, r * .45, hi);
+  } else if (L.deco === 'hecke') {                         // Hecke rundum wie die Gärten im Spiel, innen Papier bzw. Beet
+    x.save(); x.filter = 'blur(6px)'; slabPath(x, pts, 0, L.depth + 6); x.fillStyle = 'rgba(40,30,20,.2)'; x.fill(); x.restore();
+    const B = pts.map(p => [p[0], p[1], 9 + R() * 4]);
+    for (const [px, py, r] of B) slabDot(x, px, py + 6, r, '#3f7430');
+    for (const [px, py, r] of B) slabDot(x, px, py, r, '#5c9c43');
+    for (const [px, py, r] of B) slabDot(x, px - 2, py - 3, r * .55, '#79b85a');
+    const ip = slabOutline(w - 22, h - 22, Math.max(4, Math.min(L.r, h / 2.2) - 8), 1, R, 20).map(p => [p[0] + 11, p[1] + 11]);
+    slabPath(x, ip, 0, 0); x.fillStyle = L.top; x.fill();
+    if (L.beet) {                                          // Erdkrümel im Beet
+      x.save(); slabPath(x, ip, 0, 0); x.clip();
+      for (let i = 0; i < w / 8; i++) slabDot(x, R() * w, R() * h, 1 + R() * 1.4, 'rgba(60,40,20,.18)');
+      x.restore();
+    }
+  } else {                                                 // schlichte Platte mit Dicke unten (Knöpfe)
+    x.save(); x.filter = 'blur(4px)'; slabPath(x, pts, 0, L.depth + 3); x.fillStyle = 'rgba(40,30,20,.2)'; x.fill(); x.restore();
+    slabPath(x, pts, 0, L.depth); x.fillStyle = L.side; x.fill();
+    slabPath(x, pts, 0, 0); x.fillStyle = L.top; x.fill();
+  }
+  return { canvas: c, pad, depth: L.depth };
+}
+const SLABS = new Set();                                   // Elemente mit Platte
+const slabObs = typeof ResizeObserver === 'function' ? new ResizeObserver(es => { for (const e of es) drawSlab(e.target); }) : null;
+function drawSlab(el) {
+  const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight), key = `${uiLookId}|${w}x${h}`;
+  if (!w || !h) return;
+  if (el.dataset.slabKey === key) return;
+  el.dataset.slabKey = key;
+  const { canvas, pad, depth } = paintSlab(w, h, el.dataset.slab, +el.dataset.slabSeed || 1);
+  let url = '';
+  try { url = canvas.toDataURL(); } catch (e) { return; }
+  el.style.setProperty('--slab', `url(${url})`);
+  el.style.setProperty('--slab-pad', pad + 'px');
+  el.style.setProperty('--slab-depth', depth + 'px');
+}
+let slabSeedNext = 3;
+function lookSlab(el, role) {
+  if (!el) return;
+  el.dataset.slab = role;
+  el.classList.add('slab');
+  if (!el.dataset.slabSeed) el.dataset.slabSeed = String(slabSeedNext += 7);
+  if (!SLABS.has(el)) { SLABS.add(el); if (slabObs) slabObs.observe(el); }
+  drawSlab(el);
+}
+
+// ---------- Symbole ----------
+// eigene Zeichnungen (64×64, Boden bei y≈56) mit den Grundformen des Spiels: gleiches Licht, gleiche Farben wie die Häuser
+const UI_DRAW = {
+  taler() {
+    const gold = '#f1bf45';
+    uiShadow(32, 56, 19);
+    const coin = (x, y) => { cyl(x, y, 15, 7.5, 4.2, gold); ellipse(x, y - 4.2, 10.5, 5.2, shade(gold, 0.2)); ellipse(x, y - 4.2, 8, 4, shade(gold, 0.04)); };
+    coin(29, 55); coin(33, 50.2); coin(30, 45.4); coin(32.5, 40.6);
+  },
+  kiste() { uiShadow(32, 55, 20); uiCrate(32, 47, 17, 8.5, 17); },
+  wegweiser() {
+    uiShadow(32, 58, 12);
+    cyl(32, 58, 3, 1.5, 46, '#8a5e38');
+    const board = (y, dir, col) => {
+      const x0 = 32, x1 = 32 + dir * 22, t = dir * 5;
+      poly([[x0 - dir * 3, y], [x1, y + t * .5], [x1 + dir * 6, y + t * .5 + 5], [x1, y + t * .5 + 10], [x0 - dir * 3, y + 10]], col);
+      poly([[x0 - dir * 3, y + 10], [x1, y + t * .5 + 10], [x1, y + t * .5 + 12], [x0 - dir * 3, y + 12]], shade(col, -0.3));
+    };
+    board(12, 1, '#d9a464'); board(28, -1, '#c98f52');
+  },
+};
+const uiShadow = (cx, cy, rx) => ellipse(cx, cy, rx, rx / 2.4, 'rgba(40,50,70,0.18)');
+function uiBox(cx, cy, a, b, h, col) {                     // Kiste: (cx, cy) = Mitte der Grundfläche
+  poly([[cx - a, cy], [cx, cy + b], [cx, cy + b - h], [cx - a, cy - h]], col);
+  poly([[cx, cy + b], [cx + a, cy], [cx + a, cy - h], [cx, cy + b - h]], shade(col, LIGHT.side));
+  diamond(cx, cy - h, a, b, shade(col, 0.12));
+}
+function uiLine(pts, col, w) {
+  g.strokeStyle = col; g.lineWidth = w; g.lineCap = g.lineJoin = 'round';
+  g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) g.lineTo(p[0], p[1]); g.stroke();
+}
+function uiCrate(cx, cy, a, b, h) {
+  const wd = '#c99a5e', dk = shade(wd, -0.28);
+  uiBox(cx, cy, a, b, h, wd);
+  uiLine([[cx - a, cy - h / 2], [cx, cy + b - h / 2]], dk, 1.2); uiLine([[cx, cy + b - h / 2], [cx + a, cy - h / 2]], shade(dk, -0.1), 1.2);
+  uiLine([[cx - a * .5, cy + b * .5 - h + 1], [cx - a * .5, cy + b * .5 - 1]], dk, 1); uiLine([[cx + a * .5, cy + b * .5 - h + 1], [cx + a * .5, cy + b * .5 - 1]], shade(dk, -0.1), 1);
+  uiLine([[cx - a + 3, cy - h], [cx, cy - h - b + 1.5], [cx + a - 3, cy - h]], shade(wd, -0.12), 1);
+}
+// leeren Rand abschneiden, damit alle Symbole gleich groß wirken
+function uiTrim(src, pad = 2) {
+  const x = src.getContext('2d');
+  if (!x) return src;
+  const W = src.width, H = src.height, d = x.getImageData(0, 0, W, H).data;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) for (let i = 0; i < W; i++) if (d[(y * W + i) * 4 + 3] > 12) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  if (x1 < 0) return src;
+  const c = document.createElement('canvas'); c.width = x1 - x0 + 1 + 2 * pad; c.height = y1 - y0 + 1 + 2 * pad;
+  const cx = c.getContext('2d');
+  if (cx) cx.drawImage(src, x0, y0, c.width - 2 * pad, c.height - 2 * pad, pad, pad, c.width - 2 * pad, c.height - 2 * pad);
+  return c;
+}
+// Symbol als Bild-Adresse: eigene Zeichnung (UI_DRAW) oder ein Ding des Spiels ohne Bodenkachel ('haus:2' = Haus Stufe 2)
+const UI_ICON_CACHE = new Map();
+function uiIcon(name) {
+  if (UI_ICON_CACHE.has(name)) return UI_ICON_CACHE.get(name);
+  const S = 3;
+  let c = document.createElement('canvas'), url = '';
+  const x = c.getContext('2d');
+  if (x) {
+    const prev = g, fog = FOG;
+    try {
+      if (UI_DRAW[name]) {
+        c.width = c.height = 64 * S; x.scale(S, S); g = x; FOG = false;
+        UI_DRAW[name]();
+      } else {
+        const [type, lvl] = name.split(':');
+        c.width = 280 * S; c.height = 260 * S; x.scale(S, S); g = x; FOG = false;
+        drawObject(type, 140, 200, isBig(type) ? 0.8 : 1.3, 0, 3, 7, +lvl || 1, null);
+      }
+    } catch (e) { /* Symbol fehlt lieber, als dass die Leiste ausfällt */ } finally { g = prev; FOG = fog; }
+    try { url = uiTrim(c).toDataURL(); } catch (e) { url = ''; }
+  }
+  UI_ICON_CACHE.set(name, url);
+  return url;
+}
+// alle <i class="wi" data-ic="…"> mit ihrem Bild füllen
+function fillUiIcons(root = document) {
+  for (const el of root.querySelectorAll('i.wi[data-ic]')) {
+    if (el.dataset.icDone === el.dataset.ic) continue;
+    const url = uiIcon(el.dataset.ic);
+    if (url) { el.style.backgroundImage = `url(${url})`; el.dataset.icDone = el.dataset.ic; }
+  }
+}
+
+// ---------- anwenden ----------
+function applyUiLook() {
+  const b = document.body;
+  if (!b) return;
+  for (const id of Object.keys(UI_LOOKS)) b.classList.toggle('look-' + id, id === uiLookId);
+  fillUiIcons();
+  for (const el of SLABS) { if (!el.isConnected) { SLABS.delete(el); if (slabObs) slabObs.unobserve(el); continue; } drawSlab(el); }
+}

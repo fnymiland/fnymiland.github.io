@@ -516,6 +516,13 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Arbeitsplätze nur nach Antippen (`hudMore`, Klasse `more`), Rohstoffe/Schönheit/Strom im Lager (`storeHtml`,
     `toggleStore`), bezahltes Material blitzt am 📦 (`flashStore` aus `payMat`). Tagebuch steht bei „Du“. Keine neuen
     Anzeigen oben ergänzen – lieber ins Lager oder ins Rathaus. Bei ≤ 480 px muss alles in eine Zeile passen.
+34a. **Aussehen der Oberfläche** (js/ui-look.js, 25.10.2026, tests/aussehen.test.js): „Hecke“ (Standard) oder „Wolken“, je Gerät
+    (`UI_LOOK_KEY`, nicht in GFX, nicht im Spielstand), Klasse `body.look-…`, Wahl in ⚙️ Einstellungen. **Keine Emojis und keine
+    Pillen** in neuer Oberfläche (Nutzer: „sieht KI-generiert aus“): Symbole zeichnet das Spiel selbst – `<i class="wi" data-ic="…">`
+    (eigene Zeichnung aus `UI_DRAW` oder ein Ding ohne Bodenkachel, `'haus:2'`), gefüllt von `fillUiIcons`. Fenster/Leisten bekommen
+    gemalte Platten über `lookSlab(el, 'paper'|'btn'|'btn2'|'bar')` (Bild in `--slab`, gezeigt von `.slab::before`, übersteht innerHTML;
+    neu gemalt nur bei Größenwechsel). Leiste oben: Zahlen frei mit Umriss (`--ol`), auf dem Handy Raten unter der Zahl. Klasse `.ic`
+    ist schon vergeben (Bereichsknöpfe) – Welt-Symbole heißen `wi`.
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

@@ -3304,6 +3304,10 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-25-aussehen', date: '25. Oktober', title: 'Neues Aussehen', items: [
+    '🌿 <b>Aussehen:</b> Die Oberfläche kommt jetzt aus deiner Welt. Unter ☰ → Einstellungen → Aussehen wählst du zwischen <b>Hecke</b> (Standard) und <b>Wolken</b>.',
+    '🏠 <b>Leiste oben:</b> Statt Emojis in Pillen stehen dort jetzt Bildchen, die das Spiel selbst zeichnet: Münzstapel, Haus, Bibliothek, Kristall, Kiste, Freundesbank und ein Wegweiser fürs Menü.',
+  ] },
   { id: '2026-10-24-wundergarten', date: '24. Oktober', title: 'Riesenrad und Sternwarte', items: [
     '🎡 <b>Riesenrad:</b> Es steht jetzt wie ein echtes Riesenrad auf einem gepflasterten Platz, mit einem Zaun um den Fuß, einem Tor und einem Tickethäuschen daneben. Laternen, Bänke, Bäume und der Weg rundherum sind echte Dinge, die du verändern kannst. Wechselst du den Belag des Wegs, wechselt das Pflaster unter dem Rad mit.',
     '🔭 <b>Sternwarte:</b> Turm und Institut stehen jetzt nebeneinander (1×2). Drumherum gibt es einen Garten aus echten Dingen: einen Weg zur Tür mit Laternen, ein Beet, Bänke zum Sternegucken, Büsche, Bäume und eine Hecke.',

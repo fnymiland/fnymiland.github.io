@@ -2821,5 +2821,12 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         Kreis). Unauffällig: Geraden, Bahnhöfe, Nachtlichter, Scheinwerfer, weite Ansicht.
       → **Rest geprüft (23.10.2026):** Bergportal mit Tunnel (Ein-/Ausfahrt, abgeschnitten an der Öffnung, nachts kein Licht durch den Berg),
         Gleis-Rampe A hinauf und oben, Hauptbahnhof (Wagen unter das Hallendach) – ohne Befund. Block 166 damit erledigt.
+- [ ] **Neues Aussehen der Oberfläche** (Nutzer 25.10.2026: „sieht KI-generiert aus – Pillen, Emojis, Kacheln“; Entwürfe tools/ui-richtungen.html,
+      tools/ui-mischungen.html, tools/ui-welt.html; gewählt: Hecke und Wolken als Themes, Hecke Standard)
+  - [x] 1 Grundlage: js/ui-look.js (Platten, Spiel-Symbole), Wahl in ⚙️ Einstellungen (v1205)
+  - [x] 2 Leiste oben: Spiel-Symbole statt Emojis, keine Pillen, Zahlen mit Umriss; Handy einzeilig bis 360 px (v1205)
+  - [ ] 3 Bauleiste unten: Hecken-/Wolkeninsel mit Kategorie-Bildern, Auswahl-Raute, aufklappendes Feld
+  - [ ] 4 Infofenster und Ziel-Fenster als Platten, Gebäude oben drauf, Knöpfe als Plättchen/Wölkchen
+  - [ ] 5 große Fenster (Rathaus, Läden, Sternenbasar, Einstellungen …) und Emojis in Texten
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

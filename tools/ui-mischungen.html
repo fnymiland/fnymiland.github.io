@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oberfläche: Mischungen</title>
+<!-- Entwurf (Nutzer 25.10.2026: „D, E und G gefallen mir“). Drei Mischungen über dem echten Spiel (Testwelt, speichert nie):
+     ?m=1 Pergament + Kacheln (D+E) | 2 Kacheln + Naht (E+G) | 3 Pergament + Stoff (D+G); &nacht=1 für Nacht. Handy: schmales Fenster.
+     Gleicher Aufbau für alle (obere Leiste, Ziel-Fenster, Infofenster, Bauleiste), nur die Oberflächen wechseln. Icons: Phosphor. -->
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=Alegreya+Sans:wght@500;700;800&family=Baloo+2:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #6cc6e0; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+  .mix { position: fixed; inset: 0; pointer-events: none; }
+  .mix > * { pointer-events: auto; }
+  .num { font-variant-numeric: tabular-nums; }
+  i[class*="ph"] { line-height: 1; }
+
+  /* ---------- Aufbau (für alle Mischungen gleich) ---------- */
+  .top { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; gap: 10px; align-items: center; }
+  .top .grow { flex: 1; }
+  .name { padding: 6px 18px 7px; }
+  .name b { display: block; font-size: 21px; line-height: 1.05; }
+  .name small { display: block; font-size: 12.5px; opacity: .8; }
+  .stats { display: flex; padding: 5px 6px; }
+  .st { display: flex; align-items: center; gap: 7px; padding: 3px 12px; font-size: 18px; font-weight: 700; white-space: nowrap; }
+  .st i { font-size: 21px; }
+  .knobs { display: flex; gap: 8px; }
+  .knob { width: 44px; height: 44px; display: grid; place-items: center; font-size: 21px; }
+  .goal { position: absolute; left: 14px; top: 78px; width: 250px; padding: 12px 14px 12px; }
+  .goal h4 { margin: 0 0 2px; font-size: 16px; display: flex; gap: 6px; align-items: center; }
+  .goal .sub { font-size: 12.5px; opacity: .75; margin-bottom: 8px; }
+  .task { display: flex; align-items: center; gap: 9px; padding: 7px 8px; margin-top: 6px; }
+  .task i { font-size: 22px; flex: none; }
+  .task div { flex: 1; font-size: 13.5px; line-height: 1.2; font-weight: 700; }
+  .task small { display: block; font-weight: 500; font-size: 12px; opacity: .8; }
+  .task .go { flex: none; padding: 4px 10px; font-size: 13px; font-weight: 700; }
+  .panel { position: absolute; right: 16px; top: 78px; width: 300px; padding: 16px 18px; }
+  .panel .kind { display: inline-block; font-size: 13px; font-weight: 700; padding: 2px 10px; margin-bottom: 6px; }
+  .panel h3 { margin: 0 0 4px; font-size: 27px; line-height: 1.05; }
+  .panel p { margin: 0 0 12px; font-size: 14.5px; line-height: 1.45; text-wrap: pretty; }
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 14px; }
+  .fact { text-align: center; padding: 6px 2px; font-size: 12px; }
+  .fact b { display: block; font-size: 17px; }
+  .bb { display: flex; gap: 10px; }
+  .b { flex: 1; display: flex; gap: 6px; justify-content: center; align-items: center; padding: 9px 0; font-weight: 700; font-size: 15.5px; }
+  .bar { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; align-items: flex-end; }
+  .grp { display: flex; gap: 8px; padding: 8px; }
+  .k { width: 48px; height: 48px; display: grid; place-items: center; font-size: 24px; }
+  .kc { width: 80px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: 12.5px; font-weight: 700; }
+  .kc i { font-size: 24px; }
+
+  /* Handy: Werte kompakt, Ziel als Knopf, Infofenster als Blatt über der Bauleiste, Kategorien nur mit Symbol und kurzem Wort */
+  @media (max-width: 600px) {
+    .top { top: 10px; left: 8px; right: 8px; gap: 6px; flex-wrap: wrap; }
+    .name { padding: 4px 10px; } .name b { font-size: 16px; } .name small { display: none; }
+    .stats { order: 3; width: 100%; justify-content: space-between; padding: 3px 4px; }
+    .st { font-size: 14px; padding: 2px 5px; gap: 4px; } .st i { font-size: 16px; }
+    .knob { width: 38px; height: 38px; font-size: 18px; } .knobs .hide-s { display: none; }
+    .goal { top: 104px; left: 8px; width: auto; padding: 6px 10px; } .goal .task, .goal .sub { display: none; } .goal h4 { margin: 0; font-size: 13px; }
+    .panel { top: auto; bottom: 98px; left: 8px; right: 8px; width: auto; padding: 12px 14px; }
+    .panel h3 { font-size: 22px; } .panel p { font-size: 13.5px; margin-bottom: 8px; }
+    .bar { bottom: 10px; gap: 6px; left: 8px; right: 8px; transform: none; justify-content: center; }
+    .grp { gap: 4px; padding: 5px; } .k { width: 38px; height: 38px; font-size: 19px; } .k.hide-s { display: none; }
+    .kc { width: 46px; height: 48px; font-size: 9.5px; } .kc i { font-size: 19px; } .kc.hide-s { display: none; }
+  }
+
+  .top .sf { position: relative; }                                    /* Naht-Linie (::after) an Leistenteilen; Fenster bleiben absolut */
+  /* ---------- M1: Pergament + Kacheln (D+E) ---------- */
+  .m1 { font-family: 'Alegreya Sans', sans-serif; color: #3d2b1f; }
+  .m1 .sf { background: radial-gradient(120% 140% at 50% 0%, #fbf0d2 0%, #f4e6c4 55%, #ead6a6 100%); border: 2px solid #b8892f; border-radius: 6px;
+            box-shadow: 0 0 0 3px #f4e6c4, 0 0 0 4.5px #b8892f, 0 8px 18px rgba(60,40,20,.28); }
+  .m1 .name b, .m1 .panel h3, .m1 .goal h4 { font-family: 'Alegreya', serif; font-weight: 800; }
+  .m1 .name small { font-family: 'Alegreya'; font-style: italic; }
+  .m1 .st + .st { border-left: 1px solid rgba(184,137,47,.5); } .m1 .st i { color: #b8892f; } .m1 .st { font-family: 'Alegreya'; }
+  .m1 .tl { color: #fff; border-radius: 7px; background: linear-gradient(180deg, #3aa39d, #2f8f8a 60%, #2a807b);
+            box-shadow: inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.18), 0 0 0 3px #efe4d0, 0 5px 0 3px #c9b994; }
+  .m1 .tl.acc, .m1 .tl.on { background: linear-gradient(180deg, #e58a5e, #d9774a 60%, #c4663b); }
+  .m1 .tl.cr { background: linear-gradient(180deg, #fffaf0, #f2e6cc); color: #3d2b1f; }
+  .m1 .grp { background: rgba(61,43,31,.18); border-radius: 12px; }
+  .m1 .knob { border-radius: 7px; color: #3d2b1f; background: linear-gradient(180deg, #fffaf0, #f2e6cc); box-shadow: inset 0 2px 0 rgba(255,255,255,.6), inset 0 -3px 0 rgba(0,0,0,.12), 0 0 0 3px #efe4d0, 0 5px 0 3px #c9b994; }
+  .m1 .kind { background: #2f8f8a; color: #fff; border-radius: 4px; }
+  .m1 .fact { background: rgba(184,137,47,.14); border-radius: 4px; } .m1 .fact b { font-family: 'Alegreya'; }
+  .m1 .task { background: rgba(184,137,47,.12); border-radius: 4px; } .m1 .task i { color: #b8892f; }
+  .m1 .task .go { border-radius: 5px; }
+  .m1 .b { border-radius: 7px; }
+
+  /* ---------- M2: Kacheln + Naht (E+G) ---------- */
+  .m2 { font-family: 'Baloo 2', sans-serif; color: #fff; }
+  .m2 .sf { background-color: #2f8f8a; border-radius: 12px; color: #fff;
+            background-image: linear-gradient(180deg, rgba(255,255,255,.12), transparent 40%), radial-gradient(rgba(255,255,255,.06) 1px, transparent 1.2px);
+            background-size: 100% 100%, 4px 4px; box-shadow: inset 0 2px 0 rgba(255,255,255,.25), 0 0 0 3px #efe4d0, 0 6px 0 3px #c9b994; }
+  .m2 .sf::after, .m2 .tl::after { content: ''; position: absolute; inset: 5px; border: 2px dashed rgba(255,255,255,.55); border-radius: 8px; pointer-events: none; }
+  .m2 .sf.cr { background-color: #fbf2df; color: #4a3b2c; } .m2 .sf.cr::after { border-color: rgba(120,90,60,.4); }
+  .m2 .tl { position: relative; color: #fff; border-radius: 10px; background: linear-gradient(180deg, #3aa39d, #2f8f8a 60%, #2a807b);
+            box-shadow: inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.18), 0 0 0 3px #efe4d0, 0 5px 0 3px #c9b994; }
+  .m2 .tl::after { inset: 4px; border-radius: 7px; border-width: 1.5px; }
+  .m2 .tl.acc, .m2 .tl.on { background: linear-gradient(180deg, #e58a5e, #d9774a 60%, #c4663b); }
+  .m2 .tl.cr { background: linear-gradient(180deg, #fffaf0, #f2e6cc); color: #4a3b2c; } .m2 .tl.cr::after { border-color: rgba(120,90,60,.35); }
+  .m2 .knob { border-radius: 50%; background: #fbf2df; color: #4a3b2c; box-shadow: 0 3px 0 rgba(40,60,40,.35), inset 0 0 0 3px #e7d6b3; }
+  .m2 .grp { padding: 0; }
+  .m2 .kind { background: #d9774a; border-radius: 6px; color: #fff; transform: rotate(-2deg); }
+  .m2 .fact { background: rgba(47,143,138,.12); border-radius: 6px; color: #2a5f5b; }
+  .m2 .task { background: rgba(255,255,255,.14); border-radius: 8px; }
+  .m2 .task .go { border-radius: 7px; }
+  .m2 .b { border-radius: 9px; }
+
+  /* ---------- M3: Pergament + Stoff (D+G) ---------- */
+  .m3 { font-family: 'Alegreya Sans', sans-serif; color: #3d2b1f; }
+  .m3 .sf { background: radial-gradient(120% 140% at 50% 0%, #fbf0d2 0%, #f4e6c4 55%, #ead6a6 100%); border-radius: 10px;
+            box-shadow: 0 0 0 2px #a7834d, 0 6px 16px rgba(60,40,20,.25); }
+  .m3 .sf::after { content: ''; position: absolute; inset: 5px; border: 1.8px dashed rgba(122,90,54,.6); border-radius: 7px; pointer-events: none; }
+  .m3 .name b, .m3 .panel h3, .m3 .goal h4 { font-family: 'Alegreya', serif; font-weight: 800; }
+  .m3 .name small { font-family: 'Alegreya'; font-style: italic; }
+  .m3 .st { font-family: 'Alegreya'; } .m3 .st + .st { border-left: 1px dashed rgba(122,90,54,.6); }
+  .m3 .st i { color: #6d9c74; } .m3 .st:nth-child(4) i { color: #c9a227; }
+  .m3 .tl { position: relative; color: #fff; border-radius: 10px; background-color: #6d9c74;
+            background-image: radial-gradient(rgba(255,255,255,.09) 1px, transparent 1.2px), radial-gradient(rgba(0,0,0,.07) 1px, transparent 1.2px); background-size: 4px 4px, 5px 5px;
+            box-shadow: 0 4px 0 rgba(40,60,40,.4); }
+  .m3 .tl::after { content: ''; position: absolute; inset: 4px; border: 1.8px dashed rgba(255,255,255,.7); border-radius: 7px; pointer-events: none; }
+  .m3 .tl.acc, .m3 .tl.on { background-color: #c46b5a; }
+  .m3 .tl.cr { background-color: #efe1c4; color: #4a3b2c; } .m3 .tl.cr::after { border-color: rgba(120,90,60,.45); }
+  .m3 .knob { border-radius: 50%; background: radial-gradient(circle at 35% 30%, #c45a46, #9e3b2c); color: #f6e4c2; box-shadow: 0 3px 6px rgba(60,20,10,.35), inset 0 0 0 2px rgba(255,220,180,.35); }
+  .m3 .grp { padding: 0; }
+  .m3 .kind { background: #6d9c74; color: #fff; border-radius: 5px; transform: rotate(-2deg); }
+  .m3 .fact { background: rgba(109,156,116,.15); border-radius: 6px; } .m3 .fact b { font-family: 'Alegreya'; }
+  .m3 .task { background: rgba(109,156,116,.13); border-radius: 6px; } .m3 .task i { color: #6d9c74; }
+  .m3 .task .go { border-radius: 6px; }
+  .m3 .b { border-radius: 8px; }
+</style>
+</head>
+<body>
+<iframe id="game" src="../index.html?welt=og&n=ui2"></iframe>
+<div class="mix" id="mix">
+  <div class="top">
+    <div class="sf name"><b>Fnymiland</b><small>Dienstag, 14:20</small></div>
+    <div class="sf stats">
+      <div class="st num"><i class="ph-fill ph-coins"></i>76,4 Mio.</div>
+      <div class="st num"><i class="ph-fill ph-users-three"></i>3.107</div>
+      <div class="st num"><i class="ph-fill ph-lightbulb"></i>1,58 Mio.</div>
+      <div class="st num"><i class="ph-fill ph-sparkle"></i>325</div>
+    </div>
+    <div class="grow"></div>
+    <div class="knobs"><div class="knob hide-s"><i class="ph-fill ph-package"></i></div><div class="knob hide-s"><i class="ph-fill ph-cat"></i></div><div class="knob"><i class="ph-bold ph-list"></i></div></div>
+  </div>
+  <div class="sf goal">
+    <h4><i class="ph-fill ph-crown-simple"></i>22 / 22 Königliche Inselperle</h4>
+    <div class="sub">Nächster Jahrmarkt in 11 Minuten</div>
+    <div class="task"><i class="ph-fill ph-scroll"></i><div>Ein Erlass wartet<small>im Schloss wählen</small></div><div class="tl acc go">Los</div></div>
+    <div class="task"><i class="ph-fill ph-castle-turret"></i><div>Dein Schloss steht<small>antippen und hinfliegen</small></div></div>
+    <div class="task"><i class="ph-fill ph-butterfly"></i><div>Schmetterlingsinsel<small>Boot losschicken</small></div><div class="tl acc go">Los</div></div>
+  </div>
+  <div class="sf panel">
+    <span class="kind">Wunderwerk</span>
+    <h3>Sternwarte</h3>
+    <p>Nachts öffnet sich die Kuppel und das Fernrohr schaut heraus. Sternschnuppen kannst du antippen.</p>
+    <div class="facts"><div class="fact"><b>+50 %</b>Ideen</div><div class="fact"><b>100</b>Strom</div><div class="fact"><b>90</b>Schönheit</div></div>
+    <div class="bb"><div class="tl cr b"><i class="ph-bold ph-hand-grabbing"></i>Tragen</div><div class="tl acc b"><i class="ph-bold ph-arrow-fat-up"></i>Ausbauen</div></div>
+  </div>
+  <div class="bar">
+    <div class="grp"><div class="tl on k"><i class="ph-fill ph-hand-pointing"></i></div><div class="tl cr k"><i class="ph-fill ph-hand-grabbing"></i></div><div class="tl cr k hide-s"><i class="ph-fill ph-shovel"></i></div><div class="tl cr k"><i class="ph-bold ph-arrow-u-up-left"></i></div><div class="tl cr k hide-s"><i class="ph-fill ph-eye"></i></div></div>
+    <div class="grp"><div class="tl kc hide-s"><i class="ph-fill ph-star"></i>Liebling</div><div class="tl on kc"><i class="ph-fill ph-house-line"></i>Stadt</div><div class="tl kc"><i class="ph-fill ph-factory"></i>Herstellen</div><div class="tl kc"><i class="ph-fill ph-confetti"></i>Freizeit</div><div class="tl kc"><i class="ph-fill ph-flower-tulip"></i>Gestalten</div></div>
+  </div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search);
+  document.getElementById('mix').classList.add('m' + (q.get('m') || '1'));
+  if (q.get('m') === '2') for (const el of document.querySelectorAll('.goal, .panel')) el.classList.toggle('cr', el.classList.contains('panel'));
+  const f = document.getElementById('game');
+  f.addEventListener('load', () => setTimeout(() => {
+    const d = f.contentDocument, s = d.createElement('style');
+    s.textContent = '#hud,#toolbar,#goal,#panel,#minimap,#toast,#achv,#hint,#modal,#bench-badge{display:none!important}';
+    d.head.appendChild(s);
+  }, 6000));
+  // Kamera und Tag/Nacht setzt der Aufrufer per WGM(), wenn das Spiel geladen ist
+  window.WGM = (nacht, phone) => f.contentWindow.eval(`(() => { try { closeModal(); } catch (e) {} GFX.day = ${nacht ? "'auto'" : "'tag'"}; ${nacht ? 'nightAt = () => NIGHT_MAX;' : ''}
+    const sw = [...state.tiles].find(([k, t]) => t.b === 'sternwarte'); const [x, y] = sw[0].split(',').map(Number), c = iso(x + ${phone ? 0.8 : 2.6}, y + ${phone ? 1.2 : 1.6}); state.cam.x = c.x; state.cam.y = c.y - 20; state.cam.z = ${phone ? 1.7 : 2.2}; })()`);
+</script>
+</body>
+</html>

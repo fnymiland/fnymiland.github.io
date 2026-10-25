@@ -1092,3 +1092,56 @@ body:has(#minimap:not([hidden])) #rot-btn { right: calc(14px + 106px - 26px); bo
 .set-note { margin: 4px 0 8px; }
 body.phone .set-grid { grid-template-columns: 1fr; }
 .wlauf-now { align-self: center; font-size: 12px; margin-left: 4px; }   /* Wegrichtung (Block 158): wie das Muster gerade liegt */
+
+/* ---------- Aussehen aus der Welt (ui-look.js, Nutzer 25.10.2026: „sieht KI-generiert aus“ → Hecke / Wolken) ----------
+   Symbole zeichnet das Spiel selbst (i.wi), Zahlen stehen frei mit Umriss, Fenster/Leisten sind gemalte Platten (.slab → ::before) */
+:root {
+  --ol: 2px 0 0 #5a3d24, -2px 0 0 #5a3d24, 0 2px 0 #5a3d24, 0 -2px 0 #5a3d24, 1.5px 1.5px 0 #5a3d24, -1.5px 1.5px 0 #5a3d24,
+        1.5px -1.5px 0 #5a3d24, -1.5px -1.5px 0 #5a3d24, 0 4px 0 rgba(70, 45, 25, .5), 0 6px 10px rgba(30, 20, 10, .25);
+}
+i.wi { display: inline-block; flex: none; width: 34px; height: 30px; background: center bottom / contain no-repeat; font-style: normal; }
+.slab { isolation: isolate; }
+.slab::before { content: ''; position: absolute; z-index: -1; pointer-events: none;
+  left: calc(-1 * var(--slab-pad, 0px)); top: calc(-1 * var(--slab-pad, 0px)); right: calc(-1 * var(--slab-pad, 0px));
+  bottom: calc(-1 * var(--slab-pad, 0px) - var(--slab-depth, 0px)); background: var(--slab) 0 0 / 100% 100% no-repeat; }
+
+/* Leiste oben: keine Pillen mehr – Symbol + Zahl frei über der Welt */
+#hud { gap: 20px; align-items: center; }
+#hud .pill { background: none; box-shadow: none; border-radius: 0; padding: 2px 1px; gap: 5px; align-items: flex-end;
+  font-family: 'Alegreya Sans', Nunito, system-ui, sans-serif; font-size: 19px; font-weight: 800; color: #fff7e6; text-shadow: var(--ol); }
+#hud .pill b { font-weight: 800; }
+#hud .money b { font-size: 21px; }
+#hud .pill small, #hud .pill.warn b { color: #fff7e6; }
+#hud .pill.warn b { color: #ffc2b5; }
+#hud .pill small { font-size: 13px; margin-left: 2px; }
+#hud .pill.sd { color: #fff7e6; }
+#hud .pill i.wi { width: 38px; height: 34px; margin-bottom: -4px; filter: drop-shadow(0 3px 2px rgba(40, 30, 20, .25)); transition: transform .18s cubic-bezier(.3, 1.6, .5, 1); }
+#hud .pill.store i.wi, #hud .pill.net i.wi, #hud #menu-btn i.wi { width: 42px; height: 40px; }
+#hud #menu-btn { padding-left: 4px; }
+@media (hover: hover) { #hud .pill:hover i.wi { transform: translateY(-3px); } }
+#hud .pill:active i.wi { transform: translateY(1px) scale(.96); }
+#hud .town { align-items: center; gap: 8px; }
+#town-name { font-family: Alegreya, Georgia, serif; font-size: 23px; letter-spacing: .01em; }
+#town-btn .tod { color: #fff7e6; opacity: 1; font-size: 14px; }
+#town-btn .flag { text-shadow: none; box-shadow: 0 2px 0 rgba(60, 40, 20, .35), inset 0 -2px 0 rgba(0, 0, 0, .12); }
+#hud #you-face { font-size: 30px; line-height: 1; text-shadow: 0 3px 3px rgba(40, 30, 20, .3); }
+#hud .pill .dot { box-shadow: 0 0 0 2px #fff7e6; text-shadow: none; }
+#hud .pill .flash { text-shadow: none; font-family: Nunito, system-ui, sans-serif; }
+@media (max-width: 600px) { #hud { gap: 12px; } #hud .pill { font-size: 16px; } #hud .money b { font-size: 17px; } #town-name { font-size: 19px; }
+  #hud .pill i.wi { width: 30px; height: 27px; } #hud .pill.store i.wi, #hud .pill.net i.wi, #hud #menu-btn i.wi { width: 33px; height: 31px; } #hud #you-face { font-size: 25px; } }
+@media (max-width: 480px) { #hud { gap: 7px; } #hud .pill { font-size: 14px; padding: 2px 0; gap: 3px; } #hud .money b { font-size: 15px; }
+  #hud .pill i.wi { width: 25px; height: 23px; margin-bottom: -2px; } #hud .pill.store i.wi, #hud .pill.net i.wi, #hud #menu-btn i.wi { width: 27px; height: 26px; } #hud #you-face { font-size: 22px; } }
+@media (max-width: 400px) { #hud { gap: 3px; } #hud .pill { font-size: 13px; gap: 2px; } #hud .money b { font-size: 13px; }
+  #hud .pill i.wi { width: 20px; height: 18px; } #hud .pill.store i.wi, #hud .pill.net i.wi, #hud #menu-btn i.wi { width: 22px; height: 21px; } #hud #you-face { font-size: 19px; } #hud #menu-btn { padding-left: 0; } }
+@media (max-width: 370px) { #hud { gap: 2px; } #hud .pill, #hud .money b { font-size: 11.5px; letter-spacing: -.1px; }
+  #hud .pill i.wi { width: 17px; height: 16px; } #hud .pill.store i.wi, #hud .pill.net i.wi, #hud #menu-btn i.wi { width: 19px; height: 18px; } #hud #you-face { font-size: 17px; } }
+/* Handy: Raten und Arbeitsplätze (nach Antippen) unter der Zahl statt daneben – sonst bricht die Leiste um (Regel 34) */
+@media (max-width: 480px) { #hud .pill { position: relative; } #hud .pill small.more { position: absolute; left: 50%; top: calc(100% + 1px); transform: translateX(-50%);
+  white-space: nowrap; font-size: 11px; margin: 0; } }
+
+/* Aussehen wählen (⚙️ Einstellungen) */
+.look-pick { display: flex; gap: 10px; margin: 4px 0 12px; }
+.look-pick button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 7px; border: 0; border-radius: 12px;
+  background: var(--cream2); color: var(--brown); font: 800 14px/1.2 Nunito, system-ui, sans-serif; cursor: pointer; box-shadow: 0 2px 0 var(--shadow); }
+.look-pick button.on { background: var(--yellow); box-shadow: inset 0 0 0 3px var(--brown); }
+.look-pick canvas { width: 100%; max-width: 150px; height: 46px; border-radius: 8px; background: #bfe3ee; }   /* Himmel hinter dem Musterstück */

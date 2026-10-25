@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oberfläche: Richtungen</title>
+<!-- Entwurf (Nutzer 25.10.2026: „sieht KI-generiert aus – Pillen, Emojis“). Echtes Spiel (Testwelt, speichert nie) im Hintergrund,
+     darüber obere Leiste, Bauleiste und ein Infofenster in drei Richtungen. ?r=jetzt | a | b | c. Icons: Phosphor (eine Familie). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;700;800&family=Outfit:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@500;700&family=Alegreya:wght@500;700;800&family=Alegreya+Sans:wght@500;700&family=Rubik:wght@500;600;700&family=Manrope:wght@400;500;700;800&family=Baloo+2:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #6cc6e0; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+  .ui { position: fixed; inset: 0; pointer-events: none; }
+  .ui > * { pointer-events: auto; }
+  [hidden] { display: none !important; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ---------- A: Holzschild & Papier (gemütliches Spiel, Sticker-Kanten) ---------- */
+  .A { --ink: #4a3426; --paper: #fff7e8; --paper2: #f3e3c4; --wood: #b9824f; --wood-d: #8a5a33; --leaf: #5f9b4a; --gold: #e9a83b;
+       font-family: 'Nunito', sans-serif; color: var(--ink); }
+  .A .top { position: absolute; top: 14px; left: 14px; right: 14px; display: flex; gap: 10px; align-items: flex-start; }
+  .A .sign { background: var(--wood); border: 2.5px solid var(--ink); border-radius: 10px; box-shadow: 0 4px 0 var(--ink);
+             padding: 6px 14px 7px; color: #fff8ec; font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 19px; line-height: 1.05;
+             background-image: repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 2px, transparent 2px 7px); }
+  .A .sign small { display: block; font-family: 'Nunito'; font-size: 12px; font-weight: 800; opacity: .85; }
+  .A .stat { display: flex; align-items: center; gap: 8px; background: var(--paper); border: 2.5px solid var(--ink); border-radius: 10px;
+             box-shadow: 0 4px 0 var(--ink); padding: 5px 12px 5px 6px; font-family: 'Fredoka'; font-weight: 600; font-size: 19px; }
+  .A .stat i { font-size: 22px; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 8px; background: var(--paper2); }
+  .A .stat small { font-family: 'Nunito'; font-weight: 800; font-size: 11.5px; color: var(--leaf); display: block; margin-top: -3px; }
+  .A .ico { width: 44px; height: 44px; display: grid; place-items: center; background: var(--paper); border: 2.5px solid var(--ink);
+            border-radius: 10px; box-shadow: 0 4px 0 var(--ink); font-size: 23px; }
+  .A .grow { flex: 1; }
+  .A .bar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; display: flex; gap: 14px; align-items: flex-end; }
+  .A .tools, .A .cats { display: flex; gap: 6px; background: var(--paper); border: 2.5px solid var(--ink); border-radius: 12px; box-shadow: 0 4px 0 var(--ink); padding: 6px; }
+  .A .tool { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 8px; font-size: 24px; }
+  .A .tool.on { background: var(--gold); box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); }
+  .A .cat { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 74px; padding: 5px 0 4px; border-radius: 8px; font-weight: 800; font-size: 12.5px; }
+  .A .cat i { font-size: 26px; }
+  .A .cat.on { background: var(--paper2); }
+  .A .panel { position: absolute; right: 18px; top: 86px; width: 300px; background: var(--paper); border: 2.5px solid var(--ink); border-radius: 14px; box-shadow: 0 5px 0 var(--ink); }
+  .A .panel .tab { position: absolute; top: -16px; left: 16px; background: var(--leaf); color: #fff; border: 2.5px solid var(--ink); border-radius: 8px;
+                   padding: 3px 12px; font-family: 'Fredoka'; font-weight: 600; font-size: 15px; transform: rotate(-2deg); box-shadow: 0 3px 0 var(--ink); }
+  .A .panel .in { padding: 26px 18px 16px; }
+  .A .panel h3 { margin: 0; font-family: 'Fredoka'; font-weight: 700; font-size: 26px; }
+  .A .panel p { margin: 4px 0 12px; font-size: 14px; line-height: 1.45; font-weight: 700; color: #7a5e48; text-wrap: pretty; }
+  .A .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .A .fact { background: var(--paper2); border-radius: 8px; padding: 7px 10px; font-weight: 800; font-size: 13px; display: flex; gap: 7px; align-items: center; }
+  .A .fact i { font-size: 18px; color: var(--leaf); }
+  .A .btns { display: flex; gap: 8px; }
+  .A .btn { flex: 1; display: flex; gap: 6px; align-items: center; justify-content: center; border: 2.5px solid var(--ink); border-radius: 10px; padding: 9px 0;
+            font-family: 'Fredoka'; font-weight: 600; font-size: 16px; background: var(--paper); box-shadow: 0 3px 0 var(--ink); }
+  .A .btn.go { background: var(--leaf); color: #fff; }
+
+  /* ---------- B: Inselglas (ruhig, die Insel ist die Hauptsache) ---------- */
+  .B { font-family: 'Outfit', sans-serif; color: #f4f7f5; --glass: rgba(24, 48, 52, .58); --line: rgba(255,255,255,.16); --sun: #ffd36b; }
+  .B .strip { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 2px;
+              background: var(--glass); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+              border: 1px solid var(--line); border-radius: 14px; padding: 6px 8px; box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 12px 32px rgba(10,40,50,.25); }
+  .B .seg { display: flex; align-items: center; gap: 7px; padding: 4px 12px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+  .B .seg + .seg { border-left: 1px solid var(--line); }
+  .B .seg i { font-size: 20px; opacity: .9; }
+  .B .seg small { font-size: 12px; opacity: .6; font-weight: 400; }
+  .B .seg.name { font-weight: 600; letter-spacing: -.01em; }
+  .B .seg.sd i { color: var(--sun); }
+  .B .corner { position: absolute; top: 12px; right: 14px; display: flex; gap: 6px; }
+  .B .round { width: 42px; height: 42px; display: grid; place-items: center; background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+              border: 1px solid var(--line); border-radius: 12px; font-size: 21px; }
+  .B .dock { position: absolute; left: 50%; transform: translateX(-50%); bottom: 14px; display: flex; gap: 4px; align-items: center;
+             background: var(--glass); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+             border: 1px solid var(--line); border-radius: 16px; padding: 6px; box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 12px 32px rgba(10,40,50,.25); }
+  .B .t { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; font-size: 22px; opacity: .85; }
+  .B .t.on { background: rgba(255,255,255,.16); opacity: 1; }
+  .B .sep { width: 1px; height: 28px; background: var(--line); margin: 0 6px; }
+  .B .c { display: flex; align-items: center; gap: 7px; padding: 0 14px; height: 44px; border-radius: 10px; font-size: 15px; font-weight: 500; }
+  .B .c i { font-size: 20px; }
+  .B .c.on { background: var(--sun); color: #2a2a1e; }
+  .B .panel { position: absolute; right: 16px; top: 72px; width: 290px; background: var(--glass); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+              border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 16px 40px rgba(10,40,50,.3); }
+  .B .panel h3 { margin: 0; font-size: 24px; font-weight: 600; letter-spacing: -.02em; }
+  .B .panel .sub { font-size: 13px; opacity: .65; margin-top: 2px; }
+  .B .panel p { font-size: 14px; line-height: 1.55; font-weight: 300; margin: 12px 0 14px; opacity: .92; text-wrap: pretty; }
+  .B .row { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .B .row b { font-weight: 500; }
+  .B .act { display: flex; gap: 8px; margin-top: 14px; }
+  .B .a { flex: 1; display: flex; gap: 6px; align-items: center; justify-content: center; height: 40px; border-radius: 10px; border: 1px solid var(--line); font-size: 14px; font-weight: 500; }
+  .B .a.go { background: var(--sun); color: #2a2a1e; border-color: transparent; }
+
+  /* ---------- C: Bauplan (Architekten-Notizbuch: Raster, Tinte, Stempel) ---------- */
+  .C { font-family: 'Space Grotesk', sans-serif; color: #1e3a5f; --paper: #f6f5ef; --ink: #1e3a5f; --grid: rgba(30,58,95,.09); --red: #d4483b; }
+  .C .sheet { background-color: var(--paper); background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+              background-size: 12px 12px; border: 1.5px solid var(--ink); box-shadow: 4px 4px 0 rgba(30,58,95,.22); }
+  .C .top { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; align-items: stretch; }
+  .C .top .sheet { display: flex; align-items: stretch; }
+  .C .cell { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-right: 1.5px solid var(--ink); white-space: nowrap; }
+  .C .cell:last-child { border-right: 0; }
+  .C .cell i { font-size: 21px; }
+  .C .cell .v { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 17px; }
+  .C .cell small { display: block; font-family: 'JetBrains Mono'; font-size: 10.5px; opacity: .7; margin-top: -2px; }
+  .C .cell.name { font-weight: 700; font-size: 18px; letter-spacing: -.01em; }
+  .C .cell.name small { font-family: 'Space Grotesk'; }
+  .C .grow { flex: 1; }
+  .C .stamp { color: var(--red); border: 1.5px solid var(--red); padding: 1px 6px; font-family: 'JetBrains Mono'; font-size: 11px; font-weight: 700; transform: rotate(-3deg); display: inline-block; }
+  .C .bar { position: absolute; left: 50%; transform: translateX(-50%); bottom: 12px; display: flex; align-items: stretch; }
+  .C .bar .sheet { display: flex; }
+  .C .k { width: 50px; display: grid; place-items: center; font-size: 23px; border-right: 1.5px solid var(--ink); }
+  .C .k.on { background: var(--ink); color: var(--paper); }
+  .C .cc { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 92px; height: 58px; border-right: 1.5px solid var(--ink); font-weight: 700; font-size: 13px; }
+  .C .cc:last-child { border-right: 0; }
+  .C .cc i { font-size: 24px; }
+  .C .cc.on { background: var(--ink); color: var(--paper); }
+  .C .gap { width: 14px; }
+  .C .panel { position: absolute; right: 16px; top: 84px; width: 300px; }
+  .C .panel .head { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1.5px solid var(--ink); }
+  .C .panel h3 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+  .C .panel .body { padding: 12px 14px 14px; }
+  .C .panel p { margin: 0 0 12px; font-size: 14px; line-height: 1.5; text-wrap: pretty; }
+  .C dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0 0 14px; font-size: 13.5px; }
+  .C dt { font-family: 'JetBrains Mono'; font-size: 11.5px; opacity: .7; padding-top: 2px; }
+  .C dd { margin: 0; font-weight: 700; }
+  .C .acts { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1.5px solid var(--ink); }
+  .C .ac { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0; font-weight: 700; font-size: 12.5px; border-right: 1.5px solid var(--ink); }
+  .C .ac:last-child { border-right: 0; }
+  .C .ac i { font-size: 20px; }
+  .C .ac.go { background: var(--ink); color: var(--paper); }
+
+  /* ---------- D: Märchenbuch (Pergament, Goldrand, Buchschrift) ---------- */
+  .D { font-family: 'Alegreya Sans', sans-serif; color: #3d2b1f; --perg: #f4e6c4; --perg2: #ead6a6; --gold: #b8892f; --ink: #3d2b1f; --red: #9e3b2c; }
+  .D .frame { background: radial-gradient(120% 140% at 50% 0%, #fbf0d2 0%, var(--perg) 55%, var(--perg2) 100%); border: 2px solid var(--gold);
+              box-shadow: 0 0 0 3px var(--perg), 0 0 0 4.5px var(--gold), 0 8px 18px rgba(60,40,20,.28); border-radius: 6px; position: relative; }
+  .D .frame::before, .D .frame::after { content: '❦'; position: absolute; color: var(--gold); font-size: 13px; top: -1px; }
+  .D .frame::before { left: 5px; } .D .frame::after { right: 5px; transform: scaleX(-1); }
+  .D .top { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 16px; align-items: center; }
+  .D .title { padding: 6px 22px 7px; font-family: 'Alegreya'; font-weight: 800; font-size: 22px; letter-spacing: .01em; }
+  .D .title small { display: block; font-family: 'Alegreya'; font-style: italic; font-weight: 500; font-size: 13px; color: #7a5a36; margin-top: -3px; }
+  .D .stats { display: flex; padding: 6px 8px; }
+  .D .st { display: flex; align-items: center; gap: 7px; padding: 2px 12px; font-family: 'Alegreya'; font-weight: 700; font-size: 18px; }
+  .D .st + .st { border-left: 1px solid rgba(184,137,47,.5); }
+  .D .st i { font-size: 21px; color: var(--gold); }
+  .D .grow { flex: 1; }
+  .D .seal { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #c45a46, var(--red));
+             color: #f6e4c2; font-size: 21px; box-shadow: 0 3px 6px rgba(60,20,10,.35), inset 0 0 0 2px rgba(255,220,180,.35); }
+  .D .panel { position: absolute; right: 22px; top: 92px; width: 300px; padding: 18px 20px 16px; }
+  .D .panel h3 { margin: 0; font-family: 'Alegreya'; font-weight: 800; font-size: 28px; text-align: center; }
+  .D .panel .orn { text-align: center; color: var(--gold); letter-spacing: .6em; font-size: 12px; margin: 2px 0 8px; }
+  .D .panel p { font-family: 'Alegreya'; font-style: italic; font-size: 15.5px; line-height: 1.45; margin: 0 0 12px; text-align: center; text-wrap: pretty; }
+  .D .lines { margin: 0 0 14px; }
+  .D .ln { display: flex; justify-content: space-between; font-size: 15px; padding: 4px 0; border-bottom: 1px dotted rgba(122,90,54,.55); }
+  .D .ln b { font-family: 'Alegreya'; }
+  .D .bb { display: flex; gap: 10px; }
+  .D .b { flex: 1; text-align: center; padding: 8px 0; font-family: 'Alegreya'; font-weight: 700; font-size: 16px; border: 1.5px solid var(--gold); border-radius: 4px; background: #fbf0d2; }
+  .D .b.go { background: var(--red); color: #f8e6c4; border-color: #7d2a1f; }
+  .D .bar { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; padding: 6px 10px; align-items: center; }
+  .D .t { width: 46px; height: 46px; display: grid; place-items: center; font-size: 24px; color: #6b4a2b; border-radius: 4px; }
+  .D .t.on { background: rgba(184,137,47,.25); color: var(--ink); }
+  .D .div { width: 1px; height: 34px; background: rgba(184,137,47,.6); margin: 0 8px; }
+  .D .c { display: flex; flex-direction: column; align-items: center; width: 76px; font-family: 'Alegreya'; font-weight: 700; font-size: 14px; gap: 0; padding: 2px 0; border-radius: 4px; }
+  .D .c i { font-size: 24px; color: var(--gold); }
+  .D .c.on { background: rgba(184,137,47,.25); }
+
+  /* ---------- E: Glasierte Kacheln („Kachelhausen“: Fliesen mit Glasur und Fuge) ---------- */
+  .E { font-family: 'Rubik', sans-serif; color: #fff; --teal: #2f8f8a; --teal-d: #1f6b67; --terra: #d9774a; --fuge: #efe4d0; }
+  .E .tile { background: linear-gradient(180deg, #3aa39d 0%, var(--teal) 60%, #2a807b 100%); border-radius: 7px;
+             box-shadow: inset 0 2px 0 rgba(255,255,255,.35), inset 0 -3px 0 rgba(0,0,0,.18), 0 0 0 3px var(--fuge), 0 5px 0 3px #c9b994; }
+  .E .tile.terra { background: linear-gradient(180deg, #e58a5e 0%, var(--terra) 60%, #c4663b 100%); }
+  .E .tile.cream { background: linear-gradient(180deg, #fffaf0 0%, #f7ecd6 100%); color: #3b4b48; }
+  .E .top { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 12px; align-items: center; }
+  .E .name { padding: 7px 16px; font-weight: 700; font-size: 19px; }
+  .E .stat { display: flex; align-items: center; gap: 8px; padding: 7px 14px 7px 9px; font-weight: 600; font-size: 18px; }
+  .E .stat i { font-size: 22px; }
+  .E .grow { flex: 1; }
+  .E .sq { width: 44px; height: 44px; display: grid; place-items: center; font-size: 22px; }
+  .E .panel { position: absolute; right: 20px; top: 90px; width: 300px; overflow: hidden; }
+  .E .panel .hd { padding: 12px 16px; }
+  .E .panel h3 { margin: 0; font-size: 24px; font-weight: 700; }
+  .E .panel .hd small { font-weight: 500; opacity: .85; font-size: 13px; }
+  .E .panel .bd { background: #fffaf0; color: #3b4b48; padding: 12px 16px 14px; }
+  .E .panel p { margin: 0 0 10px; font-size: 14px; line-height: 1.5; font-weight: 500; text-wrap: pretty; }
+  .E .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+  .E .chip { background: #e8f3f1; border-radius: 5px; padding: 6px 4px; text-align: center; font-size: 12px; font-weight: 500; color: #2a5f5b; }
+  .E .chip b { display: block; font-size: 17px; }
+  .E .bb { display: flex; gap: 10px; }
+  .E .b { flex: 1; text-align: center; padding: 9px 0; font-weight: 600; font-size: 15px; }
+  .E .bar { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; align-items: flex-end; }
+  .E .k { width: 50px; height: 50px; display: grid; place-items: center; font-size: 25px; }
+  .E .kc { width: 82px; height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 600; font-size: 12.5px; gap: 1px; }
+  .E .kc i { font-size: 24px; }
+  .E .gap { width: 10px; }
+
+  /* ---------- F: Weißes Insel-Minimal (wie Islanders: flach, viel Luft, große Zahlen) ---------- */
+  .F { font-family: 'Manrope', sans-serif; color: #1c2321; --acc: #e4572e; }
+  .F .top { position: absolute; top: 18px; left: 22px; right: 22px; display: flex; gap: 28px; align-items: flex-start; }
+  .F .brand { font-weight: 800; font-size: 20px; letter-spacing: -.02em; background: #fff; padding: 8px 14px; border-radius: 4px; }
+  .F .brand small { font-weight: 500; font-size: 12px; color: #6b7471; margin-left: 6px; }
+  .F .big { background: #fff; padding: 6px 14px 7px; border-radius: 4px; }
+  .F .big .v { font-weight: 800; font-size: 22px; letter-spacing: -.02em; display: flex; align-items: center; gap: 6px; }
+  .F .big .v i { font-size: 18px; color: #6b7471; }
+  .F .big .l { font-size: 11px; font-weight: 600; color: #6b7471; }
+  .F .big .l b { color: #2e8b57; font-weight: 700; }
+  .F .grow { flex: 1; }
+  .F .ic { width: 40px; height: 40px; display: grid; place-items: center; background: #fff; border-radius: 4px; font-size: 20px; }
+  .F .icons { display: flex; gap: 6px; }
+  .F .panel { position: absolute; right: 22px; top: 96px; width: 286px; background: #fff; border-radius: 4px; padding: 20px; }
+  .F .panel .kind { font-size: 12px; font-weight: 700; color: var(--acc); }
+  .F .panel h3 { margin: 2px 0 8px; font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+  .F .panel p { margin: 0 0 16px; font-size: 14px; line-height: 1.55; color: #4a524f; text-wrap: pretty; }
+  .F .kpi { display: grid; grid-template-columns: repeat(3, 1fr); margin-bottom: 18px; }
+  .F .kpi div { font-size: 11px; font-weight: 600; color: #6b7471; }
+  .F .kpi b { display: block; font-size: 20px; font-weight: 800; color: #1c2321; letter-spacing: -.02em; }
+  .F .bb { display: flex; gap: 8px; }
+  .F .b { flex: 1; text-align: center; padding: 10px 0; font-weight: 700; font-size: 14px; border-radius: 4px; background: #f1f3f2; }
+  .F .b.go { background: #1c2321; color: #fff; }
+  .F .bar { position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; background: #fff; border-radius: 4px; padding: 4px; }
+  .F .t { width: 48px; height: 48px; display: grid; place-items: center; font-size: 22px; color: #4a524f; border-radius: 3px; }
+  .F .t.on { background: #1c2321; color: #fff; }
+  .F .sep { width: 1px; background: #e3e6e5; margin: 8px 6px; }
+  .F .c { display: flex; align-items: center; gap: 7px; padding: 0 14px; height: 48px; font-weight: 700; font-size: 14px; border-radius: 3px; color: #4a524f; }
+  .F .c.on { color: var(--acc); box-shadow: inset 0 -3px 0 var(--acc); border-radius: 0; }
+
+  /* ---------- G: Filz & Stickerei (Patchwork, Nähte, Knöpfe) ---------- */
+  .G { font-family: 'Baloo 2', sans-serif; color: #fff; --felt: #6d9c74; --felt2: #c46b5a; --felt3: #e9c46a; --thread: rgba(255,255,255,.75); }
+  .G .felt { background-color: var(--felt); border-radius: 12px; position: relative;
+             background-image: radial-gradient(rgba(255,255,255,.08) 1px, transparent 1.2px), radial-gradient(rgba(0,0,0,.06) 1px, transparent 1.2px);
+             background-size: 4px 4px, 5px 5px; box-shadow: 0 4px 0 rgba(40,60,40,.35), 0 8px 14px rgba(40,60,40,.2); }
+  .G .felt::after { content: ''; position: absolute; inset: 5px; border: 2px dashed var(--thread); border-radius: 8px; pointer-events: none; }
+  .G .felt.red { background-color: var(--felt2); } .G .felt.yellow { background-color: var(--felt3); color: #5a4214; } .G .felt.yellow::after { border-color: rgba(90,66,20,.5); }
+  .G .felt.cream { background-color: #f6ead2; color: #5a4632; } .G .felt.cream::after { border-color: rgba(120,90,60,.45); }
+  .G .top { position: absolute; top: 16px; left: 16px; right: 16px; display: flex; gap: 12px; align-items: center; }
+  .G .name { padding: 8px 20px 6px; font-weight: 700; font-size: 21px; line-height: 1; }
+  .G .name small { display: block; font-size: 13px; font-weight: 500; opacity: .9; }
+  .G .stat { display: flex; align-items: center; gap: 8px; padding: 8px 16px 6px 12px; font-weight: 700; font-size: 19px; line-height: 1; }
+  .G .stat i { font-size: 22px; }
+  .G .grow { flex: 1; }
+  .G .btn { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; background: #f6ead2; color: #5a4632; position: relative;
+            box-shadow: 0 3px 0 rgba(40,60,40,.35), inset 0 0 0 3px #e2d2b1; }
+  .G .panel { position: absolute; right: 20px; top: 92px; width: 300px; padding: 18px 20px 18px; }
+  .G .panel .patch { position: absolute; top: -12px; left: 18px; padding: 4px 14px 2px; font-weight: 700; font-size: 14px; transform: rotate(-3deg); }
+  .G .panel h3 { margin: 4px 0 4px; font-size: 27px; font-weight: 700; line-height: 1.1; }
+  .G .panel p { margin: 0 0 12px; font-size: 15px; line-height: 1.4; font-weight: 500; text-wrap: pretty; }
+  .G .rows { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; margin-bottom: 14px; font-weight: 600; font-size: 15px; }
+  .G .rows span { display: flex; gap: 6px; align-items: center; } .G .rows i { font-size: 18px; color: #6d9c74; }
+  .G .bb { display: flex; gap: 10px; }
+  .G .b { flex: 1; text-align: center; padding: 9px 0 7px; font-weight: 700; font-size: 16px; }
+  .G .bar { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); display: flex; gap: 12px; }
+  .G .tools, .G .cats { display: flex; gap: 4px; padding: 8px 10px; }
+  .G .t { width: 46px; height: 46px; display: grid; place-items: center; font-size: 24px; border-radius: 50%; position: relative; z-index: 1; }
+  .G .t.on { background: var(--felt3); color: #5a4214; }
+  .G .c { display: flex; flex-direction: column; align-items: center; width: 74px; font-weight: 700; font-size: 14px; line-height: 1.1; position: relative; z-index: 1; padding: 2px 0; border-radius: 8px; }
+  .G .c i { font-size: 25px; }
+  .G .c.on { background: rgba(255,255,255,.22); }
+</style>
+</head>
+<body>
+<iframe id="game" src="../index.html?welt=og&n=ui1"></iframe>
+
+<!-- A -->
+<div class="ui A" data-r="a" hidden>
+  <div class="top">
+    <div class="sign">Fnymiland<small>Dienstag · 14:20</small></div>
+    <div class="stat"><i class="ph-fill ph-coins" style="color:#d99a1e"></i><span class="num">76,4 Mio.<small>+1,2 Tsd. pro Sek.</small></span></div>
+    <div class="stat"><i class="ph-fill ph-users-three" style="color:#3f8fa8"></i><span class="num">3.107</span></div>
+    <div class="stat"><i class="ph-fill ph-lightbulb" style="color:#e2b52c"></i><span class="num">1,58 Mio.</span></div>
+    <div class="stat"><i class="ph-fill ph-sparkle" style="color:#9a6ad1"></i><span class="num">325</span></div>
+    <div class="grow"></div>
+    <div class="ico"><i class="ph-duotone ph-package"></i></div>
+    <div class="ico"><i class="ph-duotone ph-cat"></i></div>
+    <div class="ico"><i class="ph-duotone ph-globe-hemisphere-west"></i></div>
+    <div class="ico"><i class="ph-bold ph-list"></i></div>
+  </div>
+  <div class="panel"><div class="tab">Wunderwerk</div><div class="in">
+    <h3>Sternwarte</h3>
+    <p>Nachts öffnet sich die Kuppel und das Fernrohr schaut heraus. Sternschnuppen kannst du antippen.</p>
+    <div class="facts">
+      <div class="fact"><i class="ph-fill ph-lightbulb"></i>+50 % Ideen</div>
+      <div class="fact"><i class="ph-fill ph-shooting-star"></i>Sternschnuppen</div>
+      <div class="fact"><i class="ph-fill ph-lightning"></i>100 Strom</div>
+      <div class="fact"><i class="ph-fill ph-flower"></i>Schönheit 90</div>
+    </div>
+    <div class="btns"><div class="btn"><i class="ph-bold ph-hand-grabbing"></i>Tragen</div><div class="btn go"><i class="ph-bold ph-arrow-fat-up"></i>Ausbauen</div></div>
+  </div></div>
+  <div class="bar">
+    <div class="tools">
+      <div class="tool on"><i class="ph-duotone ph-hand-pointing"></i></div>
+      <div class="tool"><i class="ph-duotone ph-hand-grabbing"></i></div>
+      <div class="tool"><i class="ph-duotone ph-shovel"></i></div>
+      <div class="tool"><i class="ph-duotone ph-arrow-u-up-left"></i></div>
+      <div class="tool"><i class="ph-duotone ph-eye"></i></div>
+    </div>
+    <div class="cats">
+      <div class="cat"><i class="ph-duotone ph-star"></i>Liebling</div>
+      <div class="cat on"><i class="ph-duotone ph-house-line"></i>Stadt</div>
+      <div class="cat"><i class="ph-duotone ph-factory"></i>Herstellen</div>
+      <div class="cat"><i class="ph-duotone ph-confetti"></i>Freizeit</div>
+      <div class="cat"><i class="ph-duotone ph-flower-tulip"></i>Gestalten</div>
+    </div>
+  </div>
+</div>
+
+<!-- B -->
+<div class="ui B" data-r="b" hidden>
+  <div class="strip">
+    <div class="seg name">Fnymiland <small>14:20</small></div>
+    <div class="seg num"><i class="ph-light ph-coins"></i>76,4 Mio. <small>+1,2 Tsd./s</small></div>
+    <div class="seg num"><i class="ph-light ph-users-three"></i>3.107</div>
+    <div class="seg num"><i class="ph-light ph-lightbulb"></i>1,58 Mio.</div>
+    <div class="seg sd num"><i class="ph-fill ph-sparkle"></i>325</div>
+  </div>
+  <div class="corner">
+    <div class="round"><i class="ph-light ph-package"></i></div>
+    <div class="round"><i class="ph-light ph-cat"></i></div>
+    <div class="round"><i class="ph-light ph-list"></i></div>
+  </div>
+  <div class="panel">
+    <h3>Sternwarte</h3>
+    <div class="sub">Wunderwerk · fertig gebaut</div>
+    <p>Nachts öffnet sich die Kuppel und das Fernrohr schaut heraus. Sternschnuppen kannst du antippen.</p>
+    <div class="row"><span>Ideen</span><b>+50 %</b></div>
+    <div class="row"><span>Strom</span><b>100</b></div>
+    <div class="row"><span>Schönheit</span><b>90</b></div>
+    <div class="act"><div class="a"><i class="ph-light ph-hand-grabbing"></i>Tragen</div><div class="a go"><i class="ph ph-arrow-up"></i>Ausbauen</div></div>
+  </div>
+  <div class="dock">
+    <div class="t on"><i class="ph-light ph-hand-pointing"></i></div>
+    <div class="t"><i class="ph-light ph-hand-grabbing"></i></div>
+    <div class="t"><i class="ph-light ph-shovel"></i></div>
+    <div class="t"><i class="ph-light ph-arrow-u-up-left"></i></div>
+    <div class="t"><i class="ph-light ph-eye"></i></div>
+    <div class="sep"></div>
+    <div class="c on"><i class="ph ph-house-line"></i>Stadt</div>
+    <div class="c"><i class="ph-light ph-factory"></i>Herstellen</div>
+    <div class="c"><i class="ph-light ph-confetti"></i>Freizeit</div>
+    <div class="c"><i class="ph-light ph-flower-tulip"></i>Gestalten</div>
+  </div>
+</div>
+
+<!-- C -->
+<div class="ui C" data-r="c" hidden>
+  <div class="top">
+    <div class="sheet">
+      <div class="cell name">Fnymiland<small>&nbsp;Di 14:20</small></div>
+      <div class="cell"><i class="ph-bold ph-coins"></i><div><span class="v num">76,4 Mio.</span><small>+1,2 Tsd./s</small></div></div>
+      <div class="cell"><i class="ph-bold ph-users-three"></i><span class="v num">3.107</span></div>
+      <div class="cell"><i class="ph-bold ph-lightbulb"></i><span class="v num">1,58 Mio.</span></div>
+      <div class="cell"><i class="ph-bold ph-sparkle"></i><span class="v num">325</span></div>
+    </div>
+    <div class="grow"></div>
+    <div class="sheet">
+      <div class="cell"><i class="ph-bold ph-package"></i></div>
+      <div class="cell"><i class="ph-bold ph-cat"></i></div>
+      <div class="cell"><i class="ph-bold ph-globe-hemisphere-west"></i></div>
+      <div class="cell"><i class="ph-bold ph-list"></i></div>
+    </div>
+  </div>
+  <div class="panel sheet">
+    <div class="head"><h3>Sternwarte</h3><span class="stamp">FERTIG</span></div>
+    <div class="body">
+      <p>Nachts öffnet sich die Kuppel und das Fernrohr schaut heraus. Sternschnuppen kannst du antippen.</p>
+      <dl><dt>IDEEN</dt><dd>+50 %</dd><dt>STROM</dt><dd>100</dd><dt>FLÄCHE</dt><dd>1 × 2 Felder</dd><dt>SCHÖNHEIT</dt><dd>90</dd></dl>
+    </div>
+    <div class="acts"><div class="ac"><i class="ph-bold ph-hand-grabbing"></i>Tragen</div><div class="ac"><i class="ph-bold ph-arrows-clockwise"></i>Drehen</div><div class="ac go"><i class="ph-bold ph-arrow-fat-up"></i>Ausbauen</div></div>
+  </div>
+  <div class="bar">
+    <div class="sheet">
+      <div class="k on"><i class="ph-bold ph-hand-pointing"></i></div>
+      <div class="k"><i class="ph-bold ph-hand-grabbing"></i></div>
+      <div class="k"><i class="ph-bold ph-shovel"></i></div>
+      <div class="k"><i class="ph-bold ph-arrow-u-up-left"></i></div>
+      <div class="k" style="border-right:0"><i class="ph-bold ph-eye"></i></div>
+    </div>
+    <div class="gap"></div>
+    <div class="sheet">
+      <div class="cc"><i class="ph-bold ph-star"></i>Liebling</div>
+      <div class="cc on"><i class="ph-bold ph-house-line"></i>Stadt</div>
+      <div class="cc"><i class="ph-bold ph-factory"></i>Herstellen</div>
+      <div class="cc"><i class="ph-bold ph-confetti"></i>Freizeit</div>
+      <div class="cc"><i class="ph-bold ph-flower-tulip"></i>Gestalten</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- D -->
+<div class="ui D" data-r="d" hidden>
+  <div class="top">
+    <div class="frame title">Fnymiland<small>am Dienstag, um zwanzig nach zwei</small></div>
+    <div class="frame stats">
+      <div class="st num"><i class="ph-fill ph-coins"></i>76,4 Mio.</div>
+      <div class="st num"><i class="ph-fill ph-users-three"></i>3.107</div>
+      <div class="st num"><i class="ph-fill ph-lightbulb"></i>1,58 Mio.</div>
+      <div class="st num"><i class="ph-fill ph-sparkle"></i>325</div>
+    </div>
+    <div class="grow"></div>
+    <div class="seal"><i class="ph-fill ph-package"></i></div><div class="seal"><i class="ph-fill ph-cat"></i></div><div class="seal"><i class="ph-bold ph-list"></i></div>
+  </div>
+  <div class="frame panel">
+    <h3>Die Sternwarte</h3><div class="orn">✦ ✦ ✦</div>
+    <p>Nachts öffnet sich die Kuppel, und das Fernrohr schaut heraus. Wer Glück hat, fängt eine Sternschnuppe.</p>
+    <div class="lines"><div class="ln"><span>Ideen</span><b>+50 %</b></div><div class="ln"><span>Strom</span><b>100</b></div><div class="ln"><span>Schönheit</span><b>90</b></div></div>
+    <div class="bb"><div class="b">Tragen</div><div class="b go">Ausbauen</div></div>
+  </div>
+  <div class="frame bar">
+    <div class="t on"><i class="ph-duotone ph-hand-pointing"></i></div><div class="t"><i class="ph-duotone ph-hand-grabbing"></i></div><div class="t"><i class="ph-duotone ph-shovel"></i></div><div class="t"><i class="ph-duotone ph-arrow-u-up-left"></i></div><div class="t"><i class="ph-duotone ph-eye"></i></div>
+    <div class="div"></div>
+    <div class="c"><i class="ph-fill ph-star"></i>Liebling</div><div class="c on"><i class="ph-fill ph-house-line"></i>Stadt</div><div class="c"><i class="ph-fill ph-factory"></i>Herstellen</div><div class="c"><i class="ph-fill ph-confetti"></i>Freizeit</div><div class="c"><i class="ph-fill ph-flower-tulip"></i>Gestalten</div>
+  </div>
+</div>
+
+<!-- E -->
+<div class="ui E" data-r="e" hidden>
+  <div class="top">
+    <div class="tile terra name">Fnymiland</div>
+    <div class="tile stat num"><i class="ph-fill ph-coins"></i>76,4 Mio.</div>
+    <div class="tile stat num"><i class="ph-fill ph-users-three"></i>3.107</div>
+    <div class="tile stat num"><i class="ph-fill ph-lightbulb"></i>1,58 Mio.</div>
+    <div class="tile stat num"><i class="ph-fill ph-sparkle"></i>325</div>
+    <div class="grow"></div>
+    <div class="tile cream sq"><i class="ph-fill ph-package"></i></div><div class="tile cream sq"><i class="ph-fill ph-cat"></i></div><div class="tile cream sq"><i class="ph-bold ph-list"></i></div>
+  </div>
+  <div class="tile panel">
+    <div class="hd"><h3>Sternwarte</h3><small>Wunderwerk, fertig</small></div>
+    <div class="bd">
+      <p>Nachts öffnet sich die Kuppel und das Fernrohr schaut heraus. Sternschnuppen kannst du antippen.</p>
+      <div class="chips"><div class="chip"><b>+50 %</b>Ideen</div><div class="chip"><b>100</b>Strom</div><div class="chip"><b>90</b>Schönheit</div></div>
+      <div class="bb"><div class="tile cream b">Tragen</div><div class="tile terra b">Ausbauen</div></div>
+    </div>
+  </div>
+  <div class="bar">
+    <div class="tile terra k"><i class="ph-fill ph-hand-pointing"></i></div><div class="tile cream k"><i class="ph-fill ph-hand-grabbing"></i></div><div class="tile cream k"><i class="ph-fill ph-shovel"></i></div><div class="tile cream k"><i class="ph-bold ph-arrow-u-up-left"></i></div><div class="tile cream k"><i class="ph-fill ph-eye"></i></div>
+    <div class="gap"></div>
+    <div class="tile kc"><i class="ph-fill ph-star"></i>Liebling</div><div class="tile terra kc"><i class="ph-fill ph-house-line"></i>Stadt</div><div class="tile kc"><i class="ph-fill ph-factory"></i>Herstellen</div><div class="tile kc"><i class="ph-fill ph-confetti"></i>Freizeit</div><div class="tile kc"><i class="ph-fill ph-flower-tulip"></i>Gestalten</div>
+  </div>
+</div>
+
+<!-- F -->
+<div class="ui F" data-r="f" hidden>
+  <div class="top">
+    <div class="brand">Fnymiland<small>14:20</small></div>
+    <div class="big num"><div class="v"><i class="ph-bold ph-coins"></i>76,4 Mio.</div><div class="l">Taler <b>+1,2 Tsd./s</b></div></div>
+    <div class="big num"><div class="v"><i class="ph-bold ph-users-three"></i>3.107</div><div class="l">Einwohner</div></div>
+    <div class="big num"><div class="v"><i class="ph-bold ph-lightbulb"></i>1,58 Mio.</div><div class="l">Ideen</div></div>
+    <div class="big num"><div class="v"><i class="ph-bold ph-sparkle"></i>325</div><div class="l">Sternstaub</div></div>
+    <div class="grow"></div>
+    <div class="icons"><div class="ic"><i class="ph ph-package"></i></div><div class="ic"><i class="ph ph-cat"></i></div><div class="ic"><i class="ph ph-list"></i></div></div>
+  </div>
+  <div class="panel">
+    <div class="kind">Wunderwerk</div>
+    <h3>Sternwarte</h3>
+    <p>Nachts öffnet sich die Kuppel und das Fernrohr schaut heraus. Sternschnuppen kannst du antippen.</p>
+    <div class="kpi"><div><b>+50 %</b>Ideen</div><div><b>100</b>Strom</div><div><b>90</b>Schönheit</div></div>
+    <div class="bb"><div class="b">Tragen</div><div class="b go">Ausbauen</div></div>
+  </div>
+  <div class="bar">
+    <div class="t on"><i class="ph ph-hand-pointing"></i></div><div class="t"><i class="ph ph-hand-grabbing"></i></div><div class="t"><i class="ph ph-shovel"></i></div><div class="t"><i class="ph ph-arrow-u-up-left"></i></div><div class="t"><i class="ph ph-eye"></i></div>
+    <div class="sep"></div>
+    <div class="c on"><i class="ph-bold ph-house-line"></i>Stadt</div><div class="c"><i class="ph ph-factory"></i>Herstellen</div><div class="c"><i class="ph ph-confetti"></i>Freizeit</div><div class="c"><i class="ph ph-flower-tulip"></i>Gestalten</div>
+  </div>
+</div>
+
+<!-- G -->
+<div class="ui G" data-r="g" hidden>
+  <div class="top">
+    <div class="felt red name">Fnymiland<small>Dienstag, 14:20</small></div>
+    <div class="felt stat num"><i class="ph-fill ph-coins"></i>76,4 Mio.</div>
+    <div class="felt stat num"><i class="ph-fill ph-users-three"></i>3.107</div>
+    <div class="felt stat num"><i class="ph-fill ph-lightbulb"></i>1,58 Mio.</div>
+    <div class="felt yellow stat num"><i class="ph-fill ph-sparkle"></i>325</div>
+    <div class="grow"></div>
+    <div class="btn"><i class="ph-fill ph-package"></i></div><div class="btn"><i class="ph-fill ph-cat"></i></div><div class="btn"><i class="ph-bold ph-list"></i></div>
+  </div>
+  <div class="felt cream panel">
+    <div class="felt patch">Wunderwerk</div>
+    <h3>Sternwarte</h3>
+    <p>Nachts öffnet sich die Kuppel und das Fernrohr schaut heraus. Sternschnuppen kannst du antippen.</p>
+    <div class="rows"><span><i class="ph-fill ph-lightbulb"></i>+50 % Ideen</span><span><i class="ph-fill ph-lightning"></i>100 Strom</span><span><i class="ph-fill ph-flower"></i>Schönheit 90</span><span><i class="ph-fill ph-shooting-star"></i>Sternschnuppen</span></div>
+    <div class="bb"><div class="felt cream b" style="background-color:#ecdcbc">Tragen</div><div class="felt b">Ausbauen</div></div>
+  </div>
+  <div class="bar">
+    <div class="felt tools"><div class="t on"><i class="ph-fill ph-hand-pointing"></i></div><div class="t"><i class="ph-fill ph-hand-grabbing"></i></div><div class="t"><i class="ph-fill ph-shovel"></i></div><div class="t"><i class="ph-bold ph-arrow-u-up-left"></i></div><div class="t"><i class="ph-fill ph-eye"></i></div></div>
+    <div class="felt red cats"><div class="c"><i class="ph-fill ph-star"></i>Liebling</div><div class="c on"><i class="ph-fill ph-house-line"></i>Stadt</div><div class="c"><i class="ph-fill ph-factory"></i>Herstellen</div><div class="c"><i class="ph-fill ph-confetti"></i>Freizeit</div><div class="c"><i class="ph-fill ph-flower-tulip"></i>Gestalten</div></div>
+  </div>
+</div>
+
+<script>
+  const r = new URLSearchParams(location.search).get('r') || 'a';
+  for (const el of document.querySelectorAll('.ui')) el.hidden = el.dataset.r !== r;
+  const f = document.getElementById('game');
+  f.addEventListener('load', () => {
+    const w = f.contentWindow, d = f.contentDocument;
+    const go = () => {
+      try { w.closeModal(); } catch (e) {}
+      const s = d.createElement('style');
+      s.textContent = r === 'jetzt' ? '' : '#hud,#toolbar,#goal,#panel,#minimap,#toast,#achv,#hint,#modal,#bench-badge,#fest-bar,.lanterns,[id*=lantern]{display:none!important}';
+      d.head.appendChild(s);
+      const sw = [...w.state.tiles].find(([k, t]) => t.b === 'sternwarte');
+      if (sw) { const [x, y] = sw[0].split(',').map(Number), c = w.iso(x + 0.5, y + 1.6); w.state.cam.x = c.x; w.state.cam.y = c.y - 10; w.state.cam.z = 2.6;
+        if (r === 'jetzt') w.openInfo(x, y); }
+    };
+    setTimeout(go, 6500);
+  });
+</script>
+</body>
+</html>

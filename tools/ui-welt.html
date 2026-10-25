@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oberfläche: aus der Welt</title>
+<!-- Entwurf (Nutzer 25.10.2026: „sieht trotzdem noch KI-generiert aus“). Richtung „Oberfläche aus der Welt“ über dem echten Spiel
+     (Testwelt, speichert nie): Symbole zeichnet das Spiel selbst (thumbRaw + eigenes Zeichenwerkzeug: cyl, poly, ellipse),
+     keine Kästen um die Zahlen, Rahmen als unregelmäßig geschnittene Platten mit Dicke (wie die Spielblöcke), Bauleiste als Grasinseln.
+     &nacht=1 für Nacht. Handy: schmales Fenster. -->
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Alegreya+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #6cc6e0; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+  .ui { position: fixed; inset: 0; pointer-events: none; font-family: 'Alegreya Sans', sans-serif; color: #4a3725; }
+  .ui > * { pointer-events: auto; }
+  .num { font-variant-numeric: tabular-nums; }
+  img[data-ic] { display: block; }
+  .slab { position: absolute; isolation: isolate; }
+  .slab > canvas.sc { position: absolute; z-index: -1; pointer-events: none; }
+
+  /* Schrift mit Umriss: steht frei über der Welt, ohne Kasten */
+  .ol { color: #fff7e6; text-shadow:
+        2px 0 0 #5a3d24, -2px 0 0 #5a3d24, 0 2px 0 #5a3d24, 0 -2px 0 #5a3d24,
+        1.5px 1.5px 0 #5a3d24, -1.5px 1.5px 0 #5a3d24, 1.5px -1.5px 0 #5a3d24, -1.5px -1.5px 0 #5a3d24,
+        0 4px 0 rgba(70,45,25,.55), 0 6px 10px rgba(30,20,10,.25); }
+
+  /* ---------- oben ---------- */
+  .top { position: absolute; top: 12px; left: 18px; right: 16px; display: flex; align-items: center; gap: 26px; }
+  .town b { display: block; font-family: 'Alegreya', serif; font-weight: 800; font-size: 26px; line-height: 1; letter-spacing: .01em; }
+  .town small { display: block; font-size: 14px; font-weight: 700; margin-top: 3px; }
+  .stats { display: flex; gap: 22px; align-items: center; }
+  .st { display: flex; align-items: flex-end; gap: 6px; font-size: 21px; font-weight: 800; white-space: nowrap; }
+  .st img { height: 38px; margin-bottom: -4px; filter: drop-shadow(0 3px 2px rgba(40,30,20,.25)); }
+  .st small { font-size: 13px; font-weight: 700; margin-left: 2px; opacity: .95; }
+  .grow { flex: 1; }
+  .knobs { display: flex; gap: 14px; align-items: flex-end; }
+  .knob img { height: 42px; filter: drop-shadow(0 3px 2px rgba(40,30,20,.25)); transition: transform .18s cubic-bezier(.3,1.6,.5,1); }
+  @media (hover: hover) { .knob:hover img { transform: translateY(-3px); } }
+
+  /* ---------- Ziel ---------- */
+  .goal { left: 16px; top: 84px; width: 268px; padding: 13px 15px 12px; }
+  .goal h4 { margin: 0; font-family: 'Alegreya', serif; font-size: 17px; font-weight: 800; display: flex; justify-content: space-between; align-items: baseline; }
+  .goal h4 span { font-family: 'Alegreya Sans'; font-size: 13px; font-weight: 700; color: #8a6a48; }
+  .goal .sub { font-size: 13px; color: #8a6a48; margin: 1px 0 6px; }
+  .task { display: flex; align-items: center; gap: 9px; padding: 6px 0; border-top: 1.5px dotted rgba(138,106,72,.35); }
+  .task img { width: 38px; height: 34px; object-fit: contain; object-position: center bottom; flex: none; }
+  .task > div:not(.btn) { flex: 1; font-size: 14.5px; font-weight: 800; line-height: 1.15; }
+  .task small { display: block; font-weight: 500; font-size: 12.5px; color: #8a6a48; }
+  .btn { position: relative; isolation: isolate; display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px 6px; font-weight: 800; font-size: 14px; white-space: nowrap; }
+  .btn > canvas.sc { position: absolute; z-index: -1; pointer-events: none; }
+  .btn.red { color: #fff4e4; }
+  .btn img { height: 22px; }
+
+  /* ---------- Infofenster ---------- */
+  .panel { right: 18px; top: 150px; width: 296px; padding: 54px 18px 16px; }
+  .panel .hero { position: absolute; left: 50%; top: -92px; transform: translateX(-50%); height: 138px; filter: drop-shadow(0 4px 3px rgba(40,30,20,.25)); }
+  .panel .kind { font-size: 12.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #a0603a; }
+  .panel h3 { margin: 0 0 4px; font-family: 'Alegreya', serif; font-size: 25px; font-weight: 800; line-height: 1.05; }
+  .panel p { margin: 0 0 10px; font-size: 14.5px; line-height: 1.38; color: #5e4a36; }
+  .facts { margin: 0 0 14px; }
+  .fact { display: flex; align-items: center; gap: 9px; padding: 3px 0; font-size: 14.5px; }
+  .fact img { width: 30px; height: 28px; object-fit: contain; object-position: center bottom; }
+  .fact b { font-size: 16px; min-width: 52px; }
+  .bb { display: flex; gap: 10px; }
+  .bb .btn { padding: 8px 15px 9px; font-size: 15px; }
+
+  /* ---------- Bauleiste: zwei Grasinseln ---------- */
+  .bar { position: absolute; left: 0; right: 0; bottom: 26px; display: flex; justify-content: center; align-items: flex-end; gap: 14px; pointer-events: none; }
+  .isle { position: relative; isolation: isolate; display: flex; gap: 2px; padding: 4px 10px 7px; pointer-events: auto; }
+  .isle > canvas.sc { position: absolute; z-index: -1; pointer-events: none; }
+  .it { position: relative; width: 66px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 74px; }
+  .it img { height: 46px; max-width: 60px; object-fit: contain; object-position: center bottom; position: relative; z-index: 1; filter: drop-shadow(0 3px 2px rgba(30,50,20,.28)); }
+  .it.tool img { height: 40px; }
+  .it span { font-size: 12.5px; font-weight: 800; color: #2f4a20; margin-top: 3px; white-space: nowrap; }
+  .it.on::before { content: ''; position: absolute; left: 50%; bottom: 17px; width: 54px; height: 54px; transform: translateX(-50%) scaleY(.5) rotate(45deg);
+                   background: rgba(255,250,215,.75); border-radius: 4px; }
+  .it.on img { transform: translateY(-4px); }
+  .ui.nacht .it span { color: #eef3d6; }
+  .t1 .it span { color: #4a2e18; } .t1 .goal .sub, .t1 .task small, .t1 .goal h4 span { color: #7a5230; } .t1 .task { border-top-color: rgba(110,70,40,.3); }
+  .t2 .it span { color: #3a3128; text-shadow: 0 0 3px #f4efe4, 0 0 2px #f4efe4, 0 0 1px #f4efe4; } .t2 .panel .kind { color: #b0583a; }
+  .t3 .it span { color: #7a5226; } .t3 .panel .kind { color: #2f8fa8; }
+  .t4 .it span { color: #fff3dc; text-shadow: 0 1px 2px rgba(40,25,10,.7); }
+  .t5 { color: #3b4763; } .t5 .it span { color: #3b4763; } .t5 .goal .sub, .t5 .task small, .t5 .goal h4 span { color: #74819c; } .t5 .panel p { color: #4c5874; }
+  .t5 .panel .kind { color: #5b86c9; } .t5 .task { border-top-color: rgba(90,110,150,.25); } .t5 .btn:not(.red) { color: #3b4763; }
+
+  /* ---------- Handy ---------- */
+  @media (max-width: 600px) {
+    .top { top: 10px; left: 12px; right: 10px; gap: 14px; flex-wrap: wrap; row-gap: 6px; }
+    .town b { font-size: 21px; } .town small { font-size: 12.5px; }
+    .stats { order: 3; width: 100%; gap: 14px; }
+    .st { font-size: 17px; } .st img { height: 30px; } .st small, .hide-s { display: none !important; }
+    .knob img { height: 36px; }
+    .goal { top: 104px; left: 10px; width: 236px; padding: 10px 12px 9px; }
+    .goal .task + .task { display: none; }
+    .panel { left: 10px; right: 10px; top: auto; bottom: 112px; width: auto; padding: 14px 14px 13px 118px; }
+    .panel .hero { left: 6px; top: -38px; transform: none; height: 116px; }
+    .panel h3 { font-size: 21px; } .panel p { font-size: 13px; margin-bottom: 6px; }
+    .facts { display: flex; flex-wrap: wrap; gap: 2px 12px; margin-bottom: 9px; } .fact b { white-space: nowrap; } .fact { font-size: 12.5px; gap: 4px; } .fact img { width: 22px; height: 20px; } .fact b { min-width: 0; font-size: 13.5px; }
+    .bb .btn { padding: 6px 11px 7px; font-size: 13.5px; }
+    .bar { gap: 6px; bottom: 12px; }
+    .isle { padding: 3px 5px 6px; gap: 0; }
+    .it { width: 50px; height: 64px; } .it img { height: 38px; max-width: 46px; } .it.tool img { height: 33px; }
+    .it span { font-size: 11px; } .it.on::before { width: 44px; height: 44px; bottom: 14px; }
+  }
+</style>
+</head>
+<body>
+<iframe id="game" src="../index.html?welt=og&n=ui3"></iframe>
+<div class="ui" id="ui">
+  <div class="top">
+    <div class="town ol"><b>Fnymiland</b><small>Dienstag, 14:20</small></div>
+    <div class="stats ol">
+      <div class="st num"><img data-ic="taler" alt="">76,4 Mio.<small>+412/s</small></div>
+      <div class="st num"><img data-ic="haus2" alt="">3.107</div>
+      <div class="st num"><img data-ic="bibliothek" alt="">1,58 Mio.</div>
+      <div class="st num hide-s"><img data-ic="kristall" alt="">325</div>
+    </div>
+    <div class="grow"></div>
+    <div class="knobs">
+      <div class="knob hide-s" aria-label="Lager"><img data-ic="kiste" alt=""></div>
+      <div class="knob" aria-label="Du"><img data-ic="katze" alt=""></div>
+      <div class="knob hide-s" aria-label="Online"><img data-ic="bank" alt=""></div>
+      <div class="knob" aria-label="Hilfe und Einstellungen"><img data-ic="wegweiser" alt=""></div>
+    </div>
+  </div>
+
+  <div class="slab goal" data-slab="paper" data-seed="3">
+    <h4>Königliche Inselperle <span>22 / 22</span></h4>
+    <div class="sub">Nächster Jahrmarkt in 11 Minuten</div>
+    <div class="task"><img data-ic="rathaus" alt=""><div>Ein Erlass wartet<small>im Schloss wählen</small></div><div class="btn red" data-slab="red" data-seed="7">Los</div></div>
+    <div class="task"><img data-ic="schloss" alt=""><div>Dein Schloss steht<small>antippen und hinfliegen</small></div></div>
+    <div class="task"><img data-ic="schmetterling" alt=""><div>Schmetterlingsinsel<small>Boot losschicken</small></div><div class="btn red" data-slab="red" data-seed="11">Los</div></div>
+  </div>
+
+  <div class="slab panel" data-slab="paper" data-seed="5">
+    <img class="hero" data-ic="sternwarte" alt="">
+    <div class="kind">Wunderwerk</div>
+    <h3>Sternwarte</h3>
+    <p>Nachts öffnet sich die Kuppel und das Fernrohr schaut heraus. Sternschnuppen kannst du antippen.</p>
+    <div class="facts">
+      <div class="fact"><img data-ic="bibliothek" alt=""><b>+50 %</b>Ideen</div>
+      <div class="fact"><img data-ic="solarfeld" alt=""><b>100</b>Strom</div>
+      <div class="fact"><img data-ic="blumen" alt=""><b>90</b>Schönheit</div>
+    </div>
+    <div class="bb"><div class="btn" data-slab="wood" data-seed="13"><img data-ic="haken" alt="">Tragen</div><div class="btn red" data-slab="red" data-seed="17">Ausbauen</div></div>
+  </div>
+
+  <div class="bar">
+    <div class="isle" data-slab="grass" data-seed="21">
+      <div class="it tool on"><img data-ic="lupe" alt=""><span>Ansehen</span></div>
+      <div class="it tool hide-s"><img data-ic="weg" alt=""><span>Wege</span></div>
+      <div class="it tool"><img data-ic="haken" alt=""><span>Tragen</span></div>
+      <div class="it tool"><img data-ic="undo" alt=""><span>Zurück</span></div>
+      <div class="it tool hide-s"><img data-ic="glaskugel" alt=""><span>Durchsicht</span></div>
+    </div>
+    <div class="isle" data-slab="grass" data-seed="29">
+      <div class="it hide-s"><img data-ic="rosen" alt=""><span>Liebling</span></div>
+      <div class="it"><img data-ic="haus3" alt=""><span>Stadt</span></div>
+      <div class="it"><img data-ic="baecker" alt=""><span>Herstellen</span></div>
+      <div class="it"><img data-ic="karussell" alt=""><span>Freizeit</span></div>
+      <div class="it"><img data-ic="blumen" alt=""><span>Gestalten</span></div>
+    </div>
+  </div>
+</div>
+<script>
+  const q = new URLSearchParams(location.search), NACHT = q.get('nacht') === '1';
+  const ui = document.getElementById('ui');
+  if (NACHT) ui.classList.add('nacht');
+
+  // ---------- Platten: unregelmäßig geschnitten, mit Dicke unten (wie die Blöcke im Spiel), ohne Umriss ----------
+  // ?v=0 Papier + Grasinseln (erster Entwurf) | 1 Holzsteg | 2 Pflaster | 3 Strand | 4 Hecke | 5 Wolken. Rollen im Markup: paper, wood, red, grass
+  const V = +(q.get('v') || 0);
+  ui.classList.add('t' + V);
+  const THEMES = {
+    0: { paper: { top: '#f7eedb', side: '#d8c096', depth: 6, r: 16, j: 1.7 },
+         wood:  { top: '#e6cfa3', side: '#b48c5c', depth: 4, r: 9, j: 1.1 },
+         red:   { top: '#c9673f', side: '#93432a', depth: 4, r: 9, j: 1.1 },
+         grass: { top: '#a3d672', side: '#b48a58', depth: 14, r: 26, j: 7, step: 34, side2: '#9a7247', deco: 'halme' } },
+    1: { paper: { top: '#ecd3a8', side: '#a9794a', depth: 7, r: 7, j: 1.2, deco: 'bretterQuer' },
+         wood:  { top: '#e3c896', side: '#a9794a', depth: 4, r: 5, j: .8, deco: 'bretterQuer' },
+         red:   { top: '#c55a3c', side: '#8c3a26', depth: 4, r: 5, j: .8, deco: 'bretterQuer' },
+         grass: { top: '#d9b07a', side: '#9a6a3e', depth: 10, r: 6, j: 1.5, step: 24, deco: 'steg' } },
+    2: { paper: { top: '#eee9dd', side: '#b4ab98', depth: 7, r: 10, j: 3, step: 12, deco: 'platten' },
+         wood:  { top: '#dcd4c3', side: '#a39a86', depth: 4, r: 7, j: 1.6, step: 10 },
+         red:   { top: '#c06a4c', side: '#8a4632', depth: 4, r: 7, j: 1.6, step: 10 },
+         grass: { top: '#9e958a', side: '#7c7468', depth: 9, r: 14, j: 3, step: 14, deco: 'pflaster' } },
+    3: { paper: { top: '#fdf6e6', side: '#8fd2e2', depth: 6, r: 18, j: 2.2 },
+         wood:  { top: '#f2e2bd', side: '#cdb07a', depth: 4, r: 10, j: 1.2 },
+         red:   { top: '#ec7b5c', side: '#b8513a', depth: 4, r: 10, j: 1.2 },
+         grass: { top: '#f3e2b2', side: '#d6bb84', depth: 5, r: 30, j: 9, step: 30, pad: 26, deco: 'strand' } },
+    4: { paper: { top: '#f8f0dc', side: '#4f8a3c', depth: 6, r: 18, j: 1.5, pad: 18, deco: 'hecke' },
+         wood:  { top: '#e6cfa3', side: '#b48c5c', depth: 4, r: 9, j: 1.1 },
+         red:   { top: '#c9673f', side: '#93432a', depth: 4, r: 9, j: 1.1 },
+         grass: { top: '#a77c52', side: '#4f8a3c', depth: 6, r: 22, j: 2, pad: 20, deco: 'hecke' } },
+    5: { paper: { top: '#ffffff', side: '#c7d4e8', depth: 7, r: 20, j: 2, step: 26, pad: 26, deco: 'wolke' },
+         wood:  { top: '#e3ecf8', side: '#b3c3dd', depth: 4, r: 12, j: 1, step: 14, pad: 14, deco: 'wolke', bump: 5 },
+         red:   { top: '#6b95d8', side: '#46699f', depth: 4, r: 12, j: 1, step: 14, pad: 14, deco: 'wolke', bump: 5 },
+         grass: { top: '#ffffff', side: '#c3d0e6', depth: 9, r: 26, j: 3, step: 30, pad: 30, deco: 'wolke' } },
+  };
+  const NIGHT_LOOK = { paper: { top: '#efe3c8', side: '#bfa67c' }, grass: { top: '#7fb15e', side: '#8c6c48', side2: '#755838' } };
+  const rnd = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  function outline(w, h, r, j, R, step = 18) {                       // Umriss eines abgerundeten Rechtecks, alle ~18 px ein Punkt, leicht verschoben
+    const pts = [], seg = (x0, y0, x1, y1) => { const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / step));
+      for (let i = 0; i < n; i++) { const t = i / n; pts.push([x0 + (x1 - x0) * t + (R() - .5) * j, y0 + (y1 - y0) * t + (R() - .5) * j * 1.4]); } };
+    const arc = (cx, cy, a0) => { for (let i = 0; i < 4; i++) { const a = a0 + i * Math.PI / 8, rr = r + (R() - .5) * j; pts.push([cx + Math.cos(a) * rr, cy + Math.sin(a) * rr]); } };
+    seg(r, 0, w - r, 0); arc(w - r, r, -Math.PI / 2); seg(w, r, w, h - r); arc(w - r, h - r, 0);
+    seg(w - r, h, r, h); arc(r, h - r, Math.PI / 2); seg(0, h - r, 0, r); arc(r, r, Math.PI);
+    return pts;
+  }
+  function path(x, pts, dx, dy) {                         // weich durch die Punkte (Mittelpunkte als Stützstellen)
+    x.beginPath();
+    const m = (a, b) => [(a[0] + b[0]) / 2 + dx, (a[1] + b[1]) / 2 + dy], n = pts.length;
+    let p = m(pts[n - 1], pts[0]); x.moveTo(p[0], p[1]);
+    for (let i = 0; i < n; i++) { const c = pts[i], e = m(c, pts[(i + 1) % n]); x.quadraticCurveTo(c[0] + dx, c[1] + dy, e[0], e[1]); }
+    x.closePath();
+  }
+  const mixC = (a, b, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); const A = p(a), B = p(b);
+    return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join(''); };
+  const circ = (x, cx, cy, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill(); };
+  // Muster auf der Oberseite (schon auf die Form zugeschnitten)
+  const DECO_TOP = {
+    halme(x, w, h, R) { x.strokeStyle = NACHT ? '#6a9a4c' : '#86c25a'; x.lineWidth = 1.6; x.lineCap = 'round';
+      for (let i = 0; i < w / 26; i++) { const gx = 14 + R() * (w - 28), gy = h - 5 - R() * 6; x.beginPath(); x.moveTo(gx, gy); x.lineTo(gx - 1.5, gy - 4 - R() * 3); x.moveTo(gx + 2.5, gy); x.lineTo(gx + 3.5, gy - 3 - R() * 3); x.stroke(); } },
+    bretterQuer(x, w, h, R, L) {                           // waagrechte Bretter, leicht verschiedene Töne, Fugen und Nägel
+      const bh = h > 60 ? 26 : h / 2; let y = -2, i = 0;
+      while (y < h + 4) { const t = (R() - .5) * .08; x.fillStyle = mixC(L.top, t > 0 ? '#ffffff' : '#000000', Math.abs(t)); x.fillRect(-4, y, w + 8, bh);
+        x.fillStyle = mixC(L.top, '#000000', .2); x.fillRect(-4, y + bh - 1.4, w + 8, 1.4);
+        if (h > 60) { x.fillStyle = mixC(L.top, '#000000', .35); circ(x, 8 + R() * 3, y + bh / 2, 1.3, x.fillStyle); circ(x, w - 9 - R() * 3, y + bh / 2, 1.3, x.fillStyle); }
+        y += bh; i++; } },
+    steg(x, w, h, R, L) {                                   // Steg: Bretter quer zur Laufrichtung
+      let xx = -2; while (xx < w + 4) { const bw = 15 + R() * 4, t = (R() - .5) * .12; x.fillStyle = mixC(L.top, t > 0 ? '#ffffff' : '#000000', Math.abs(t)); x.fillRect(xx, -4, bw, h + 8);
+        x.fillStyle = mixC(L.top, '#000000', .28); x.fillRect(xx + bw - 1.5, -4, 1.5, h + 8);
+        circ(x, xx + bw / 2, 5, 1.1, mixC(L.top, '#000000', .4)); circ(x, xx + bw / 2, h - 5, 1.1, mixC(L.top, '#000000', .4)); xx += bw; } },
+    platten(x, w, h, R, L) {                                // große Steinplatten mit Fugen
+      const cs = 92, nx = Math.ceil(w / cs) + 1, ny = Math.ceil(h / cs) + 1, P = [];
+      for (let j = 0; j <= ny; j++) { P[j] = []; for (let i = 0; i <= nx; i++) P[j][i] = [i * w / nx + (i && i < nx ? (R() - .5) * 26 : 0), j * h / ny + (j && j < ny ? (R() - .5) * 20 : 0)]; }
+      for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const t = (R() - .5) * .07; x.fillStyle = mixC(L.top, t > 0 ? '#ffffff' : '#7a7060', Math.abs(t));
+        x.beginPath(); x.moveTo(...P[j][i]); x.lineTo(...P[j][i + 1]); x.lineTo(...P[j + 1][i + 1]); x.lineTo(...P[j + 1][i]); x.closePath(); x.fill();
+        x.strokeStyle = mixC(L.top, '#7a7060', .16); x.lineWidth = 1.4; x.stroke(); } },
+    pflaster(x, w, h, R, L) {                               // Pflaster wie die Wege im Spiel: einzelne gerundete Steine
+      for (let y = 2, row = 0; y < h; y += 14, row++) for (let xx = (row % 2 ? -10 : -2); xx < w; ) { const sw = 17 + R() * 9;
+        x.fillStyle = mixC('#e6dccb', ['#ffffff', '#c9a58a', '#b9b0a0'][Math.floor(R() * 3)], R() * .35);
+        x.beginPath(); x.roundRect(xx + 1.2, y + 1.2, sw - 2.4, 11.6, 4); x.fill(); xx += sw; } },
+    strand(x, w, h, R) {                                    // Muscheln und Kiesel
+      for (let i = 0; i < w / 40; i++) circ(x, 10 + R() * (w - 20), h - 4 - R() * 8, 1.5 + R(), ['#fff6ea', '#e8c9a8', '#d9cfc0'][i % 3]); },
+  };
+  function slab(el) {
+    const role = el.dataset.slab, base = THEMES[V][role], L = { pad: 12, ...base, ...(NACHT && V === 0 ? NIGHT_LOOK[role] || {} : {}) }, R = rnd(+el.dataset.seed || 1);
+    let c = el.querySelector(':scope > canvas.sc');
+    if (!c) { c = document.createElement('canvas'); c.className = 'sc'; el.prepend(c); }
+    const w = el.offsetWidth, h = el.offsetHeight, pad = L.pad, dpr = devicePixelRatio || 1;
+    c.style.left = c.style.top = -pad + 'px'; c.style.width = (w + 2 * pad) + 'px'; c.style.height = (h + 2 * pad + L.depth) + 'px';
+    c.width = (w + 2 * pad) * dpr; c.height = (h + 2 * pad + L.depth) * dpr;
+    const x = c.getContext('2d'); x.scale(dpr, dpr); x.translate(pad, pad);
+    const pts = outline(w, h, Math.min(L.r, h / 2.2), L.j, R, L.step);
+    const shadow = (dy, blur, a) => { x.save(); x.filter = `blur(${blur}px)`; path(x, pts, 0, dy); x.fillStyle = `rgba(40,30,20,${a})`; x.fill(); x.restore(); };
+
+    if (L.deco === 'wolke') {                              // Wolke: Buckel rundum, Unterseite bläulich
+      const bump = L.bump || 13, B = pts.map(p => [p[0], p[1], bump * (.75 + R() * .5)]);
+      x.save(); x.filter = 'blur(6px)'; x.fillStyle = 'rgba(50,70,110,.18)'; for (const [px, py, r] of B) { x.beginPath(); x.arc(px, py + L.depth + 5, r, 0, 7); x.fill(); } x.restore();
+      for (const [px, py, r] of B) circ(x, px, py + L.depth, r, L.side);
+      path(x, pts, 0, L.depth); x.fillStyle = L.side; x.fill();
+      for (const [px, py, r] of B) circ(x, px, py, r, L.top);
+      path(x, pts, 0, 0); x.fillStyle = L.top; x.fill();
+      for (const [px, py, r] of B) if (py < h / 2) circ(x, px - r * .25, py - r * .3, r * .45, mixC(L.top, '#ffffff', .5));
+      return;
+    }
+    if (L.deco === 'hecke') {                              // Hecke rundum (wie die Hecken im Spiel), innen Papier bzw. Beet
+      shadow(L.depth + 6, 6, .2);
+      const B = pts.map(p => [p[0], p[1], 9 + R() * 4]);
+      for (const [px, py, r] of B) circ(x, px, py + 6, r, '#3f7430');
+      for (const [px, py, r] of B) circ(x, px, py, r, '#5c9c43');
+      for (const [px, py, r] of B) circ(x, px - 2, py - 3, r * .55, '#79b85a');
+      const ip = outline(w - 22, h - 22, Math.max(4, Math.min(L.r, h / 2.2) - 8), 1, R, 20).map(p => [p[0] + 11, p[1] + 11]);
+      path(x, ip, 0, 0); x.fillStyle = L.top; x.fill();
+      if (role === 'grass') { x.save(); path(x, ip, 0, 0); x.clip(); for (let i = 0; i < w / 8; i++) circ(x, R() * w, R() * h, 1 + R() * 1.4, mixC(L.top, '#000000', .18)); x.restore(); }
+      return;
+    }
+    if (L.deco === 'strand') {                             // Sandinsel im Wasser, mit Schaumkante
+      const wp = outline(w + 34, h + 24, Math.min(L.r + 14, (h + 24) / 2.2), L.j, R, L.step).map(p => [p[0] - 17, p[1] - 12]);
+      path(x, wp, 0, 0); x.fillStyle = '#7fd0e4'; x.fill();
+      x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 1.5; x.setLineDash([7, 9]); path(x, outline(w + 18, h + 13, Math.min(L.r + 8, (h + 13) / 2.2), 3, R, 26).map(p => [p[0] - 9, p[1] - 6]), 0, 0); x.stroke(); x.setLineDash([]);
+      path(x, pts, 0, L.depth + 1); x.fillStyle = 'rgba(255,255,255,.85)'; x.fill();
+      path(x, pts, 0, L.depth); x.fillStyle = L.side; x.fill();
+      path(x, pts, 0, 0); x.fillStyle = L.top; x.fill();
+      x.save(); path(x, pts, 0, 0); x.clip(); DECO_TOP.strand(x, w, h, R); x.restore();
+      return;
+    }
+    shadow(L.depth + 3, 5, .2);
+    if (L.deco === 'steg') for (let px = 30; px < w - 10; px += 88 + R() * 20) { x.fillStyle = '#6e4a2c'; x.fillRect(px, h - 4, 7, L.depth + 12); x.fillStyle = '#5a3c23'; x.fillRect(px + 4, h - 4, 3, L.depth + 12); }
+    path(x, pts, 0, L.depth); x.fillStyle = L.side; x.fill();
+    if (L.side2) {                                         // Grasinsel: rechte Hälfte der Erdkante dunkler (Licht von links, wie im Spiel)
+      x.save(); x.beginPath(); x.rect(w * .5, 0, w, h + L.depth + 4); x.clip(); path(x, pts, 0, L.depth); x.fillStyle = L.side2; x.fill(); x.restore();
+      for (let i = 0; i < w / 60; i++) { const sx = 20 + R() * (w - 40), sy = h + 3 + R() * (L.depth - 6);
+        x.fillStyle = NACHT ? '#a49a8a' : '#cbbfa8'; x.beginPath(); x.ellipse(sx, sy, 3 + R() * 2, 2 + R(), 0, 0, Math.PI * 2); x.fill(); }
+    }
+    path(x, pts, 0, 0); x.fillStyle = L.top; x.fill();
+    if (L.deco && DECO_TOP[L.deco]) { x.save(); path(x, pts, 0, 0); x.clip(); DECO_TOP[L.deco](x, w, h, R, L); x.restore(); }
+  }
+  const drawSlabs = () => document.querySelectorAll('[data-slab]').forEach(slab);
+
+  // ---------- Symbole: zeichnet das Spiel selbst (läuft im Spiel-Fenster, nutzt dessen g, cyl, poly, ellipse, shade, thumbRaw) ----------
+  function ICON_KIT() {
+    const box = (cx, cy, a, b, h, col) => {                // Kiste: (cx, cy) = Mitte der Grundfläche
+      poly([[cx - a, cy], [cx, cy + b], [cx, cy + b - h], [cx - a, cy - h]], col);
+      poly([[cx, cy + b], [cx + a, cy], [cx + a, cy - h], [cx, cy + b - h]], shade(col, LIGHT.side));
+      diamond(cx, cy - h, a, b, shade(col, 0.12));
+    };
+    const line = (pts, col, w) => { g.strokeStyle = col; g.lineWidth = w; g.lineCap = g.lineJoin = 'round'; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (const p of pts.slice(1)) g.lineTo(p[0], p[1]); g.stroke(); };
+    const crate = (cx, cy, a, b, h) => {
+      const wd = '#c99a5e', dk = shade(wd, -0.28);
+      box(cx, cy, a, b, h, wd);
+      line([[cx - a, cy - h / 2], [cx, cy + b - h / 2]], dk, 1.2); line([[cx, cy + b - h / 2], [cx + a, cy - h / 2]], shade(dk, -0.1), 1.2);
+      line([[cx - a * .5, cy + b * .5 - h + 1], [cx - a * .5, cy + b * .5 - 1]], dk, 1); line([[cx + a * .5, cy + b * .5 - h + 1], [cx + a * .5, cy + b * .5 - 1]], shade(dk, -0.1), 1);
+      line([[cx - a + 3, cy - h], [cx, cy - h - b + 1.5], [cx + a - 3, cy - h]], shade(wd, -0.12), 1);
+    };
+    const groundShadow = (cx, cy, rx) => ellipse(cx, cy, rx, rx / 2.4, 'rgba(40,50,70,0.18)');
+    const DRAW = {
+      taler() {
+        const gold = '#f1bf45';
+        groundShadow(32, 56, 19);
+        const coin = (x, y) => { cyl(x, y, 15, 7.5, 4.2, gold); ellipse(x, y - 4.2, 10.5, 5.2, shade(gold, 0.2)); ellipse(x, y - 4.2, 8, 4, shade(gold, 0.04)); };
+        coin(29, 55); coin(33, 50.2); coin(30, 45.4); coin(32.5, 40.6);
+      },
+      kiste() { groundShadow(32, 55, 20); crate(32, 47, 17, 8.5, 17); },
+      haken() {
+        groundShadow(32, 58, 13);
+        line([[32, 6], [32, 22]], '#6b4f3a', 1.6);
+        line([[32, 22], [24, 29]], '#6b4f3a', 1.2); line([[32, 22], [40, 29]], '#6b4f3a', 1.2);
+        g.strokeStyle = '#8a8f99'; g.lineWidth = 2; g.beginPath(); g.arc(32, 9, 3, Math.PI * .1, Math.PI * 1.9); g.stroke();
+        crate(32, 42, 13, 6.5, 13);
+      },
+      lupe() {
+        groundShadow(34, 57, 16);
+        line([[39, 39], [50, 52]], '#7a4f2e', 7); line([[39.5, 38.5], [50, 50.5]], '#a5734a', 2.4);
+        ellipse(30, 30, 14, 14, '#7f8b96'); ellipse(30, 30, 11, 11, '#cfeef6');
+        g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.ellipse(25.5, 25.5, 4.2, 2.4, -0.8, 0, Math.PI * 2); g.fill();
+      },
+      undo() {
+        groundShadow(32, 56, 16);
+        const arcPath = () => { g.beginPath(); g.arc(33, 34, 12, Math.PI * .95, Math.PI * 2.25); };
+        g.lineCap = 'round'; g.strokeStyle = '#7a4f2e'; g.lineWidth = 8; arcPath(); g.stroke();
+        g.strokeStyle = '#b37b4c'; g.lineWidth = 3; g.beginPath(); g.arc(33, 33, 12, Math.PI * 1.05, Math.PI * 1.9); g.stroke();
+        poly([[13, 30], [29, 30], [21, 42]], '#7a4f2e'); poly([[16, 31], [26, 31], [21, 38]], '#9a6a40');
+      },
+      wegweiser() {                                       // Hilfe: Wegweiser mit zwei Brettern
+        groundShadow(32, 58, 12);
+        cyl(32, 58, 3, 1.5, 46, '#8a5e38');
+        const board = (y, dir, col) => { const x0 = 32, x1 = 32 + dir * 22, t = dir * 5;
+          poly([[x0 - dir * 3, y], [x1, y + t * .5], [x1 + dir * 6, y + t * .5 + 5], [x1, y + t * .5 + 10], [x0 - dir * 3, y + 10]], col);
+          poly([[x0 - dir * 3, y + 10], [x1, y + t * .5 + 10], [x1, y + t * .5 + 12], [x0 - dir * 3, y + 12]], shade(col, -0.3)); };
+        board(12, 1, '#d9a464'); board(28, -1, '#c98f52');
+      },
+      bretter() {
+        groundShadow(32, 56, 19);
+        const wd = '#cfa168';
+        box(32, 51, 17, 8.5, 4.5, shade(wd, -0.06)); box(31, 44, 17, 8.5, 4.5, wd); box(33, 37, 17, 8.5, 4.5, shade(wd, 0.05));
+      },
+    };
+    function trim(src, pad = 2) {                           // leeren Rand abschneiden, damit alle Symbole gleich groß wirken
+      const x = src.getContext('2d'), { width: W, height: H } = src, d = x.getImageData(0, 0, W, H).data;
+      let x0 = W, y0 = H, x1 = -1, y1 = -1;
+      for (let y = 0; y < H; y++) for (let i = 0; i < W; i++) if (d[(y * W + i) * 4 + 3] > 12) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 < 0) return src;
+      const c = document.createElement('canvas'); c.width = x1 - x0 + 1 + 2 * pad; c.height = y1 - y0 + 1 + 2 * pad;
+      c.getContext('2d').drawImage(src, x0, y0, c.width - 2 * pad, c.height - 2 * pad, pad, pad, c.width - 2 * pad, c.height - 2 * pad);
+      return c;
+    }
+    window.__uiwIcon = (name, scale) => {
+      let c;
+      if (DRAW[name]) {
+        c = document.createElement('canvas'); c.width = c.height = 64 * scale;
+        const x = c.getContext('2d'); x.scale(scale, scale);
+        const prev = g, fog = FOG; g = x; FOG = false;
+        try { DRAW[name](); } finally { g = prev; FOG = fog; }
+      } else {
+        const [type, lvl] = name.split(':');
+        if (type === 'weg') c = thumbRaw(type, 1, null, scale);   // Weg: das Feld selbst ist das Bild
+        else {                                                   // Gebäude ohne Bodenkachel (thumbRaw legt immer eine darunter)
+          const big = isBig(type), z = big ? 0.8 : 1.3;
+          c = document.createElement('canvas'); c.width = 280 * scale; c.height = 260 * scale;
+          const x = c.getContext('2d'); x.scale(scale, scale);
+          const prev = g, fog = FOG; g = x; FOG = false;
+          try { drawObject(type, 140, 200, z, 0, 3, 7, +lvl || 1, null); } finally { g = prev; FOG = fog; }
+        }
+      }
+      return trim(c).toDataURL();
+    };
+  }
+  const ICON_SRC = { haus2: 'haus:2', haus3: 'haus:4', laterne: 'laterne', kristall: 'kristall', katze: 'sd_katze', bank: 'freundesbank',
+    rathaus: 'rathaus', schloss: 'fz_schloss', schmetterling: 'schmetterlingsgarten', sternwarte: 'sternwarte', windrad: 'windrad',
+    blumen: 'blumen', weg: 'weg', glaskugel: 'glaskugel', rosen: 'rosenbogen', baecker: 'baecker', karussell: 'fz_karussell' };
+
+  const f = document.getElementById('game');
+  {
+    const wait = setInterval(() => {
+      const w = f.contentWindow;
+      let ok = false; try { ok = w.eval('typeof thumbRaw === "function" && typeof state === "object" && state.tiles && state.tiles.size > 0'); } catch (e) {}
+      if (!ok) return;
+      clearInterval(wait);
+      const d = f.contentDocument, s = d.createElement('style');
+      s.textContent = '#hud,#toolbar,#goal,#panel,#minimap,#toast,#achv,#hint,#modal,#bench-badge,#rot-btn{display:none!important}';
+      d.head.appendChild(s);
+      w.eval('(' + ICON_KIT.toString() + ')()');
+      const cache = {};
+      for (const img of document.querySelectorAll('img[data-ic]')) {
+        const n = img.dataset.ic, src = ICON_SRC[n] || n, big = img.classList.contains('hero');
+        const key = src + (big ? '@4' : '');
+        try { cache[key] = cache[key] || w.__uiwIcon(src, big ? 4 : 3); img.src = cache[key]; } catch (e) { console.warn('Symbol', n, e); }
+      }
+      setTimeout(drawSlabs, 50);
+      window.WGM_READY = true;
+    }, 400);
+  }
+  addEventListener('resize', drawSlabs);
+  document.fonts && document.fonts.ready.then(drawSlabs);
+  // Kamera und Tag/Nacht wie bei den Mischungen
+  window.WGM = phone => f.contentWindow.eval(`(() => { try { closeModal(); } catch (e) {} GFX.day = ${NACHT ? "'auto'" : "'tag'"}; ${NACHT ? 'nightAt = () => NIGHT_MAX;' : ''}
+    const sw = [...state.tiles].find(([k, t]) => t.b === 'sternwarte'); const [x, y] = sw[0].split(',').map(Number), c = iso(x + ${phone ? 0.8 : 2.6}, y + ${phone ? 1.2 : 1.6}); state.cam.x = c.x; state.cam.y = c.y - 20; state.cam.z = ${phone ? 1.7 : 2.2}; })()`);
+</script>
+</body>
+</html>

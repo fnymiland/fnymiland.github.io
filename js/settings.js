@@ -80,6 +80,8 @@ function showSettings() {
     <div class="looks set-presets">${Object.entries(GFX_PRESETS).map(([id, P]) => `<button class="look${cur === id ? ' on' : ''}" data-preset="${id}" aria-pressed="${cur === id}">${P.name}</button>`).join('')}</div>
     <p class="muted set-note">${cur === 'schnell' ? 'Halbe Schärfe, weniger Einwohner, ohne Tiere, Schatten und Glitzer – für ältere Geräte.' : cur === 'schoen' ? 'Alles an, immer 60 Bilder pro Sekunde, Drehendes dreht sich auch weit weg.' : cur === 'ausgewogen' ? 'Wie das Spiel von selbst eingestellt ist.' : 'Eigene Einstellung – unten einzeln gewählt.'}</p>
     <div class="set-grid set-one">${btn('id="m-sound"', 'Ton', onOff(!state.muted))}</div>
+    <div class="label">Aussehen <span class="muted">(nur dieses Gerät)</span></div>
+    <div class="look-pick">${Object.entries(UI_LOOKS).map(([id, L]) => `<button data-uilook="${id}" class="${uiLookId === id ? 'on' : ''}" aria-pressed="${uiLookId === id}"><canvas data-lookprev="${id}" width="300" height="92"></canvas>${L.name}</button>`).join('')}</div>
     <div class="label">Anzeige</div>
     ${grid(btn('id="m-day"', 'Tageszeit', GFX.day === 'tag' ? 'immer Tag' : 'echte Uhr', 'Echte Uhr: ein Spieltag dauert 24 Minuten, nachts leuchten die Laternen. Immer Tag: nie dunkel (die Spieluhr läuft weiter)'),
       btn('id="m-shadow"', 'Schatten', onOff(GFX.shadows)),
@@ -100,6 +102,12 @@ function showSettings() {
     <div class="row"><button class="btn ghost" style="flex:1" id="m-back">Zurück</button><button class="btn" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   const again = () => showSettings();
   const click = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = () => { fn(); again(); }; };
+  for (const b of document.querySelectorAll('[data-uilook]')) b.onclick = () => { setUiLook(b.dataset.uilook); sfx('deco'); again(); };   // Hecke / Wolken (ui-look.js)
+  for (const cv of document.querySelectorAll('canvas[data-lookprev]')) {                                     // kleines Musterstück je Aussehen
+    const { canvas } = paintSlab(150, 40, 'paper', 5, cv.dataset.lookprev), x = cv.getContext('2d');
+    const f = Math.min(cv.width / canvas.width, cv.height / canvas.height), w = canvas.width * f, h = canvas.height * f;   // ganz ins Kästchen
+    if (x) x.drawImage(canvas, (cv.width - w) / 2, (cv.height - h) / 2, w, h);
+  }
   for (const b of document.querySelectorAll('[data-preset]')) b.onclick = () => { applyGfxPreset(b.dataset.preset); sfx('deco'); again(); };
   click('m-sound', () => { state.muted = !state.muted; save(); });
   click('m-day', () => setGfx('day', GFX.day === 'tag' ? 'uhr' : 'tag'));
