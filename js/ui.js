@@ -974,6 +974,7 @@ function updateHud() {
   netDotShow();                                                                          // Knopf „Online“: wie viel Neues (Block 106/111)
   setText($('you-face'), ANIMALS[meLook().a].icon);
   if (typeof youFaceSync === 'function') youFaceSync();                  // als gezeichnete Figur (ui-look.js)
+  if (typeof uiNightSync === 'function') uiNightSync();                  // nachts dunklerer Rand an Fenstern und Leisten (ui-look.js)
   const tod = timeOfDay();                                              // Spieluhr (Block 101): Sonne/Mond und Uhrzeit
   setWiText($('tod-i'), tod.icon); setText($('tod-t'), ' ' + tod.text);   // Handy: nur Sonne/Mond (CSS)
   const todLabel = `Rathaus – ${tod.text} Uhr, ${tod.name}`;
@@ -3343,6 +3344,7 @@ const NEWS_HISTORY = [
     '🌿 <b>Aussehen:</b> Die Oberfläche kommt jetzt aus deiner Welt. Unter ☰ → Einstellungen → Aussehen wählst du zwischen <b>Hecke</b> (Standard) und <b>Wolken</b>.',
     '🏠 <b>Leiste oben:</b> Statt Emojis in Pillen stehen dort jetzt Bildchen, die das Spiel selbst zeichnet: Münzstapel, Haus, Bibliothek, Kristall, Kiste, Freundesbank und ein Wegweiser fürs Menü.',
     '🪟 <b>Infofenster und Ziele:</b> Beide haben jetzt die Hecke bzw. die Wolke als Rand. Oben rechts im Infofenster steht das angetippte Gebäude so, wie es bei dir aussieht, und die Knöpfe sind kleine Plättchen statt Pillen.',
+    '🌙 <b>Nachts</b> werden Hecke und Wolken an den Fenstern dunkler, die Fläche innen bleibt hell und gut lesbar.',
     '🪵 <b>Bildchen statt Emojis:</b> Rohstoffe, Strom, Laternen, Geschenke, Bewohner und rund 150 weitere Zeichen sind jetzt selbst gezeichnet – in Texten, Meldungen, über den Häusern und auf den Schildern der Karte. Oben beim Knopf „Du“ steht deine eigene Figur.',
     '📜 <b>Große Fenster:</b> Rathaus, Forschung, Einstellungen und die anderen Fenster haben jetzt auch Hecke bzw. Wolke als Rand, und alle Knöpfe sind Plättchen. Taler, Lager, Einwohner, Ideen, Schönheit und das Schloss für Gesperrtes erscheinen in Texten als Spiel-Bildchen.',
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',

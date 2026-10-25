@@ -105,4 +105,19 @@ describe('Aussehen', () => {
     })()`);
     expect(r).toEqual([3, [100, 80, 64], 1]);
   });
+
+  it('Nacht: Rand stufenweise dunkler (0–3), bei „immer Tag“ nie; neu gemalt nur beim Stufenwechsel', () => {
+    const r = game(`(() => {
+      const na = nightAt, day = GFX.day; const out = [];
+      try {
+        GFX.day = 'uhr';
+        nightAt = () => 0; uiNightSync(); out.push(uiNightNow);
+        nightAt = () => NIGHT_MAX / 2; uiNightSync(); out.push(uiNightNow);
+        nightAt = () => NIGHT_MAX; uiNightSync(); out.push(uiNightNow, typeof paintSlab(120, 40, 'paper', 3, 'hecke', 3).canvas);   // jsdom misst keine Größen: direkt malen
+        GFX.day = 'tag'; uiNightSync(); out.push(uiNightNow);
+      } finally { nightAt = na; GFX.day = day; uiNightSync(); }
+      return out;
+    })()`);
+    expect(r).toEqual([0, 2, 3, 'object', 0]);
+  });
 });

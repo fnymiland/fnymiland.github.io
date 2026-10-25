@@ -42,6 +42,13 @@ const SLAB_STYLE = {
     bar:   { top: '#ffffff', side: '#c3d0e6', depth: 9, r: 26, j: 3, step: 30, pad: 30, deco: 'wolke' },
   },
 };
+// Nacht (Nutzer 25.10.2026, Variante C „nur der Rand“): Hecke bzw. Wolkenbuckel werden nachtdunkel, die Fläche innen bleibt hell
+// (lesbar wie am Tag). Stufen 0–3 statt stufenlos: neu gemalt wird nur, wenn die Dämmerung eine Stufe weiter ist
+const uiNightStep = () => {
+  if (typeof nightAt !== 'function' || typeof NIGHT_MAX === 'undefined' || (typeof GFX === 'object' && GFX.day === 'tag')) return 0;
+  return Math.round(Math.max(0, Math.min(1, nightAt() / NIGHT_MAX)) * 3);
+};
+let uiNightNow = 0;
 // fester Zufall je Platte (sieht bei jedem Neumalen gleich aus)
 const slabRnd = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 // Umriss eines abgerundeten Rechtecks, alle `step` px ein Punkt, leicht verschoben – von Hand geschnitten statt border-radius
@@ -80,7 +87,7 @@ function slabPath(x, pts, dx, dy) {
 }
 const slabDot = (x, cx, cy, r, col) => { x.fillStyle = col; x.beginPath(); x.arc(cx, cy, Math.max(0.1, r), 0, Math.PI * 2); x.fill(); };
 // malt eine Platte w×h (CSS-Pixel) in eine neue Leinwand; Rückgabe { canvas, pad, depth }
-function paintSlab(w, h, role, seed, look = uiLookId) {
+function paintSlab(w, h, role, seed, look = uiLookId, night = 0) {
   const L = { pad: 12, ...SLAB_STYLE[look][role] }, R = slabRnd(seed), pad = L.pad;
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const c = document.createElement('canvas');
@@ -127,6 +134,14 @@ function paintSlab(w, h, role, seed, look = uiLookId) {
     slabPath(x, pts, 0, L.depth); x.fillStyle = L.side; x.fill();
     slabPath(x, pts, 0, 0); x.fillStyle = L.top; x.fill();
   }
+  if (night > 0 && (L.deco === 'hecke' || L.deco === 'wolke')) {      // Rand dunkler, innen fast unverändert
+    const ins = L.deco === 'hecke' ? 11 : 4, rr = Math.min(L.r, h / 2.2), ir = L.deco === 'hecke' ? Math.max(4, rr - 6.6) : rr, k = night / 3;
+    x.save(); x.globalCompositeOperation = 'source-atop';
+    x.beginPath(); x.rect(-pad, -pad, w + 2 * pad, h + 2 * pad + L.depth + 8); x.roundRect(ins, ins, w - 2 * ins, h - 2 * ins, ir);
+    x.fillStyle = `rgba(22,32,78,${(0.48 * k).toFixed(3)})`; x.fill('evenodd');
+    x.beginPath(); x.roundRect(ins, ins, w - 2 * ins, h - 2 * ins, ir); x.fillStyle = `rgba(60,45,30,${(0.07 * k).toFixed(3)})`; x.fill();
+    x.restore();
+  }
   return { canvas: c, pad, depth: L.depth };
 }
 const SLABS = new Set();                                   // Elemente mit Platte
@@ -138,14 +153,14 @@ const slabObs = typeof ResizeObserver === 'function' ? new ResizeObserver(es => 
   if (first) requestAnimationFrame(() => { const l = [...slabDirty]; slabDirty.clear(); for (const el of l) drawSlab(el); });
 }) : null;
 function drawSlab(el) {
-  const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight), key = `${uiLookId}|${w}x${h}`;
+  const w = Math.round(el.offsetWidth), h = Math.round(el.offsetHeight), key = `${uiLookId}|${w}x${h}|${uiNightNow}`;
   if (!w || !h) return;
   if (el.dataset.slabKey === key) return;
   el.dataset.slabKey = key;
   const inset = el.dataset.slabIn === '1', L = SLAB_STYLE[uiLookId][el.dataset.slab], p0 = L.pad ?? 12;
   // slab-in: ganz im Element (als Hintergrund) – für Fenster, die selbst scrollen (::before würde mitgeschnitten bzw. mitscrollen)
-  const { canvas, pad, depth } = inset ? paintSlab(Math.max(20, w - 2 * p0), Math.max(20, h - 2 * p0 - L.depth), el.dataset.slab, +el.dataset.slabSeed || 1)
-    : paintSlab(w, h, el.dataset.slab, +el.dataset.slabSeed || 1);
+  const { canvas, pad, depth } = inset ? paintSlab(Math.max(20, w - 2 * p0), Math.max(20, h - 2 * p0 - L.depth), el.dataset.slab, +el.dataset.slabSeed || 1, uiLookId, uiNightNow)
+    : paintSlab(w, h, el.dataset.slab, +el.dataset.slabSeed || 1, uiLookId, uiNightNow);
   let url = '';
   try { url = canvas.toDataURL(); } catch (e) { return; }
   if (inset) { el.style.backgroundImage = `url(${url})`; return; }
@@ -445,6 +460,14 @@ function youFaceSync() {
   try { figPreview(c, { ...fig, label: null }, 2.6 * S); url = uiTrim(c).toDataURL(); } catch (e) { url = ''; }
   el.classList.toggle('drawn', !!url);
   el.style.backgroundImage = url ? `url(${url})` : '';
+}
+
+// von updateHud alle 0,2 s: Dämmerung eine Stufe weiter → alle Platten neu malen
+function uiNightSync() {
+  const n = uiNightStep();
+  if (n === uiNightNow) return;
+  uiNightNow = n;
+  for (const el of SLABS) if (el.isConnected) drawSlab(el);
 }
 
 // ---------- anwenden ----------
