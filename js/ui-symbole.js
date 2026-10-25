@@ -262,6 +262,15 @@ Object.assign(UI_DRAW, {
     g.fillStyle = '#6b4a2a'; g.font = "800 30px Alegreya, Georgia, serif"; g.textBaseline = 'middle'; g.textAlign = 'left';
     const w = g.measureText('?').width; g.fillText('?', 32 - w / 2, 26);
   },
+  drehen() {                                               // Drehknopf: Holzpfeil im Kreis um ein kleines Haus
+    uiShadow(32, 57, 20);
+    uiBox(32, 44, 9, 4.5, 8, '#f4e6c8'); poly([[23, 36], [32, 31.5], [32, 24], [23, 36]], '#c4634f'); poly([[32, 31.5], [41, 36], [32, 24]], shade('#c4634f', -0.2));
+    g.lineCap = 'round';
+    g.strokeStyle = '#7a4f2e'; g.lineWidth = 7; g.beginPath(); g.ellipse(32, 38, 23, 15, 0, Math.PI * 0.15, Math.PI * 1.75); g.stroke();
+    g.strokeStyle = '#b37b4c'; g.lineWidth = 2.6; g.beginPath(); g.ellipse(32, 37, 23, 15, 0, Math.PI * 0.95, Math.PI * 1.7); g.stroke();
+    const a = Math.PI * 1.75, ex = 32 + Math.cos(a) * 23, ey = 38 + Math.sin(a) * 15;
+    poly([[ex - 7, ey - 6], [ex + 9, ey - 1], [ex - 2, ey + 9]], '#7a4f2e');
+  },
   mond() {
     g.fillStyle = '#f2d77a'; g.beginPath(); g.arc(32, 32, 20, 0, Math.PI * 2); g.fill();
     g.save(); g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(42, 26, 17, 0, Math.PI * 2); g.fill(); g.restore();

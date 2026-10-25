@@ -555,6 +555,7 @@ function syncDropBtn() {
     if (hold) { const x = document.createElement('span'); x.className = 'x'; x.textContent = '✕'; const t = document.createElement('span'); t.className = 'tx'; t.textContent = 'Weglegen'; b.replaceChildren(x, t); }
     else wiFace(b, 'lupe', 'Ansehen');
   }
+  if (hold && typeof heldPic === 'function') heldPic(b, tool);             // Bild des Dings in der Hand statt ✕ (ui-look.js; ✕ bleibt als Text)
   b.title = label; b.setAttribute('aria-label', label);
 }
 function setTool(t) {

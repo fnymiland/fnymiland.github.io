@@ -470,6 +470,22 @@ function uiNightSync() {
   for (const el of SLABS) if (el.isConnected) drawSlab(el);
 }
 
+// Weglegen-Knopf: zeigt, was man in der Hand hat (Nutzer: „das X gefällt mir nicht“); antippen legt es weg. Das ✕ bleibt als
+// Text im Knopf (Vorlesen, Tests), sichtbar ist das Bild
+function heldPic(b, tool) {
+  const x = b.querySelector('.x');
+  if (!x || x.dataset.held === tool) return;
+  x.dataset.held = tool;
+  let url = '';
+  if (typeof isDragTool === 'function' && isDragTool(tool) && typeof katPic === 'function') {
+    try { url = katPic(tool, 34).toDataURL(); } catch (e) { url = ''; }
+  }
+  if (!url && ITEMS[tool]) url = uiIcon(tool);
+  if (!url) url = uiIcon(tool === 'verschieben' ? 'haken' : 'kiste');
+  x.classList.toggle('pic', !!url);
+  x.style.backgroundImage = url ? `url(${url})` : '';
+}
+
 // ---------- anwenden ----------
 function applyUiLook() {
   const b = document.body;
@@ -477,7 +493,7 @@ function applyUiLook() {
   for (const id of Object.keys(UI_LOOKS)) b.classList.toggle('look-' + id, id === uiLookId);
   fillUiIcons();
   watchUiEmojis();
-  wtEnsure('stern');                                                      // Favoriten-Sterne im Baumenü und Infofenster (style.css)
+  wtEnsure('stern'); wtEnsure('drehen');                                                      // Favoriten-Sterne im Baumenü und Infofenster (style.css)
   lookSlab(document.getElementById('modal-card'), 'paper', true);        // große Fenster
   lookSlab(document.getElementById('cats-isle'), 'bar');                 // Bauleiste: Beet in der Hecke bzw. Wolke
   lookSlab(document.getElementById('sheet'), 'paper', true);              // aufklappendes Feld (scrollt selbst: Platte als Hintergrund)

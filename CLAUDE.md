@@ -550,6 +550,11 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Nacht (Variante C): `uiNightSync` (aus `updateHud`) setzt `uiNightNow` 0–3 aus `nightAt()`; `paintSlab(…, night)` dunkelt nur den Rand
     (Hecke/Wolkenbuckel), die Fläche innen bleibt hell. Neu gemalt nur beim Stufenwechsel (Stufe steht im `slabKey`). „Immer Tag“ → 0.
     Hecke und Wolken sind gleichmäßig (`roundRectRing`: gleicher Abstand, echte Viertelkreis-Ecken) – nie wieder zufällige Größen/Wackeln.
+    **Knopf-Familie** (Nutzer: „du solltest gründlicher sein“): Haupt = Terrakotta/Blau (`.btn`), Neben = Sand/Hellblau (`.btn.ghost`),
+    Wahl-Chips/Reiter = `--chip` (Hecke Sand, Wolken Hellblau), gewählt = `--chip-on` (Heckengrün/Blau, helle Schrift), reine Anzeigen
+    (`.stats span` …) = `--info` ohne Kante. Nie wieder Creme mit brauner Kante oder Gelb für Gewähltes – das sah aus wie vorher.
+    Neue Knöpfe prüfen: Farbe muss eine dieser sein (Prüfschleife über alle Fenster und alle Infofenster, beide Aussehen). Drehknopf =
+    gezeichnetes Symbol (`drehen`), Weglegen = Bild des Dings in der Hand (`heldPic`), Bauleiste: Inhalt ganz im Beet (Innenabstand).
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

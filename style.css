@@ -1225,8 +1225,6 @@ body.look-wolke #panel.slab-in { padding: 36px 38px 46px; }
 body.look-wolke #panel h3 .lvl { color: #5b86c9; }
 #panel .stats span, #goal .task-chips .chip { border-radius: 7px; box-shadow: none; }
 .look { border-radius: 9px 11px 10px 12px / 11px 9px 12px 10px; }
-.look.on { background: #f2d27a; box-shadow: 0 2px 0 #c9a443; }
-body.look-wolke .look.on { background: var(--yellow); box-shadow: 0 2px 0 #9bb5df; }
 /* Knöpfe: flache Oberseite mit Dicke unten, leicht unregelmäßig geschnitten (Hecke) bzw. rund (Wolken) */
 .btn, #goal .task.ready .t-go { border-radius: 11px 14px 12px 13px / 13px 11px 14px 12px; background: #c9673f; color: #fff6e8; box-shadow: 0 4px 0 #93432a; }
 .btn:active { box-shadow: 0 2px 0 #93432a; }
@@ -1372,3 +1370,43 @@ body.look-wolke .design.have { background: rgba(107, 149, 216, .16); }
 #modal-card input[type="text"], #modal-card input[type="search"], #modal-card input:not([type]), #modal-card textarea, #modal-card .lx-q, #panel input[type="text"] {
   background: var(--plate); color: var(--brown); border: 2px solid var(--plate-side); border-radius: var(--cut); box-shadow: inset 0 2px 0 rgba(60, 40, 20, .06); outline: none; }
 #modal-card input:focus, #modal-card textarea:focus, #panel input:focus { border-color: var(--plate-hi-side); }
+
+/* ===== Knopf-Familie je Aussehen (Nutzer 25.10.2026: „im Rathaus noch die alten Buttons“, „Anordnen ist noch der alte Button“) =====
+   Wahl-Chips/Reiter/Nebenknöpfe: Hecke = Sand, gewählt Heckengrün mit heller Schrift; Wolken = Hellblau, gewählt Blau mit weißer Schrift.
+   Reine Info-Kästchen (Zahlen) sehen nicht mehr wie Knöpfe aus. Diese Regeln stehen zuletzt und gelten vor allen früheren */
+body { --chip: #ecdcb6; --chip-side: #c4a87a; --chip-on: #5c9c43; --chip-on-side: #3f7430; --chip-on-tx: #fff8e8; --info: rgba(255, 255, 255, .55); }
+body.look-wolke { --chip: #e3ecf8; --chip-side: #b3c3dd; --chip-on: #6b95d8; --chip-on-side: #46699f; --chip-on-tx: #ffffff; --info: rgba(120, 160, 230, .12); }
+.look, .set-btn, .look-pick button, .arrange-btn, .arrange-mv, #goal .task-chips .chip, .store-row .keep, .sub, .wopt, #visit-band .btn,
+.hall-quick .look, .fr-btns .btn.ghost, .style-chip, .kat-item, .hint-info {
+  background: var(--chip); color: var(--brown); border-radius: 9px; box-shadow: 0 3px 0 var(--chip-side); }
+.look.on, .look-pick button.on, .sub.active, .wopt.on, .fr-btns .btn.on, .style-chip.on, .style-chip.wsel.open, .kat-item.on, .arrange-row.on {
+  background: var(--chip-on); color: var(--chip-on-tx); box-shadow: 0 3px 0 var(--chip-on-side); }
+.look.on small, .look.on .muted, .style-chip.on small { color: inherit; opacity: .85; }
+.look.art-more { background: var(--chip); }
+@media (hover: hover) { .set-btn:hover, .look:not(.on):hover, .style-chip:not(.on):hover, .arrange-btn:hover { background: color-mix(in srgb, var(--chip) 80%, #fff); } }
+.look-pick button.on { box-shadow: 0 3px 0 var(--chip-on-side); }
+.set-btn b { background: rgba(255, 255, 255, .7); color: var(--brown); border-radius: 6px; }
+.arrange-row { background: var(--chip); border-radius: 9px; box-shadow: 0 2px 0 var(--chip-side); }
+/* reine Anzeigen: flach, ohne Kante */
+.stats span, #panel .stats span, .tod-box, .sd-wish, .sv-e, .fr-friend { background: var(--info); box-shadow: none; border-radius: 8px; }
+/* „Los“ und kleine Knöpfe: schlicht abgerundet (die unregelmäßige Kante wirkt klein wie ein Klecks) */
+#goal .task.ready .t-go { border-radius: 8px; padding: 4px 11px 5px; font: 800 13px/1.1 'Alegreya Sans', Nunito, system-ui, sans-serif; }
+.btn.small { border-radius: 8px; }
+body.look-wolke #goal .task.ready .t-go, body.look-wolke .btn.small { border-radius: 10px; }
+/* Drehknopf: gezeichneter Holzpfeil um ein Häuschen, frei über der Welt (kein gelbes Kissen) */
+#rot-btn { width: 64px; height: 58px; font-size: 0; color: transparent; border-radius: 0; box-shadow: none;
+  background: var(--wt-drehen) center / contain no-repeat; filter: drop-shadow(0 3px 3px rgba(40, 30, 20, .35)); }
+#rot-btn:active { transform: translateY(2px) rotate(25deg); }
+/* Weglegen: das Ding in der Hand als Bild (statt rotem ✕), darunter eine rötliche Raute */
+#toolbar #cats .quick.drop .x.pic { width: 40px; height: 34px; margin-bottom: 0; border-radius: 0; box-shadow: none; font-size: 0; color: transparent;
+  background-color: transparent; background-position: center bottom; background-size: contain; background-repeat: no-repeat; filter: drop-shadow(0 2px 1.5px rgba(30, 40, 20, .3)); }
+#toolbar #cats .quick.drop::before { content: ''; position: absolute; left: 50%; bottom: 13px; width: 40px; height: 40px; border-radius: 4px; pointer-events: none;
+  transform: translateX(-50%) scaleY(.5) rotate(45deg); background: rgba(217, 83, 74, .45); }
+@media (max-width: 600px) { #toolbar #cats .quick.drop .x.pic { width: 30px; height: 26px; } #toolbar #cats .quick.drop::before { width: 30px; height: 30px; bottom: -6px; } }
+/* Bauleiste: Symbole und Wörter ganz im Beet bzw. in der Wolke (Nutzer: „Icons ragen in die Leiste, Text ragt unten rein“) */
+.cats-isle { padding: 15px 18px 14px; }
+body.look-wolke .cats-isle { padding: 11px 18px 10px; }
+@media (max-width: 600px) { .cats-isle { padding: 12px 11px 11px; } body.look-wolke .cats-isle { padding: 9px 10px 8px; } }
+.sw { background-color: var(--chip); }                  /* Felder mit Zeichen (Flagge); echte Farbfelder setzen ihre Farbe selbst */
+.sw.on { box-shadow: 0 2px 0 var(--chip-on-side), 0 0 0 3px var(--chip-on); }
+.card.basar .btn.small.basar-try { background: var(--chip); color: var(--brown); box-shadow: 0 3px 0 var(--chip-side); }
