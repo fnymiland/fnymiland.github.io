@@ -334,7 +334,7 @@ const WI_TEXT = {
   '🪓': 'axt', '🧭': 'kompass', '🧹': 'besen', '🌊': 'welle', '🪜': 'leiter', '🏗': 'kran', '👷': 'kran', '⭐': 'stern', '✋': 'haken', '👁': 'glaskugel',
   '👆': 'lupe', '🌐': 'freundesbank', '☰': 'wegweiser', '🛤': 'wegweiser', '⛰': 'stein', '⛱': 'pavillon',
   '🏛': 'rathaus', '🚆': 'station', '🚉': 'station', '🏠': 'haus:1', '🏘': 'reihenhaus', '🌉': 'seebruecke', '🌳': 'baum', '🌲': 'baum', '🎡': 'riesenrad',
-  '🐾': 'tier:2', '👀': 'lupe', '⛩': 'bogen', '🌫': 'wolke', '🚧': 'kran', '🐠': 'fischer', '🦋': 'schmetterlingsgarten', '📩': 'briefkasten',
+  '❓': 'wegweiser', '❔': 'wegweiser', '🐾': 'tier:2', '👀': 'lupe', '⛩': 'bogen', '🌫': 'wolke', '🚧': 'kran', '🐠': 'fischer', '🦋': 'schmetterlingsgarten', '📩': 'briefkasten',
   '🌅': 'sonne', '🧰': 'kiste', '⛺': 'pavillon',
   '🐱': 'tier:0', '🐻': 'tier:1', '🐰': 'tier:2', '🐿': 'tier:3', '🦔': 'tier:4', '🦊': 'tier:5', '🦒': 'tier:6', '🐘': 'tier:7', '🦆': 'tier:8',
   '🏰': 'fz_schloss', '🎢': 'fz_looping', '🌿': 'busch', '🕘': 'uhrturm', '🏭': 'fabrik', '🚇': 'ubahn', '🗼': 'leuchtturm', '💾': 'truhe',

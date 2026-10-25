@@ -2830,6 +2830,8 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] 5a große Fenster mit Hecke/Wolke, Knöpfe/Reiter überall als Plättchen, 🪙 📦 👥 💡 🔒 🌸 in Texten als Spiel-Symbole (v1221)
   - [x] 5b Rohstoffe und ~150 Emojis als gezeichnete Symbole (js/ui-symbole.js), auch Überschriften, Hinweise, Meldungen, Symbole über Häusern,
         Schilder auf der Karte (ohne Pillen), Tiere als Figuren, Knopf „Du“ mit eigener Figur; kleine Leisten als Plättchen (v1236)
-  - [ ] 5c Rest: seltene Emojis (je 1–2×, z. B. 🎮 ❄ 🌈 🍄 …), Sternenbasar (Nacht-Stil lassen?), Sprechblase/Schwebezahlen prüfen
+  - [x] 5c Sprechblase als Plättchen, schwebende Zahlen mit Umriss und Taler, alle Pillen-Rundungen im CSS ersetzt (Balken 3px, sonst --cut),
+        Fortschrittsbalken in Gras-/Himmelfarbe (v1240)
+  - [ ] 5d offen: seltene Emojis (je 1–2×, z. B. 🎮 ❄ 🌈 🍄 …); Sternenbasar (eigener Nacht-Stil – lassen oder angleichen? Nutzer fragen)
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).
