@@ -520,7 +520,7 @@ function openBasar(tab = basarTab) {
     ${body}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
   const c = $('modal-card');
-  c.classList.add('basar-night');
+  c.classList.add('basar');                                              // hell wie alle Fenster (Hecke/Wolken, Nutzer 25.10.2026) – früher basar-night
   for (const b of c.querySelectorAll('[data-btab]')) b.onclick = () => { if (b.dataset.btab === 'sd') openStardust(); else openBasar(b.dataset.btab); };
   for (const b of c.querySelectorAll('[data-sdbuy]')) b.onclick = () => {
     const r = b.getBoundingClientRect();

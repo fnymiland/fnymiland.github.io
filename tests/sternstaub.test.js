@@ -252,7 +252,7 @@ describe('Basar „mehr special“ (161h, Nutzer 18.10.2026)', () => {
   it('Sternennacht: Mondhase spricht, Seltenes groß oben, Countdown, Sammlung auf jeder Karte', () => {
     game(fresh); game("openBasar('heute')");
     const offers = game('basarOffers().map(s => [s.id, !!s.rare])');
-    expect(game("document.getElementById('modal-card').classList.contains('basar-night')")).toBe(true);
+    expect(game("document.getElementById('modal-card').classList.contains('basar')")).toBe(true);   // hell wie alle Fenster (Aussehen)
     expect(game("document.querySelector('#modal .basar-say').textContent.length")).toBeGreaterThan(10);
     expect(game("document.querySelector('#modal .basar-when').textContent")).toMatch(/Neue Ware in \d/);
     const rare = offers.find(o => o[1])[0];

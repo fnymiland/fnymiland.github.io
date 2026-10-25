@@ -345,6 +345,18 @@ const WI_TEXT = {
   '🔬': 'bibliothek', '🎓': 'uni', '🏦': 'rathaus', '🔓': 'riegel', '🗺': 'kompass', '🛳': 'boot', '🚤': 'boot', '🛶': 'boot', '🌴': 'palme', '🏖': 'insel',
   '🎈': 'fz_ballon', '🪴': 'blumentopf', '🌾': 'feld', '🎭': 'theater', '🏬': 'kaufhaus', '🏨': 'hotel', '🎪': 'markt',
 };
+Object.assign(WI_TEXT, {
+  '🧨': 'dynamit', '⚠': 'warnung', '😣': 'warnung', '❄': 'schnee', '🔗': 'kette', '📏': 'lineal', '📐': 'lineal', '🎶': 'noten', '🎵': 'noten',
+  '🚪': 'tuer', '🌈': 'regenbogen', '🔁': 'kreispfeil', '🔄': 'kreispfeil', '🔀': 'kreispfeil', '🔑': 'schluessel',
+  '👋': 'herz', '👏': 'herz', '🤍': 'herz', '🙂': 'sonne', '🌄': 'sonne', '🎮': 'zahnrad', '📱': 'briefkasten', '🎒': 'schule', '📈': 'taler', '🪟': 'glashaus',
+  '🎟': 'rolle', '🏷': 'rolle', '🧩': 'kiste', '🧳': 'kiste', '📥': 'kiste', '📤': 'kiste', '📂': 'kiste', '🔔': 'uhrturm', '🏙': 'reihenhaus', '🏯': 'fz_schloss',
+  '🎖': 'stern', '✏': 'palette', '🤔': 'gedanke', '🕌': 'rathaus', '🍒': 'obst', '🖐': 'haken', '💺': 'bank', '🚀': 'funkel',
+});
+// Läden: ihr Emoji (SHOPS, data.js) zeigt das echte Laden-Gebäude (🧋 → Bubble-Tea-Laden …), wenn es nicht schon vergeben ist
+for (const [id, sh] of Object.entries(typeof SHOPS === 'object' && SHOPS ? SHOPS : {})) {
+  const e = String(sh.icon || '').replace(/\uFE0F/g, '');
+  if (e && !WI_TEXT[e]) WI_TEXT[e] = id;
+}
 const WI_TEXT_RE = new RegExp(`(?:${Object.keys(WI_TEXT).join('|')})\uFE0F?`, 'gu');
 const WI_TEXT_HAS = new RegExp(WI_TEXT_RE.source, 'u');                  // zum Prüfen: ohne g, merkt sich keine Position zwischen Aufrufen
 const wiTextName = e => WI_TEXT[e.replace(/\uFE0F/g, '')];

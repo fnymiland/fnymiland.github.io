@@ -194,6 +194,68 @@ Object.assign(UI_DRAW, {
     for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; uiPath([[32 + Math.cos(a - 0.14) * 16, 32 + Math.sin(a - 0.14) * 16], [32 + Math.cos(a) * 27, 32 + Math.sin(a) * 27], [32 + Math.cos(a + 0.14) * 16, 32 + Math.sin(a + 0.14) * 16]], '#f2b53a'); }
     uiDisc(32, 32, 16, '#e8a52a'); uiDisc(31, 31, 15, '#f6c93c'); uiDisc(27, 27, 5, '#fbe08a');
   },
+  dynamit() {
+    uiShadow(32, 57, 16);
+    for (const [x, c] of [[24, '#c4433a'], [32, '#d9534a'], [40, '#b8352c']]) { cyl(x, 55, 5, 2.4, 28, c); ellipse(x, 27, 5, 2.4, shade(c, 0.2)); }
+    uiLine([[18, 42], [46, 42]], '#e8d9b0', 3);
+    g.strokeStyle = '#6b4f3a'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(32, 26); g.quadraticCurveTo(36, 16, 44, 14); g.stroke();
+    uiStar4(45, 13, 7, '#ffd24a'); uiStar4(45, 13, 3.5, '#fff6c8');
+  },
+  warnung() {
+    uiShadow(32, 57, 18);
+    uiPath([[32, 9], [56, 52], [8, 52]].map(([x, y]) => [x + 1.5, y + 2.5]), '#c98f1e');
+    uiPath([[32, 9], [56, 52], [8, 52]], '#f6c93c');
+    uiPath([[32, 16], [50, 48], [14, 48]], '#fbd968');
+    uiPath([[29.5, 24], [34.5, 24], [33.5, 39], [30.5, 39]], '#5a3d24'); uiDisc(32, 44, 2.6, '#5a3d24');
+  },
+  schnee() {
+    g.strokeStyle = '#9fd0ea'; g.lineWidth = 4.5; g.lineCap = 'round';
+    for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; g.beginPath(); g.moveTo(32 - Math.cos(a) * 22, 32 - Math.sin(a) * 22); g.lineTo(32 + Math.cos(a) * 22, 32 + Math.sin(a) * 22); g.stroke(); }
+    g.strokeStyle = '#e6f5fc'; g.lineWidth = 2;
+    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3, x = 32 + Math.cos(a) * 14, y = 32 + Math.sin(a) * 14;
+      for (const d of [-0.6, 0.6]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a + d) * 7, y + Math.sin(a + d) * 7); g.stroke(); } }
+  },
+  kette() {
+    uiShadow(32, 56, 18);
+    g.lineWidth = 5; g.strokeStyle = '#8a8f99';
+    g.beginPath(); g.ellipse(24, 38, 11, 7, -0.5, 0, Math.PI * 2); g.stroke();
+    g.strokeStyle = '#b5bac3'; g.beginPath(); g.ellipse(40, 30, 11, 7, -0.5, 0, Math.PI * 2); g.stroke();
+  },
+  lineal() {
+    uiShadow(32, 56, 22);
+    uiPath([[6, 44], [50, 20], [58, 26], [14, 50]], '#e2bd5c'); uiPath([[14, 50], [58, 26], [58, 29], [14, 53]], '#b8923a');
+    g.strokeStyle = '#7a5a20'; g.lineWidth = 1.2;
+    for (let i = 1; i < 11; i++) { const x = 6 + i * 4.4, y = 44 - i * 2.4, l = i % 2 ? 4 : 7; g.beginPath(); g.moveTo(x, y); g.lineTo(x + l * 0.5, y + l * 0.55); g.stroke(); }
+  },
+  noten() {
+    uiLine([[26, 44], [26, 14], [46, 9], [46, 38]], '#5a3d24', 3.4); uiLine([[26, 18], [46, 13]], '#5a3d24', 5);
+    g.fillStyle = '#5a3d24'; g.beginPath(); g.ellipse(21, 45, 6.5, 5, -0.4, 0, Math.PI * 2); g.fill(); g.beginPath(); g.ellipse(41, 39, 6.5, 5, -0.4, 0, Math.PI * 2); g.fill();
+  },
+  tuer() {
+    uiShadow(32, 57, 16);
+    uiPath([[18, 56], [18, 16], [32, 8], [46, 16], [46, 56]], '#8a5a34');
+    uiPath([[21, 54], [21, 18], [32, 11.5], [43, 18], [43, 54]], '#b07a4a');
+    g.strokeStyle = '#8a5a34'; g.lineWidth = 1.2; for (const x of [28, 36]) { g.beginPath(); g.moveTo(x, 15); g.lineTo(x, 54); g.stroke(); }
+    uiDisc(38, 36, 2.2, '#f2c14e');
+  },
+  regenbogen() {
+    g.lineCap = 'butt';
+    ['#e2564b', '#f2a03a', '#f6c93c', '#7cc05a', '#4f86d9', '#9a6ad0'].forEach((c, i) => { g.strokeStyle = c; g.lineWidth = 3.6; g.beginPath(); g.arc(32, 48, 26 - i * 3.6, Math.PI, 0); g.stroke(); });
+    uiCloud(10, 48, 0.55, '#ffffff', '#c7d4e8'); uiCloud(54, 48, 0.55, '#ffffff', '#c7d4e8');
+  },
+  kreispfeil() {
+    g.lineCap = 'round'; g.lineWidth = 6;
+    g.strokeStyle = '#5fae4a'; g.beginPath(); g.arc(32, 32, 16, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
+    uiPath([[44, 14], [52, 24], [40, 26]], '#5fae4a');
+    g.strokeStyle = '#4f86d9'; g.beginPath(); g.arc(32, 32, 16, Math.PI * 0.1, Math.PI * 0.9); g.stroke();
+    uiPath([[20, 50], [12, 40], [24, 38]], '#4f86d9');
+  },
+  schluessel() {
+    uiShadow(32, 56, 16);
+    g.lineWidth = 5; g.strokeStyle = '#d9a43a'; g.beginPath(); g.arc(20, 24, 9, 0, Math.PI * 2); g.stroke();
+    uiLine([[27, 31], [50, 52]], '#d9a43a', 5); uiLine([[43, 45], [38, 50]], '#d9a43a', 4); uiLine([[48, 50], [44, 54]], '#d9a43a', 4);
+    g.lineWidth = 1.6; g.strokeStyle = '#f2d27a'; g.beginPath(); g.arc(19, 23, 8, Math.PI, Math.PI * 1.6); g.stroke();
+  },
   mond() {
     g.fillStyle = '#f2d77a'; g.beginPath(); g.arc(32, 32, 20, 0, Math.PI * 2); g.fill();
     g.save(); g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(42, 26, 17, 0, Math.PI * 2); g.fill(); g.restore();

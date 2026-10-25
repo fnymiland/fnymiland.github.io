@@ -1302,3 +1302,20 @@ body.look-wolke #hint, body.look-wolke #bubble, body.look-wolke #store, body.loo
 body.look-hecke .achv-row .bar i, body.look-hecke .wish-bar i, body.look-hecke .wear-lock .bar i, body.look-hecke .status .load i:not(.full) { background: #7fb85a; }
 body.look-wolke .achv-row .bar i, body.look-wolke .wish-bar i, body.look-wolke .wear-lock .bar i, body.look-wolke .status .load i:not(.full) { background: #6b95d8; }
 .btn i.wt { width: 1.15em; margin-right: 1px; }
+
+/* Sternenbasar hell wie alle Fenster (Nutzer 25.10.2026: „Basar soll auch Hecke bzw. Wolken bekommen“) – früher eigenes Nacht-Aussehen (.basar-night) */
+.card.basar .basar-say { background: var(--cream2); }
+.card.basar .basar-say::before { border-right-color: var(--cream2); }
+.card.basar h2.basar-title { text-align: center; color: #a8701a; font-size: 26px; margin: 2px 0 4px; }
+body.look-wolke .card.basar h2.basar-title { color: #5b86c9; }
+.card.basar .basar-title .sd-have { border-radius: var(--cut); border-color: currentColor; }
+.card.basar .basar-when { color: var(--brown2) !important; }
+.card.basar .basar-card { background: rgba(255, 255, 255, .55); border: 1.5px solid rgba(122, 90, 60, .16); border-radius: var(--cut); }
+body.look-wolke .card.basar .basar-card { border-color: rgba(90, 110, 150, .2); }
+.card.basar .basar-card.rare { border-color: #e0b54a; background: rgba(255, 226, 140, .2); }
+.card.basar .basar-card.feature { border: 2px solid #e0b54a; padding: 10px 10px 12px; margin-bottom: 4px;
+  background: radial-gradient(circle at 50% 42%, rgba(255, 217, 121, .4), rgba(255, 217, 121, .06) 62%); }
+.card.basar .basar-rare { color: #b07a14; }
+.card.basar .basar-pic .sp { color: #e0a83a; }
+.card.basar .basar-card.feature .btn.small { padding: 5px 18px; font-size: 15px; }
+.card.basar .btn.small.basar-try { background: var(--plate-hi); color: var(--brown); box-shadow: 0 3px 0 var(--plate-hi-side); }
