@@ -522,7 +522,11 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     (eigene Zeichnung aus `UI_DRAW` oder ein Ding ohne Bodenkachel, `'haus:2'`), gefüllt von `fillUiIcons`. Fenster/Leisten bekommen
     gemalte Platten über `lookSlab(el, 'paper'|'btn'|'btn2'|'bar')` (Bild in `--slab`, gezeigt von `.slab::before`, übersteht innerHTML;
     neu gemalt nur bei Größenwechsel). Leiste oben: Zahlen frei mit Umriss (`--ol`), auf dem Handy Raten unter der Zahl. Klasse `.ic`
-    ist schon vergeben (Bereichsknöpfe) – Welt-Symbole heißen `wi`.
+    ist schon vergeben (Bereichsknöpfe) – Welt-Symbole heißen `wi`. Bauleiste: `#cats` steht in `#cats-isle` (Platte 'bar'; `.cats` scrollt
+    selbst, eine Platte darin würde abgeschnitten), Knöpfe über `wiFace(b, symbol, wort)`, Bereiche/Gruppen über `menuIcon(el, id)`
+    (`MENU_ICON`; ohne Bild bleibt das Emoji). Das Feld `#sheet` scrollt selbst → Platte als Hintergrund (`lookSlab(el, rolle, true)`,
+    Klasse `slab-in`). Höhe der Leiste nie fest annehmen, sondern `--bar` (Minikarte, Drehknopf). Neue Regeln für die Leiste mit
+    `#toolbar #cats …` schreiben – die alten Pillen-Regeln sind schwächer, ihre Ausblende-Regeln (drag-open/-tight/-tighter) sind dort wiederholt.
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

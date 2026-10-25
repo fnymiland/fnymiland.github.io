@@ -18,7 +18,7 @@ describe('Ziehen-Knopf: Kategorien', () => {
   const items = () => game("[...document.querySelectorAll('#style-bar .kat-item')].map(b => b.dataset.katItem + (b.classList.contains('on') ? '*' : '') + (b.classList.contains('locked') ? '🔒' : ''))");
   const click = s => game(`document.querySelector('${s}').click()`);
   it('zu: nur der große Knopf mit Spielbild statt Emoji; mit Weg in der Hand die übrigen drei Kategorien als Kugeln daneben, Wege: Weg und Brücke vorn in der Stil-Zeile', () => {
-    expect(big()).toEqual(['weg', 'wege', false, true, '']);
+    expect(big()).toEqual(['weg', 'wege', false, true, 'Wege']);   // Spielbild + Wort darunter (Aussehen, 25.10.2026)
     expect(balls()).toEqual([]);
     click('#cats .quick.drag');
     expect(game('tool')).toBe('weg');
@@ -79,7 +79,7 @@ describe('Ziehen-Knopf: Kategorien', () => {
 describe('⭐ Favoriten und zuletzt gebaut', () => {
   it('☆ macht ein zuletzt gebautes Ding zum Favoriten (steht dann oben), ★ wieder nicht; Zahlentasten folgen', () => {
     game("noteRecent('bank'); noteRecent('haus'); buildToolbar(); document.querySelector('#cats .quick.recent').click()");
-    expect(game("document.querySelector('#cats .quick.recent').textContent")).toBe('⭐');
+    expect(game("[document.querySelector('#cats .quick.recent').textContent, document.querySelector('#cats .quick.recent [data-ic]').dataset.ic]")).toEqual(['Favoriten', 'stern']);
     expect(q('#tools .tool')).toEqual(['haus', 'bank']);
     game("document.querySelector('#tools [data-tool=\"bank\"] .fav').click()");
     expect(game('favList()')).toEqual(['bank']);

@@ -47,4 +47,24 @@ describe('Aussehen', () => {
       expect(game(`paintSlab(120, 40, '${role}', 3, '${look}').pad`)).toBeGreaterThan(0);
     }
   });
+
+  it('Bauleiste: Insel mit Platte, jeder Knopf Spiel-Symbol + Wort, keine Emojis; mit etwas in der Hand rotes ✕', () => {
+    game("setTool('look'); buildToolbar()");
+    expect(game("document.getElementById('cats-isle').dataset.slab")).toBe('bar');
+    expect(game("[...document.querySelectorAll('#cats .quick:not(.drag), #cats .cat')].map(b => b.querySelector('[data-ic]').dataset.ic)"))
+      .toEqual(['lupe', 'haken', 'undo', 'glaskugel', 'stern', 'haus:3', 'baecker', 'fz_karussell', 'blumen']);
+    expect(game("[...document.querySelectorAll('#cats .tx')].map(t => t.textContent)"))
+      .toEqual(['Ansehen', 'Wege', 'Auswählen', 'Zurück', 'Durchsicht', 'Favoriten', 'Stadt', 'Herstellen', 'Freizeit', 'Gestalten']);
+    expect(/\p{Extended_Pictographic}/u.test(game("document.getElementById('cats').textContent"))).toBe(false);
+    game("setTool('haus')");
+    expect(game("document.querySelector('#cats .quick[data-quick=\"look\"] .x').textContent")).toBe('✕');
+    game("setTool('look')");
+  });
+
+  it('Feld: Platte als Hintergrund (scrollt selbst), Gruppen mit Spielbild statt Emoji', () => {
+    game("menuTop = 'stadt'; setSheet(true); buildToolbar()");
+    expect(game("document.getElementById('sheet').classList.contains('slab-in')")).toBe(true);
+    expect(game("document.querySelector('#tools .sheet-h[data-group=\"wohnen\"] [data-ic]').dataset.ic")).toBe('haus:2');
+    game('setSheet(false)');
+  });
 });

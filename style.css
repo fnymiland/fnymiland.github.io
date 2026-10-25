@@ -1127,6 +1127,8 @@ i.wi { display: inline-block; flex: none; width: 34px; height: 30px; background:
 #hud #you-face { font-size: 30px; line-height: 1; text-shadow: 0 3px 3px rgba(40, 30, 20, .3); }
 #hud .pill .dot { box-shadow: 0 0 0 2px #fff7e6; text-shadow: none; }
 #hud .pill .flash { text-shadow: none; font-family: Nunito, system-ui, sans-serif; }
+@media (max-width: 900px) { #hud { gap: 8px; } #hud .pill { font-size: 17px; } #hud .money b { font-size: 18px; } #town-name { font-size: 18px; max-width: 20vw; }
+  #hud .pill i.wi { width: 32px; height: 29px; } #hud .pill.store i.wi, #hud .pill.net i.wi, #hud #menu-btn i.wi { width: 35px; height: 33px; } }   /* iPad hochkant: eine Zeile */
 @media (max-width: 600px) { #hud { gap: 12px; } #hud .pill { font-size: 16px; } #hud .money b { font-size: 17px; } #town-name { font-size: 19px; }
   #hud .pill i.wi { width: 30px; height: 27px; } #hud .pill.store i.wi, #hud .pill.net i.wi, #hud #menu-btn i.wi { width: 33px; height: 31px; } #hud #you-face { font-size: 25px; } }
 @media (max-width: 480px) { #hud { gap: 7px; } #hud .pill { font-size: 14px; padding: 2px 0; gap: 3px; } #hud .money b { font-size: 15px; }
@@ -1135,9 +1137,10 @@ i.wi { display: inline-block; flex: none; width: 34px; height: 30px; background:
   #hud .pill i.wi { width: 20px; height: 18px; } #hud .pill.store i.wi, #hud .pill.net i.wi, #hud #menu-btn i.wi { width: 22px; height: 21px; } #hud #you-face { font-size: 19px; } #hud #menu-btn { padding-left: 0; } }
 @media (max-width: 370px) { #hud { gap: 2px; } #hud .pill, #hud .money b { font-size: 11.5px; letter-spacing: -.1px; }
   #hud .pill i.wi { width: 17px; height: 16px; } #hud .pill.store i.wi, #hud .pill.net i.wi, #hud #menu-btn i.wi { width: 19px; height: 18px; } #hud #you-face { font-size: 17px; } }
-/* Handy: Raten und Arbeitsplätze (nach Antippen) unter der Zahl statt daneben – sonst bricht die Leiste um (Regel 34) */
-@media (max-width: 480px) { #hud .pill { position: relative; } #hud .pill small.more { position: absolute; left: 50%; top: calc(100% + 1px); transform: translateX(-50%);
-  white-space: nowrap; font-size: 11px; margin: 0; } }
+/* Raten und Arbeitsplätze (nach Antippen) unter der Zahl statt daneben – sonst bricht die Leiste um (Regel 34) */
+#hud .pill { position: relative; }
+#hud .pill small.more { position: absolute; left: 50%; top: calc(100% + 1px); transform: translateX(-50%); white-space: nowrap; font-size: 12px; margin: 0; }
+@media (max-width: 480px) { #hud .pill small.more { font-size: 11px; } }
 
 /* Aussehen wählen (⚙️ Einstellungen) */
 .look-pick { display: flex; gap: 10px; margin: 4px 0 12px; }
@@ -1145,3 +1148,65 @@ i.wi { display: inline-block; flex: none; width: 34px; height: 30px; background:
   background: var(--cream2); color: var(--brown); font: 800 14px/1.2 Nunito, system-ui, sans-serif; cursor: pointer; box-shadow: 0 2px 0 var(--shadow); }
 .look-pick button.on { background: var(--yellow); box-shadow: inset 0 0 0 3px var(--brown); }
 .look-pick canvas { width: 100%; max-width: 150px; height: 46px; border-radius: 8px; background: #bfe3ee; }   /* Himmel hinter dem Musterstück */
+
+/* Bauleiste (Aussehen, Schritt 3): Insel – Beet in der Hecke bzw. Wolke (lookSlab 'bar'), Knöpfe = Spiel-Symbol + Wort, ohne Pillen.
+   Gewählt/offen: helle Raute darunter wie der Bau-Cursor im Spiel */
+:root { --bar-tx: #fff3dc; --bar-tx-sh: 0 1px 2px rgba(40, 25, 10, .75); --bar-sep: rgba(255, 240, 210, .35); }
+body.look-wolke { --bar-tx: #3b4763; --bar-tx-sh: none; --bar-sep: rgba(80, 100, 150, .22); }
+.cats-isle { position: relative; width: max-content; max-width: calc(100% - 24px); margin: 0 auto 8px; padding: 9px 12px 7px; }
+body.look-wolke .cats-isle { padding: 7px 14px 5px; }
+#toolbar .cats#cats { gap: 2px; align-items: flex-end; margin: 0; padding: 0; max-width: 100%; }
+#toolbar #cats .quick, #toolbar #cats .cat { position: relative; height: auto; width: auto; min-width: 58px; padding: 2px 3px 0; border-radius: 0;
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 1px; background: none; box-shadow: none;
+  color: var(--bar-tx); text-shadow: var(--bar-tx-sh); font: 800 12px/1.1 'Alegreya Sans', Nunito, system-ui, sans-serif; }
+#toolbar #cats .cat::after { content: none; }
+#toolbar #cats i.wi, #toolbar #cats .kat-pic { position: relative; z-index: 1; width: 40px; height: 34px; filter: drop-shadow(0 2px 1.5px rgba(30, 40, 20, .3));
+  transition: transform .18s cubic-bezier(.3, 1.6, .5, 1); }
+#toolbar #cats .kat-pic { width: 34px !important; height: 34px !important; }
+#toolbar #cats .cat .ic { font-size: 24px; line-height: 34px; height: 34px; }
+#toolbar #cats .tx { display: block; white-space: nowrap; }
+#toolbar #cats .quick.active::before, #toolbar #cats .cat.active::before, #toolbar #cats .quick.drag.drag-open::before {
+  content: ''; position: absolute; left: 50%; bottom: 13px; width: 40px; height: 40px; border-radius: 4px; pointer-events: none;
+  transform: translateX(-50%) scaleY(.5) rotate(45deg); background: rgba(255, 246, 200, .8); }
+body.look-wolke #toolbar #cats .quick.active::before, body.look-wolke #toolbar #cats .cat.active::before, body.look-wolke #toolbar #cats .quick.drag.drag-open::before { background: rgba(120, 160, 230, .35); }
+#toolbar #cats .quick.active i.wi, #toolbar #cats .cat.active i.wi, #toolbar #cats .quick.drag.drag-open .kat-pic { transform: translateY(-3px); }
+@media (hover: hover) { #toolbar #cats .quick:not(:disabled):hover i.wi, #toolbar #cats .cat:hover i.wi, #toolbar #cats .quick:hover .kat-pic { transform: translateY(-3px); } }
+#toolbar #cats .quick:not(:disabled):active i.wi, #toolbar #cats .cat:active i.wi { transform: translateY(1px) scale(.95); }
+#toolbar #cats .cat.has-tool:not(.active) .tx { text-decoration: underline 2px #f2c14e; text-underline-offset: 3px; }   /* hier steckt das gewählte Ding */
+#toolbar #cats .quick.undo:disabled { opacity: .35; }
+#toolbar #cats .quick.drop { background: none; box-shadow: none; }
+#toolbar #cats .quick.drop .x { width: 32px; height: 32px; margin-bottom: 2px; border-radius: 50%; display: grid; place-items: center; background: var(--red);
+  color: #fff; text-shadow: none; font: 900 17px/1 Nunito, system-ui, sans-serif; box-shadow: 0 3px 0 #a8443a; }
+#toolbar #cats .quick.drag-ball { min-width: 0; width: 30px; height: 30px; margin: 0 14px 15px; padding: 0; border-radius: 0; align-self: flex-end; }   /* Platz so breit wie der große Knopf (30 + 2 × 14) – nichts rückt */
+#toolbar #cats .quick.drag-ball .kat-pic { width: 26px !important; height: 26px !important; }
+#toolbar #cats .quick-sep { width: 2px; align-self: stretch; margin: 6px 6px; border-radius: 1px; background: var(--bar-sep); }
+#toolbar #cats.drag-tighter .cat, #toolbar #cats.drag-tighter .quick-sep, #toolbar #cats.drag-tighter .quick.recent { display: none; }   /* wie vorher: Ziehen offen, zu eng */
+#toolbar #cats.drag-tight .cat .tx { display: none; }
+@media (max-width: 600px) { #toolbar #cats.drag-open .cat, #toolbar #cats.drag-open .quick-sep, #toolbar #cats.drag-open .quick.recent { display: none; } }
+@media (max-width: 600px) {
+  .cats-isle { max-width: calc(100% - 4px); margin-bottom: 4px; padding: 7px 6px 5px; }
+  #toolbar .cats#cats { gap: 1px; }
+  #toolbar #cats .quick, #toolbar #cats .cat { min-width: 0; width: 31px; padding: 1px 0 0; }   /* zehn Knöpfe in 375 px (Regel 25) */
+  #toolbar #cats .tx { display: none; }
+  #toolbar #cats i.wi { width: 30px; height: 26px; } #toolbar #cats .kat-pic { width: 26px !important; height: 26px !important; }
+  #toolbar #cats .quick.drop .x { width: 26px; height: 26px; font-size: 14px; }
+  #toolbar #cats .quick.drag-ball { width: 24px; height: 24px; margin: 0 6px 2px; } #toolbar #cats .quick.drag-ball .kat-pic { width: 22px !important; height: 22px !important; }
+  #toolbar #cats .quick.active::before, #toolbar #cats .cat.active::before, #toolbar #cats .quick.drag.drag-open::before { width: 30px; height: 30px; bottom: -6px; }
+  #toolbar #cats .quick-sep { margin: 4px 1px; }
+}
+body.phone #toolbar { background: none; }
+
+/* aufklappendes Feld: Platte als Hintergrund (scrollt selbst), Dinge ohne Kachel – gewählt hell hinterlegt */
+#sheet.slab-in { background-color: transparent; background-size: 100% 100%; background-repeat: no-repeat; box-shadow: none; border-radius: 0; padding: 30px 32px 36px; }
+body.look-wolke #sheet.slab-in { padding: 30px 36px 38px; }
+#sheet .tool { background: none; box-shadow: none; border-radius: 12px; }
+@media (hover: hover) { #sheet .tool:hover { background: rgba(255, 255, 255, .55); } body.look-wolke #sheet .tool:hover { background: rgba(120, 160, 230, .12); } }
+#sheet .tool.active { background: rgba(255, 214, 90, .35); box-shadow: inset 0 0 0 2px #e0b84a; }
+body.look-wolke #sheet .tool.active { background: rgba(120, 160, 230, .2); box-shadow: inset 0 0 0 2px #6b95d8; }
+.sheet-h i.wi { width: 26px; height: 21px; margin-right: 1px; }
+body.look-wolke #sheet .sheet-h, body.look-wolke #sheet .tool { color: #3b4763; }
+body.phone #sheet.slab-in { padding: 28px 31px 32px; }   /* innen ganz neben der Hecke bzw. den Wolkenbuckeln */
+
+/* Minikarte und Drehknopf über der (jetzt höheren) Bauleiste */
+#minimap { bottom: calc(var(--bar, 56px) + 6px); }
+body:has(#minimap:not([hidden])) #rot-btn { bottom: calc(var(--bar, 56px) + 6px + 212px + 12px); }

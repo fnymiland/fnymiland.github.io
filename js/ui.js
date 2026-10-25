@@ -135,7 +135,7 @@ function roofGlitterHtml(t) {
 // Schnellzugriff: die Werkzeuge, die man ständig braucht, ohne Umweg über die Kategorien (Tasten A, W, V, E)
 // 🧹 Abreißen ist nicht mehr in der Leiste (Block 155, Nutzer: „Auswählen und Löschen zusammenlegen“): ✋ Auswählen → 🗑️ Abreißen,
 // Aufgenommenes → 🗑️ Wegwerfen, im 👆-Fenster 🗑️, Wald/Fels über 👆 → Roden. Das Werkzeug 'abriss' gibt es intern weiter
-const QUICK = [['look', '👆', 'Ansehen (A)'], ['weg', '🛤️', 'Weg (W)'], ['verschieben', '✋', 'Auswählen: verschieben, kopieren, abreißen (V)']];
+const QUICK = [['look', 'lupe', 'Ansehen (A)', 'Ansehen'], ['weg', '', 'Weg (W)', ''], ['verschieben', 'haken', 'Auswählen: verschieben, kopieren, abreißen (V)', 'Auswählen']];   // Symbol: ui-look.js
 const NOT_RECENT = new Set(['abriss', 'verschieben']);                 // alles Gebaute zählt, auch Weg und Schiene (Nutzer 11.10.2026: „alles zählt“)
 // Ziehen-Knopf (Nutzer 11.10.2026: „bei der Wege-Schnellauswahl auch Schienen und Tunnel“ – „wie die Apple-Leiste: was man wählt, wird groß,
 // der Rest kleine Kugeln daneben“; dann: „Eisenbahn, Zäune, Wege, Terraforming als Kategorien – Spielbilder statt Emojis“): der Knopf zeigt die
@@ -206,14 +206,14 @@ function katPic(id, s) {
 // Große nochmal: zu, vorn steht das zuletzt Genutzte; beim nächsten Aufgehen steht es vorn, die übrigen rücken in ihrer Reihenfolge nach
 let dragAnchor = null, dragShift = 0, dragRow = DRAG_KATS.map(([k]) => k), dragShown = false;
 function holdDragSpot(el) { if (el) { const r = el.getBoundingClientRect(); dragAnchor = r.left + r.width / 2; } }
-function shiftCats(px) { dragShift = px; $('cats').style.translate = px ? px + 'px 0' : ''; }
+function shiftCats(px) { dragShift = px; ($('cats-isle') || $('cats')).style.translate = px ? px + 'px 0' : ''; }   // mit der Insel (ui-look.js)
 function dragBigLabel(id) { return `${katOf(id)[1]}: ${ITEMS[id].name} (W: Weg)`; }
 function syncDragGroup() {
   const big = document.querySelector('#cats .quick.drag');
   if (!big) return;
   const cur = dragTool(), kat = katOf(cur);
   if (big.dataset.quick !== cur) { big.dataset.quick = cur; big.title = dragBigLabel(cur); big.setAttribute('aria-label', big.title); }
-  if (big.dataset.kat !== kat[0]) { big.dataset.kat = kat[0]; big.replaceChildren(katPic(kat[2], innerWidth <= 600 ? 25 : 32)); }
+  if (big.dataset.kat !== kat[0]) { big.dataset.kat = kat[0]; const tx = document.createElement('span'); tx.className = 'tx'; tx.textContent = kat[1]; big.replaceChildren(katPic(kat[2], innerWidth <= 600 ? 25 : 34), tx); }
   for (const b of document.querySelectorAll('#cats .drag-ball')) b.remove();
   const open = isDragTool(tool), cats = $('cats');
   big.classList.toggle('drag-open', open); cats.classList.toggle('drag-open', open);   // Handy: dann ohne Bereiche (style.css)
@@ -355,33 +355,33 @@ document.addEventListener('pointerdown', e => {                          // dane
 function buildToolbar() {
   const cats = $('cats');
   cats.innerHTML = '';
-  for (const [id0, icon0, label0] of QUICK) {
+  for (const [id0, icon0, label0, short0] of QUICK) {
     const drag = id0 === 'weg', id = drag ? dragTool() : id0;            // Ziehen-Knopf: das zuletzt Genommene, Bild seiner Kategorie (syncDragGroup)
     const icon = drag ? '' : icon0, label = drag ? dragBigLabel(id) : label0;
     const b = document.createElement('button');
     b.className = 'quick' + (drag ? ' drag' : '') + (tool === id ? ' active' : '');
     b.dataset.quick = id;
-    b.textContent = icon;
+    if (icon) wiFace(b, icon, short0);
     b.title = label; b.setAttribute('aria-label', label);
     b.onclick = () => { audio(); if (drag) holdDragSpot(b); setSheet(false); const q = b.dataset.quick; setTool(tool === q && q !== 'look' ? 'look' : q); };   // Ziehen-Knopf: was er gerade zeigt, bleibt beim Aufgehen stehen
     cats.append(b);
   }
   // ↶ Rückgängig (Block 45): grau, wenn es nichts zurückzunehmen gibt; Strg/⌘+Z
   const un = document.createElement('button');
-  un.className = 'quick undo'; un.textContent = '↶';
+  un.className = 'quick undo'; wiFace(un, 'undo', 'Zurück');
   un.title = 'Rückgängig (Strg/⌘+Z)'; un.setAttribute('aria-label', 'Rückgängig');
   un.onclick = () => { audio(); undo(); };
   cats.append(un); updateUndoBtn();
   const see = document.createElement('button');                         // 👁 Durchsicht (Nutzer, 09.10.2026): Dächer, Gebäude, Bäume, Figuren blass
   see.className = 'quick see' + (seeThrough ? ' active' : '');
-  see.textContent = '👁'; see.title = 'Durchsicht: Dächer, Gebäude, Bäume und Figuren blass – tippen geht hindurch (D)';
+  wiFace(see, 'glaskugel', 'Durchsicht'); see.title = 'Durchsicht: Dächer, Gebäude, Bäume und Figuren blass – tippen geht hindurch (D)';
   see.setAttribute('aria-label', 'Durchsicht'); see.setAttribute('aria-pressed', String(seeThrough));
   see.onclick = () => { audio(); setSeeThrough(!seeThrough); };
   cats.append(see);
   const sep = document.createElement('span'); sep.className = 'quick-sep'; cats.append(sep);
   const rec = document.createElement('button');                        // 🕘 zuletzt gebaut (Block 120)
   rec.className = 'quick recent' + (recentOpen ? ' active' : '');
-  rec.textContent = '⭐'; rec.title = 'Favoriten und zuletzt gebaut'; rec.setAttribute('aria-label', 'Favoriten und zuletzt gebaut');
+  wiFace(rec, 'stern', 'Favoriten'); rec.title = 'Favoriten und zuletzt gebaut'; rec.setAttribute('aria-label', 'Favoriten und zuletzt gebaut');
   rec.onclick = () => { audio(); recentOpen = !recentOpen; setSheet(recentOpen); buildToolbar(); };
   cats.append(rec);
   // Bereiche (Stadt · Herstellen · Freizeit · Gestalten); ein Werkzeug aus einem anderen Bereich
@@ -394,7 +394,7 @@ function buildToolbar() {
     const b = document.createElement('button');
     b.className = 'cat' + (sheetOpen && m.id === menuTop && !recentOpen ? ' active' : '') + (menuHas(m, baseOf(tool)) ? ' has-tool' : '');
     b.dataset.menu = m.id;
-    menuLabel(b, m.label);
+    menuLabel(b, m.label); menuIcon(b, m.id);
     b.setAttribute('aria-expanded', String(sheetOpen && m.id === menuTop && !recentOpen));
     b.onclick = () => { audio(); const same = sheetOpen && menuTop === m.id && !recentOpen; recentOpen = false; menuTop = m.id; menuSub = firstSub(m.id); setSheet(!same); buildToolbar(); };
     cats.append(b);
@@ -442,10 +442,10 @@ function renderTools() {
   const head = t => { const h = document.createElement('div'); h.className = 'sheet-h'; menuLabel(h, t); box.append(h); return h; };
   if (recentOpen) {                                                       // ⭐: Favoriten, darunter zuletzt gebaut
     const favs = favList(), rec = recentList().filter(id => !favs.includes(id));
-    head('⭐ Favoriten').dataset.group = 'fav';
+    { const h = head('⭐ Favoriten'); h.dataset.group = 'fav'; menuIcon(h, 'fav'); }
     if (!favs.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch keine – tippe im Menü auf ☆ oben rechts an einer Kachel'; box.append(p); }
     for (const id of favs) box.append(card(id));
-    head('🕘 Zuletzt gebaut').dataset.group = 'recent';
+    { const h = head('🕘 Zuletzt gebaut'); h.dataset.group = 'recent'; menuIcon(h, 'recent'); }
     if (!rec.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch nichts – was du baust, steht dann hier'; box.append(p); }
     for (const id of rec) box.append(card(id));
     return;
@@ -456,7 +456,7 @@ function renderTools() {
   const ready = gr => gr.items.some(available);                           // Gruppen ganz ohne Freies ans Ende (Reihenfolge sonst eigene bzw. MENU)
   let first = true;
   for (const gr of [...grs.filter(ready), ...grs.filter(gr => !ready(gr))]) {   // alle Gruppen untereinander, Überschrift je Gruppe
-    const h = document.createElement('div'); h.className = 'sheet-h'; h.dataset.group = gr.id || top.id; menuLabel(h, gr.label); box.append(h);
+    const h = document.createElement('div'); h.className = 'sheet-h'; h.dataset.group = gr.id || top.id; menuLabel(h, gr.label); menuIcon(h, gr.id || top.id); box.append(h);
     if (first && top.groups && top.groups.length > 1) {                   // ⇅ Anordnen: rechts in der ersten Überschrift
       const a = document.createElement('button'); a.className = 'arrange-btn'; a.textContent = '⇅ Anordnen';
       a.setAttribute('aria-label', 'Gruppen anordnen');
@@ -528,7 +528,11 @@ function syncDropBtn() {
   if (!b) return;
   const hold = tool !== 'look', label = hold ? 'Weglegen (Esc)' : 'Ansehen (A)';
   b.classList.toggle('drop', hold);
-  b.textContent = hold ? '✕' : '👆';
+  if (b.dataset.face !== String(hold)) {                                  // ✕ rot, solange etwas in der Hand ist; sonst Lupe
+    b.dataset.face = String(hold);
+    if (hold) { const x = document.createElement('span'); x.className = 'x'; x.textContent = '✕'; const t = document.createElement('span'); t.className = 'tx'; t.textContent = 'Weglegen'; b.replaceChildren(x, t); }
+    else wiFace(b, 'lupe', 'Ansehen');
+  }
   b.title = label; b.setAttribute('aria-label', label);
 }
 function setTool(t) {
@@ -3307,6 +3311,7 @@ const NEWS_HISTORY = [
   { id: '2026-10-25-aussehen', date: '25. Oktober', title: 'Neues Aussehen', items: [
     '🌿 <b>Aussehen:</b> Die Oberfläche kommt jetzt aus deiner Welt. Unter ☰ → Einstellungen → Aussehen wählst du zwischen <b>Hecke</b> (Standard) und <b>Wolken</b>.',
     '🏠 <b>Leiste oben:</b> Statt Emojis in Pillen stehen dort jetzt Bildchen, die das Spiel selbst zeichnet: Münzstapel, Haus, Bibliothek, Kristall, Kiste, Freundesbank und ein Wegweiser fürs Menü.',
+    '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
   ] },
   { id: '2026-10-24-wundergarten', date: '24. Oktober', title: 'Riesenrad und Sternwarte', items: [
     '🎡 <b>Riesenrad:</b> Es steht jetzt wie ein echtes Riesenrad auf einem gepflasterten Platz, mit einem Zaun um den Fuß, einem Tor und einem Tickethäuschen daneben. Laternen, Bänke, Bäume und der Weg rundherum sind echte Dinge, die du verändern kannst. Wechselst du den Belag des Wegs, wechselt das Pflaster unter dem Rad mit.',

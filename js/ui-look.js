@@ -111,18 +111,22 @@ function drawSlab(el) {
   if (!w || !h) return;
   if (el.dataset.slabKey === key) return;
   el.dataset.slabKey = key;
-  const { canvas, pad, depth } = paintSlab(w, h, el.dataset.slab, +el.dataset.slabSeed || 1);
+  const inset = el.classList.contains('slab-in'), L = SLAB_STYLE[uiLookId][el.dataset.slab], p0 = L.pad ?? 12;
+  // slab-in: ganz im Element (als Hintergrund) – für Fenster, die selbst scrollen (::before würde mitgeschnitten bzw. mitscrollen)
+  const { canvas, pad, depth } = inset ? paintSlab(Math.max(20, w - 2 * p0), Math.max(20, h - 2 * p0 - L.depth), el.dataset.slab, +el.dataset.slabSeed || 1)
+    : paintSlab(w, h, el.dataset.slab, +el.dataset.slabSeed || 1);
   let url = '';
   try { url = canvas.toDataURL(); } catch (e) { return; }
+  if (inset) { el.style.backgroundImage = `url(${url})`; return; }
   el.style.setProperty('--slab', `url(${url})`);
   el.style.setProperty('--slab-pad', pad + 'px');
   el.style.setProperty('--slab-depth', depth + 'px');
 }
 let slabSeedNext = 3;
-function lookSlab(el, role) {
+function lookSlab(el, role, inset = false) {
   if (!el) return;
   el.dataset.slab = role;
-  el.classList.add('slab');
+  el.classList.add(inset ? 'slab-in' : 'slab');
   if (!el.dataset.slabSeed) el.dataset.slabSeed = String(slabSeedNext += 7);
   if (!SLABS.has(el)) { SLABS.add(el); if (slabObs) slabObs.observe(el); }
   drawSlab(el);
@@ -148,6 +152,33 @@ const UI_DRAW = {
     };
     board(12, 1, '#d9a464'); board(28, -1, '#c98f52');
   },
+  lupe() {                                                 // Ansehen
+    uiShadow(34, 57, 16);
+    uiLine([[39, 39], [50, 52]], '#7a4f2e', 7); uiLine([[39.5, 38.5], [50, 50.5]], '#a5734a', 2.4);
+    ellipse(30, 30, 14, 14, '#7f8b96'); ellipse(30, 30, 11, 11, '#cfeef6');
+    g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.ellipse(25.5, 25.5, 4.2, 2.4, -0.8, 0, Math.PI * 2); g.fill();
+  },
+  haken() {                                                // Auswählen / Tragen: Kiste am Kranhaken
+    uiShadow(32, 58, 13);
+    uiLine([[32, 4], [32, 22]], '#6b4f3a', 1.8);
+    uiLine([[32, 22], [23, 30]], '#6b4f3a', 1.4); uiLine([[32, 22], [41, 30]], '#6b4f3a', 1.4);
+    g.strokeStyle = '#8a8f99'; g.lineWidth = 2.4; g.beginPath(); g.arc(32, 8, 3.4, Math.PI * .1, Math.PI * 1.9); g.stroke();
+    uiCrate(32, 43, 14, 7, 14);
+  },
+  undo() {                                                 // Zurück: gebogener Holzpfeil
+    uiShadow(32, 56, 16);
+    g.lineCap = 'round'; g.strokeStyle = '#7a4f2e'; g.lineWidth = 8;
+    g.beginPath(); g.arc(33, 34, 12, Math.PI * .95, Math.PI * 2.25); g.stroke();
+    g.strokeStyle = '#b37b4c'; g.lineWidth = 3; g.beginPath(); g.arc(33, 33, 12, Math.PI * 1.05, Math.PI * 1.9); g.stroke();
+    poly([[13, 30], [29, 30], [21, 42]], '#7a4f2e'); poly([[16, 31], [26, 31], [21, 38]], '#9a6a40');
+  },
+  stern() {                                                // Favoriten: dicker goldener Stern mit Kante
+    uiShadow(32, 57, 15);
+    const pts = (cx, cy, R, r) => Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r : R; return [cx + Math.cos(a) * q, cy + Math.sin(a) * q * .92]; });
+    poly(pts(32, 34, 21, 9.5), '#c98f1e');
+    poly(pts(32, 31, 21, 9.5), '#f2bd3a');
+    poly(pts(30.5, 29.5, 9, 4.2), '#f8d978');
+  },
 };
 const uiShadow = (cx, cy, rx) => ellipse(cx, cy, rx, rx / 2.4, 'rgba(40,50,70,0.18)');
 function uiBox(cx, cy, a, b, h, col) {                     // Kiste: (cx, cy) = Mitte der Grundfläche
@@ -170,7 +201,8 @@ function uiCrate(cx, cy, a, b, h) {
 function uiTrim(src, pad = 2) {
   const x = src.getContext('2d');
   if (!x) return src;
-  const W = src.width, H = src.height, d = x.getImageData(0, 0, W, H).data;
+  const W = src.width, H = src.height, img = x.getImageData(0, 0, W, H), d = img && img.data;
+  if (!d) return src;
   let x0 = W, y0 = H, x1 = -1, y1 = -1;
   for (let y = 0; y < H; y++) for (let i = 0; i < W; i++) if (d[(y * W + i) * 4 + 3] > 12) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; if (y > y1) y1 = y; }
   if (x1 < 0) return src;
@@ -212,11 +244,38 @@ function fillUiIcons(root = document) {
   }
 }
 
+// Symbol als Element (für Knöpfe); fehlt das Bild, bleibt `fallback` (Text) stehen
+function wiEl(name, fallback = '') {
+  const i = document.createElement('i');
+  i.className = 'wi'; i.dataset.ic = name; i.setAttribute('aria-hidden', 'true');
+  const url = uiIcon(name);
+  if (url) { i.style.backgroundImage = `url(${url})`; i.dataset.icDone = name; } else { i.className = 'ic'; i.textContent = fallback; }
+  return i;
+}
+// Knopf der Bauleiste: Symbol und darunter ein Wort (.tx – schmal ausgeblendet, style.css)
+function wiFace(b, name, label) {
+  const t = document.createElement('span'); t.className = 'tx'; t.textContent = label;
+  b.replaceChildren(wiEl(name), t);
+}
+// Bereiche der Bauleiste und Gruppen im Feld: Bild aus dem Spiel statt Emoji (unbekannt: Emoji bleibt)
+const MENU_ICON = { stadt: 'haus:3', herstellen: 'baecker', freizeit: 'fz_karussell', gestalten: 'blumen',
+  wohnen: 'haus:2', bahn: 'station', untergrund: 'ubahn', wasser: 'bootssteg', einrichtungen: 'schule', taler: 'muehle', rohstoffe: 'holz',
+  strom: 'windrad', veredeln: 'schmiede', fzpark: 'fz_ballon', fzfahrt: 'fz_teetassen', fzbahn: 'fz_station', parkbahn: 'pb_station',
+  fzschloss: 'fz_schloss', wunder: 'riesenrad', hoehen: 'anhoehe', gruen: 'baum', platz: 'laterne', besonderes: 'statue',
+  fav: 'stern', recent: 'rathaus' };
+function menuIcon(el, id) {
+  const ic = el.querySelector('.ic'), name = MENU_ICON[id];
+  if (!ic || !name || !uiIcon(name)) return;
+  ic.replaceWith(wiEl(name));
+}
+
 // ---------- anwenden ----------
 function applyUiLook() {
   const b = document.body;
   if (!b) return;
   for (const id of Object.keys(UI_LOOKS)) b.classList.toggle('look-' + id, id === uiLookId);
   fillUiIcons();
+  lookSlab(document.getElementById('cats-isle'), 'bar');                 // Bauleiste: Beet in der Hecke bzw. Wolke
+  lookSlab(document.getElementById('sheet'), 'paper', true);              // aufklappendes Feld (scrollt selbst: Platte als Hintergrund)
   for (const el of SLABS) { if (!el.isConnected) { SLABS.delete(el); if (slabObs) slabObs.unobserve(el); continue; } drawSlab(el); }
 }

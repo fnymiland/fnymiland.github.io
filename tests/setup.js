@@ -36,6 +36,7 @@ const fakeCtx = new Proxy({ globalCompositeOperation: 'source-over', globalAlpha
   set(target, prop, value) { target[prop] = value; return true; },
 });
 HTMLCanvasElement.prototype.getContext = () => fakeCtx;
+HTMLCanvasElement.prototype.toDataURL = () => 'data:,';   // jsdom kann es nicht (Symbole der Oberfläche, ui-look.js)
 
 // Die Spielschleife läuft im Test nicht von selbst – Tests rufen gezielt Funktionen auf
 globalThis.requestAnimationFrame = () => 0;
