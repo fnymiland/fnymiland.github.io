@@ -1335,3 +1335,12 @@ body.look-wolke .album-page { background: rgba(120, 160, 230, .08); }
 #panel h3 .fav-head { background-size: 24px 24px; background-position: center; }
 #tools .tool .fav.on, #panel h3 .fav-head.on { filter: none; }
 @media (hover: hover) { #tools .tool .fav:hover, #panel h3 .fav-head:hover { filter: grayscale(.3); } }
+/* Abstand zur Bauleiste: Hecke bzw. Wolkenbuckel der Leiste ragen oben über ihre Box hinaus (--bar misst nur die Box) –
+   Fenster darüber halten diesen Überstand frei (Nutzer: „warum überlappt das“, Handy quer) */
+body { --isle-over: 14px; }
+body.look-wolke { --isle-over: 20px; }
+#panel.slab-in { max-height: calc(100vh - var(--bar, 160px) - 76px - var(--isle-over)); max-height: calc(100dvh - var(--bar, 160px) - 76px - var(--isle-over)); }
+body.phone:not(.phone-land) #panel.slab-in { bottom: calc(var(--bar, 57px) + var(--isle-over)); }   /* Höhe bleibt 48dvh wie bisher */
+body.phone:not(.phone-land) #panel.slab-in.tall { max-height: calc(100dvh - var(--bar, 57px) - 64px - var(--isle-over)); }
+body.phone.phone-land #panel.slab-in { bottom: calc(var(--bar, 57px) + 8px + var(--isle-over)); max-height: calc(100dvh - var(--bar, 57px) - 64px - var(--isle-over)); }
+@media (max-width: 600px) { #panel.slab-in { max-height: calc(100dvh - var(--bar, 160px) - 110px - var(--isle-over)); } }
