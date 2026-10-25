@@ -2511,6 +2511,7 @@ const ICON_SPRITES = new Map();               // weit weg (Block 124): ✨/🐌/
 let iconPaint = false;
 function drawStatusIcon(cx, cy, z, icon, now) {
   const bob = Math.sin(now / 300) * 1.5 * z, x = cx - 10 * z, y = cy - 34 * z + bob, r = 6.5 * z;
+  const pic = typeof uiIconCanvas === 'function' ? uiIconCanvas(icon) : null;   // gezeichnetes Spiel-Symbol (ui-look.js) oder null
   if (SPRITES_ON && g === ctx && !iconPaint) {
     const zs = zoomStep(z), key = icon + '|' + zs + '|' + DPR;
     let c = ICON_SPRITES.get(key);
@@ -2524,6 +2525,12 @@ function drawStatusIcon(cx, cy, z, icon, now) {
       }
     }
     if (c) { const k = z / c.zs; g.drawImage(c.c, x - c.R * k, y - c.R * k, 2 * c.R * k, 2 * c.R * k); return; }
+  }
+  // gezeichnetes Spiel-Symbol statt Emoji im Kreis (Aussehen, ui-look.js); ohne Bild (😣 …) wie bisher
+  if (pic) {
+    const box = 15 * z, k = Math.min(box / pic.width, box / pic.height), w = pic.width * k, h = pic.height * k;
+    g.drawImage(pic, x - w / 2, y + box / 2 - h, w, h);
+    return;
   }
   circle(x, y + 1.5, r, 'rgba(107,79,58,0.3)');
   circle(x, y, r, '#fffaf0');

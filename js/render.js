@@ -41,19 +41,47 @@ function timeOfDay(ms = Date.now()) {
 }
 
 // fit: im Bild halten (Vorschau-Schild) – notfalls kleiner, dann seitlich hineinrücken
+// Schilder auf der Karte (Sehenswürdigkeiten, Inseln, Namen, Bau-Vorschau): früher Pillen mit Emojis, jetzt freistehende Schrift mit
+// braunem Rand wie die Leiste oben; Emojis mit Spiel-Symbol (WI_TEXT, ui-look.js) als Bild. Farbe aus dem früheren Hintergrund:
+// gelb = bereit/nächstes, grün = fertig/geht, rot = geht nicht. Rückgabe: Trefferfläche (pillHits)
+const PILL_TINT = { '#fff3b0': '#ffe27a', '#eaffea': '#d6f5c4', '#ffe9e7': '#ffc0b4' };
+function pillSegs(text) {
+  if (typeof WI_TEXT_RE === 'undefined' || typeof uiIconCanvas !== 'function') return [{ t: text }];
+  const out = [];
+  let last = 0;
+  for (const m of text.matchAll(WI_TEXT_RE)) {
+    const pic = uiIconCanvas(m[0]);
+    if (!pic) continue;                                                // ohne Bild: Emoji bleibt Text
+    if (m.index > last) out.push({ t: text.slice(last, m.index) });
+    out.push({ pic });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) out.push({ t: text.slice(last) });
+  return out;
+}
 function pill(text, x, y, bg, fg, size, fit) {
-  g.font = `900 ${size}px Nunito, system-ui, sans-serif`;
-  let w = g.measureText(text).width + size * 1.2;
-  while (fit && w > W - 16 && size > 9) { size--; g.font = `900 ${size}px Nunito, system-ui, sans-serif`; w = g.measureText(text).width + size * 1.2; }
+  const segs = pillSegs(text), font = s => `800 ${s * 1.12}px 'Alegreya Sans', Nunito, system-ui, sans-serif`;
+  const segW = (sg, s) => sg.pic ? s * 1.5 * Math.min(1.25, sg.pic.width / sg.pic.height) : g.measureText(sg.t).width;
+  const widthAt = s => { g.font = font(s); return segs.reduce((a, sg) => a + segW(sg, s), 0); };
+  let w = widthAt(size);
+  while (fit && w + size > W - 16 && size > 9) { size--; w = widthAt(size); }
   if (fit) x = Math.max(w / 2 + 8, Math.min(W - w / 2 - 8, x));
-  const h = size * 1.7;
-  g.fillStyle = 'rgba(107,79,58,0.25)';
-  g.beginPath(); g.roundRect(x - w / 2, y - h / 2 + 3, w, h, h / 2); g.fill();
-  g.fillStyle = bg;
-  g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, h / 2); g.fill();
-  g.fillStyle = fg; g.textBaseline = 'middle';
-  centerText(text, x, y + 1);
-  return { x0: x - w / 2, y0: y - h / 2, x1: x + w / 2, y1: y + h / 2 };
+  const h = size * 1.7, col = PILL_TINT[bg] || '#fff7e6';
+  g.font = font(size); g.textBaseline = 'middle'; g.textAlign = 'left'; g.lineJoin = 'round';
+  let cx = x - w / 2;
+  for (const sg of segs) {
+    const sw = segW(sg, size);
+    if (sg.pic) {
+      const ih = size * 1.5, iw = Math.min(sw, ih * sg.pic.width / sg.pic.height);
+      g.drawImage(sg.pic, cx + (sw - iw) / 2, y - ih * 0.62, iw, ih);
+    } else {
+      g.strokeStyle = 'rgba(70,45,25,.45)'; g.lineWidth = size * 0.42; g.strokeText(sg.t, cx, y + 2.5);   // weicher Schatten nach unten
+      g.strokeStyle = '#5a3d24'; g.lineWidth = size * 0.34; g.strokeText(sg.t, cx, y + 1);
+      g.fillStyle = col; g.fillText(sg.t, cx, y + 1);
+    }
+    cx += sw;
+  }
+  return { x0: x - w / 2 - 4, y0: y - h / 2, x1: x + w / 2 + 4, y1: y + h / 2 };
 }
 
 

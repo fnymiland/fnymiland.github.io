@@ -12,11 +12,21 @@ describe('Schilder', () => {
       const out = [], f = g.fillText, m = g.measureText;
       g.measureText = () => ({ width: 100 });
       g.fillText = (t, x, y) => out.push([t, x, g.textAlign]);
-      pill('🏛 Alte Ruine 🏮', 200, 50, '#fff', '#000', 12);
+      pill('Alte Ruine', 200, 50, '#fff', '#000', 12);
       g.fillText = f; g.measureText = m;
       return out;
     })()`);
-    expect(calls).toEqual([['🏛 Alte Ruine 🏮', 150, 'left']]);
+    expect(calls).toEqual([['Alte Ruine', 150, 'left']]);
+  });
+  it('Emojis im Schild werden gezeichnete Spiel-Symbole, der Text bleibt dazwischen (Aussehen, 25.10.2026)', () => {
+    const r = game(`(() => {
+      const out = [], f = g.fillText, d = g.drawImage;
+      g.fillText = t => out.push(t); g.drawImage = () => out.push('[Bild]');
+      pill('🏛 Alte Ruine 🏮', 200, 50, '#fff', '#000', 12);
+      g.fillText = f; g.drawImage = d;
+      return out;
+    })()`);
+    expect(r).toEqual(['[Bild]', ' Alte Ruine ', '[Bild]']);
   });
 });
 

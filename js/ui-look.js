@@ -228,7 +228,7 @@ function uiTrim(src, pad = 2) {
   return c;
 }
 // Symbol als Bild-Adresse: eigene Zeichnung (UI_DRAW) oder ein Ding des Spiels ohne Bodenkachel ('haus:2' = Haus Stufe 2)
-const UI_ICON_CACHE = new Map();
+const UI_ICON_CACHE = new Map(), UI_ICON_CNV = new Map();              // Bild-Adresse bzw. fertige Leinwand je Symbol
 function uiIcon(name) {
   if (UI_ICON_CACHE.has(name)) return UI_ICON_CACHE.get(name);
   const S = 3;
@@ -246,10 +246,19 @@ function uiIcon(name) {
         drawObject(type, 140, 200, isBig(type) ? 0.8 : 1.3, 0, 3, 7, +lvl || 1, null);
       }
     } catch (e) { /* Symbol fehlt lieber, als dass die Leiste ausfällt */ } finally { g = prev; FOG = fog; }
-    try { url = uiTrim(c).toDataURL(); } catch (e) { url = ''; }
+    try { const tc = uiTrim(c); UI_ICON_CNV.set(name, tc); url = tc.toDataURL(); } catch (e) { url = ''; }
   }
   UI_ICON_CACHE.set(name, url);
   return url;
+}
+// dasselbe Symbol als fertige Leinwand (zum Zeichnen auf der Karte: Symbole über Häusern, Schilder); null = kein Bild für dieses Emoji.
+// Leinwand statt Bild: sofort da (ein Bild aus einer Adresse lädt erst später – dann würde das Häuser-Symbol jedes Bild neu gemalt)
+function uiIconCanvas(emoji) {
+  const name = typeof emoji === 'string' && wiTextName(emoji);
+  if (!name) return null;
+  if (!UI_ICON_CACHE.has(name)) uiIcon(name);
+  const c = UI_ICON_CNV.get(name);
+  return c && c.width && c.height ? c : null;
 }
 // Bild eines echten Feldes (Infofenster): mit seinen Farben/Formen, ohne Bodenkachel; je Aussehen des Feldes einmal gemalt
 const HERO_SKIP = new Set(['weg', 'schiene', 'tunnel', 'pb_gleis', 'fzboden', 'graben', 'schuett', 'anhoehe', 'huegeltreppe', 'huegelrampe', 'bruecke', 'dach', 'stuetze', 'dachtreppe']);

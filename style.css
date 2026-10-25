@@ -1274,3 +1274,5 @@ body.phone #modal-card:not(.basar-night) { padding: 34px 32px 42px; }
 i.wt { display: inline-block; width: 1.35em; height: 1.15em; vertical-align: -.24em; overflow: hidden; text-indent: 300%; white-space: nowrap;
   font-style: normal; background: center bottom / contain no-repeat; }
 .tool .lock i.wt { width: 15px; height: 15px; }
+#town-btn .tod i.wt { width: 20px; height: 18px; vertical-align: -4px; filter: drop-shadow(0 1px 1px rgba(60, 40, 20, .55)); }
+#hud .more i.wt { filter: drop-shadow(0 1px 1px rgba(60, 40, 20, .55)); }
