@@ -55,8 +55,8 @@ function slabOutline(w, h, r, j, R, step = 18) {
   return pts;
 }
 // Punkte in gleichem Abstand auf dem Rand eines abgerundeten Rechtecks (w×h, Ecken r) – Abstand so angepasst, dass es rundum aufgeht
-function roundRectRing(w, h, r, step) {
-  const sx = w - 2 * r, sy = h - 2 * r, arc = Math.PI / 2 * r, L = 2 * sx + 2 * sy + 4 * arc, n = Math.max(8, Math.round(L / step)), out = [];
+function roundRectRing(w, h, r, step, even = false) {             // even: gerade Anzahl (Wechsel groß/klein geht rundum auf)
+  const sx = w - 2 * r, sy = h - 2 * r, arc = Math.PI / 2 * r, L = 2 * sx + 2 * sy + 4 * arc, n0 = Math.max(8, Math.round(L / step)), n = even ? n0 + (n0 % 2) : n0, out = [];
   const segs = [                                                           // im Uhrzeigersinn ab oben links (nach der Ecke)
     [sx, t => [r + t, 0]], [arc, t => { const a = -Math.PI / 2 + t / r; return [w - r + Math.cos(a) * r, r + Math.sin(a) * r]; }],
     [sy, t => [w, r + t]], [arc, t => { const a = t / r; return [w - r + Math.cos(a) * r, h - r + Math.sin(a) * r]; }],
@@ -88,17 +88,22 @@ function paintSlab(w, h, role, seed, look = uiLookId) {
   if (!x) return { canvas: c, pad, depth: L.depth };
   x.scale(dpr, dpr); x.translate(pad, pad);
   const pts = slabOutline(w, h, Math.min(L.r, h / 2.2), L.j, R, L.step);
-  if (L.deco === 'wolke') {                                // Wolke: Buckel rundum, Unterseite bläulich
-    const bump = L.bump || 13, B = pts.map(p => [p[0], p[1], bump * (.75 + R() * .5)]);
-    x.save(); x.filter = 'blur(6px)'; x.fillStyle = 'rgba(50,70,110,.18)';
-    for (const [px, py, r] of B) { x.beginPath(); x.arc(px, py + L.depth + 5, r, 0, 7); x.fill(); }
-    x.restore();
-    for (const [px, py, r] of B) slabDot(x, px, py + L.depth, r, L.side);
-    slabPath(x, pts, 0, L.depth); x.fillStyle = L.side; x.fill();
-    for (const [px, py, r] of B) slabDot(x, px, py, r, L.top);
-    slabPath(x, pts, 0, 0); x.fillStyle = L.top; x.fill();
-    const hi = L.top === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,.35)';
-    for (const [px, py, r] of B) if (py < h / 2) slabDot(x, px - r * .25, py - r * .3, r * .45, hi);
+  if (L.deco === 'wolke') {                                // Wolke: Unterseite bläulich
+    // geordnet wie die Hecke (Nutzer 25.10.2026): runde Ecken, gleicher Abstand, im Wechsel große und kleine Buckel; Knöpfe als glatte
+    // Wölkchen mit drei Buckeln oben
+    const rr = Math.min(L.r, h / 2.2);
+    let B;
+    if (L.bump) {                                          // Knopf: glatt, oben drei Buckel
+      B = [[w * 0.3, h * 0.2, h * 0.36], [w * 0.55, h * 0.12, h * 0.48], [w * 0.78, h * 0.24, h * 0.32]];
+    } else {
+      const big = role === 'bar' ? 16 : 15, small = role === 'bar' ? 11 : 10;
+      B = roundRectRing(w, h, rr, role === 'bar' ? 24 : 22, true).map(([px, py], i) => [px, py, i % 2 ? small : big]);
+    }
+    const body = (dy, col) => { for (const [px, py, r] of B) slabDot(x, px, py + dy, r, col); x.beginPath(); x.roundRect(0, dy, w, h, rr); x.fillStyle = col; x.fill(); };
+    x.save(); x.filter = 'blur(6px)'; body(L.depth + 5, 'rgba(50,70,110,.18)'); x.restore();
+    body(L.depth, L.side);
+    body(0, L.top);
+    if (L.top !== '#ffffff') for (const [px, py, r] of B) if (py < h / 2) slabDot(x, px - r * .25, py - r * .3, r * .45, 'rgba(255,255,255,.3)');
   } else if (L.deco === 'hecke') {                         // Hecke rundum wie die Gärten im Spiel, innen Papier bzw. Beet
     // gleichmäßig (Nutzer: „so ungleichmäßig, unschön – auch die Ecken gehen gar nicht“): exaktes abgerundetes Rechteck, Büsche in
     // festem Abstand entlang des Rands (auch durch die Ecken, die echte Viertelkreise sind), alle gleich groß

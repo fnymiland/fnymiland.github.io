@@ -1323,3 +1323,14 @@ body.look-wolke .card.basar .basar-card { border-color: rgba(90, 110, 150, .2); 
 .al-e, .sv-e { background: none; }
 .album-page { border-radius: var(--cut); background: rgba(255, 255, 255, .45); }
 body.look-wolke .album-page { background: rgba(120, 160, 230, .08); }
+/* Wolken: Knöpfe als Wölkchen – drei Buckel oben in der Knopffarbe (--bt), Text bleibt frei (Nutzer 25.10.2026: „ja mach so“) */
+body.look-wolke .btn { --bt: #6b95d8; position: relative; isolation: isolate; }
+body.look-wolke .btn.ghost { --bt: #e3ecf8; }
+body.look-wolke .btn.danger { --bt: #d9655a; }
+body.look-wolke .btn:disabled { --bt: #dfe5ee; }
+body.look-wolke .btn::before { content: ''; position: absolute; left: 0; right: 0; top: -7px; height: 14px; z-index: -1; pointer-events: none;
+  background: radial-gradient(circle 8px at 30% 100%, var(--bt) 97%, transparent 100%),
+              radial-gradient(circle 10px at 55% 100%, var(--bt) 97%, transparent 100%),
+              radial-gradient(circle 7px at 78% 100%, var(--bt) 97%, transparent 100%); }
+body.look-wolke .btn.small::before { top: -5px; height: 10px; background: radial-gradient(circle 5px at 32% 100%, var(--bt) 97%, transparent 100%),
+  radial-gradient(circle 7px at 56% 100%, var(--bt) 97%, transparent 100%), radial-gradient(circle 5px at 77% 100%, var(--bt) 97%, transparent 100%); }
