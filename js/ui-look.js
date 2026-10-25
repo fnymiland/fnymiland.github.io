@@ -241,6 +241,11 @@ function uiIcon(name) {
       if (name.startsWith('tier:') && typeof figPreview === 'function') {   // Bewohner-Tier wie auf der Insel (Standard-Fell und -Hemd)
         c.width = 64 * S; c.height = 80 * S;
         figPreview(c, figFrom(+name.slice(5), {}, ''), 2.6 * S);
+      } else if (name.startsWith('natur:') && typeof drawCritter === 'function') {   // Naturtier (Album) wie auf der Insel, sitzend
+        c.width = c.height = 64 * S; x.scale(S, S); g = x; FOG = false;
+        const ots = toScreen; toScreen = () => ({ x: 32, y: 50 });
+        try { drawCritter({ id: name.slice(6), px: 0, py: 0, h: 0, t0: -1000, until: 1e9, seed: 1, col: '#f2a0c8', flying: false }, 4, 0); }
+        finally { toScreen = ots; g.globalAlpha = 1; }
       } else if (UI_DRAW[name]) {
         c.width = c.height = 64 * S; x.scale(S, S); g = x; FOG = false;
         UI_DRAW[name]();
@@ -334,12 +339,12 @@ const WI_TEXT = {
   '🪓': 'axt', '🧭': 'kompass', '🧹': 'besen', '🌊': 'welle', '🪜': 'leiter', '🏗': 'kran', '👷': 'kran', '⭐': 'stern', '✋': 'haken', '👁': 'glaskugel',
   '👆': 'lupe', '🌐': 'freundesbank', '☰': 'wegweiser', '🛤': 'wegweiser', '⛰': 'stein', '⛱': 'pavillon',
   '🏛': 'rathaus', '🚆': 'station', '🚉': 'station', '🏠': 'haus:1', '🏘': 'reihenhaus', '🌉': 'seebruecke', '🌳': 'baum', '🌲': 'baum', '🎡': 'riesenrad',
-  '❓': 'wegweiser', '❔': 'wegweiser', '🐾': 'tier:2', '👀': 'lupe', '⛩': 'bogen', '🌫': 'wolke', '🚧': 'kran', '🐠': 'fischer', '🦋': 'schmetterlingsgarten', '📩': 'briefkasten',
+  '❓': 'wegweiser', '❔': 'wegweiser', '🐾': 'tier:2', '👀': 'lupe', '⛩': 'bogen', '🌫': 'wolke', '🚧': 'kran', '📩': 'briefkasten',
   '🌅': 'sonne', '🧰': 'kiste', '⛺': 'pavillon',
   '🐱': 'tier:0', '🐻': 'tier:1', '🐰': 'tier:2', '🐿': 'tier:3', '🦔': 'tier:4', '🦊': 'tier:5', '🦒': 'tier:6', '🐘': 'tier:7', '🦆': 'tier:8',
   '🏰': 'fz_schloss', '🎢': 'fz_looping', '🌿': 'busch', '🕘': 'uhrturm', '🏭': 'fabrik', '🚇': 'ubahn', '🗼': 'leuchtturm', '💾': 'truhe',
   '🛍': 'blumenladen', '🛒': 'korb', '🌬': 'windrad', '🪑': 'bank', '📍': 'pin', '🖌': 'palette', '🚂': 'station', '🚋': 'station', '🚃': 'station', '🚈': 'station',
-  '🚄': 'station', '🐟': 'fischer', '🏆': 'pokal_gold', '🚡': 'seilbahn', '🌠': 'funkel', '🌟': 'funkel', '⚓': 'hafen', '♨': 'geothermie', '🌷': 'blumen',
+  '🚄': 'station', '🏆': 'pokal_gold', '🚡': 'seilbahn', '🌠': 'funkel', '🌟': 'funkel', '⚓': 'hafen', '♨': 'geothermie', '🌷': 'blumen',
   '🌹': 'blumen', '🌻': 'blumen', '🌼': 'blumen', '💐': 'blumen', '🏡': 'haus:2', '📋': 'rolle', '💰': 'taler', '🌱': 'busch', '🍃': 'busch', '🎠': 'fz_karussell',
   '🔨': 'schmiede', '💧': 'brunnen', '⛲': 'brunnen', '☀': 'sonne', '💌': 'briefkasten', '📮': 'briefkasten', '🔭': 'sternwarte', '💼': 'fabrik', '🔍': 'lupe',
   '🔬': 'bibliothek', '🎓': 'uni', '🏦': 'rathaus', '🔓': 'riegel', '🗺': 'kompass', '🛳': 'boot', '🚤': 'boot', '🛶': 'boot', '🌴': 'palme', '🏖': 'insel',
@@ -350,8 +355,14 @@ Object.assign(WI_TEXT, {
   '🚪': 'tuer', '🌈': 'regenbogen', '🔁': 'kreispfeil', '🔄': 'kreispfeil', '🔀': 'kreispfeil', '🔑': 'schluessel',
   '👋': 'herz', '👏': 'herz', '🤍': 'herz', '🙂': 'sonne', '🌄': 'sonne', '🎮': 'zahnrad', '📱': 'briefkasten', '🎒': 'schule', '📈': 'taler', '🪟': 'glashaus',
   '🎟': 'rolle', '🏷': 'rolle', '🧩': 'kiste', '🧳': 'kiste', '📥': 'kiste', '📤': 'kiste', '📂': 'kiste', '🔔': 'uhrturm', '🏙': 'reihenhaus', '🏯': 'fz_schloss',
+  '🎣': 'fischer', '🐚': 'insel', '🍄': 'busch', '🐝': 'blumen', '🍰': 'cafe', '🚶': 'wegweiser', '🧅': 'feld', '🎏': 'flagge', '✂': 'friseur',
   '🎖': 'stern', '✏': 'palette', '🤔': 'gedanke', '🕌': 'rathaus', '🍒': 'obst', '🖐': 'haken', '💺': 'bank', '🚀': 'funkel',
 });
+// Naturtiere (NATURE, Album): gezeichnet wie draußen (🐦 🐸 🦉 …), wenn das Emoji nicht schon vergeben ist (✨ bleibt Funkeln)
+for (const n of typeof NATURE === 'object' && NATURE ? NATURE : []) {
+  const e = String(n.icon || '').replace(/\uFE0F/g, '');
+  if (e && !WI_TEXT[e]) WI_TEXT[e] = 'natur:' + n.id;
+}
 // Läden: ihr Emoji (SHOPS, data.js) zeigt das echte Laden-Gebäude (🧋 → Bubble-Tea-Laden …), wenn es nicht schon vergeben ist
 for (const [id, sh] of Object.entries(typeof SHOPS === 'object' && SHOPS ? SHOPS : {})) {
   const e = String(sh.icon || '').replace(/\uFE0F/g, '');

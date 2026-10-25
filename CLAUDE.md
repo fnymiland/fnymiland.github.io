@@ -543,6 +543,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     (`WI_TEXT_HAS` ohne g) – die gemerkte Position ließ den Beobachter endlos umbauen. Karte: Symbole über Häusern und Schilder (`pill`, ohne
     Pille, Umriss-Schrift) zeichnen Emojis als `uiIconCanvas` (fertige Leinwand, nie ein noch ladendes Bild – sonst kein Bildchen-Speicher).
     Knopf „Du“: eigene Figur (`youFaceSync`). Kleine Leisten/Meldungen: Plättchen über `--cut`, `--plate…` (je Aussehen in style.css).
+    Läden (SHOPS) und Naturtiere (NATURE) tragen sich selbst in `WI_TEXT` ein (Emoji → echtes Laden-Gebäude bzw. `'natur:id'` über
+    `drawCritter`). Der Sternenbasar ist hell wie alle Fenster (Klasse `basar`, die alten `.basar-night`-Regeln greifen nicht mehr).
+    Bewusst Text geblieben: ♥ ↔ ▶ ⬆ ➕ ℹ und die Farbquadrate 🟥🟦🟨🟩 (Farbwahl). Emojis in Gebäudezeichnungen (Ladenschilder) gehören zur Welt.
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

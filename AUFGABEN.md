@@ -2832,6 +2832,6 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         Schilder auf der Karte (ohne Pillen), Tiere als Figuren, Knopf „Du“ mit eigener Figur; kleine Leisten als Plättchen (v1236)
   - [x] 5c Sprechblase als Plättchen, schwebende Zahlen mit Umriss und Taler, alle Pillen-Rundungen im CSS ersetzt (Balken 3px, sonst --cut),
         Fortschrittsbalken in Gras-/Himmelfarbe (v1240)
-  - [ ] 5d offen: seltene Emojis (je 1–2×, z. B. 🎮 ❄ 🌈 🍄 …); Sternenbasar (eigener Nacht-Stil – lassen oder angleichen? Nutzer fragen)
+  - [x] 5d Sternenbasar hell mit Hecke/Wolken (Nutzer 25.10.2026), seltene Emojis: Läden → Laden-Gebäude, Naturtiere → Zeichnung wie draußen, Rest gezeichnet/zugeordnet (v1245)
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).
