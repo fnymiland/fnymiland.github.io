@@ -1319,3 +1319,7 @@ body.look-wolke .card.basar .basar-card { border-color: rgba(90, 110, 150, .2); 
 .card.basar .basar-pic .sp { color: #e0a83a; }
 .card.basar .basar-card.feature .btn.small { padding: 5px 18px; font-size: 15px; }
 .card.basar .btn.small.basar-try { background: var(--plate-hi); color: var(--brown); box-shadow: 0 3px 0 var(--plate-hi-side); }
+/* Album und Souvenir-Regal: Dinge ohne Kachel (wie im Baumenü), Seiten als leichte Plättchen */
+.al-e, .sv-e { background: none; }
+.album-page { border-radius: var(--cut); background: rgba(255, 255, 255, .45); }
+body.look-wolke .album-page { background: rgba(120, 160, 230, .08); }

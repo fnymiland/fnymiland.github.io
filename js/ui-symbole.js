@@ -256,6 +256,12 @@ Object.assign(UI_DRAW, {
     uiLine([[27, 31], [50, 52]], '#d9a43a', 5); uiLine([[43, 45], [38, 50]], '#d9a43a', 4); uiLine([[48, 50], [44, 54]], '#d9a43a', 4);
     g.lineWidth = 1.6; g.strokeStyle = '#f2d27a'; g.beginPath(); g.arc(19, 23, 8, Math.PI, Math.PI * 1.6); g.stroke();
   },
+  frage() {                                                // unbekannt / Hilfe: Holzschild mit Fragezeichen
+    uiShadow(32, 57, 13); cyl(32, 57, 2.6, 1.3, 18, '#8a5e38');
+    uiPath([[13, 14], [51, 10], [53, 40], [15, 44]], '#b8864f'); uiPath([[13, 12], [51, 8], [51, 38], [13, 42]], '#e0b47a');
+    g.fillStyle = '#6b4a2a'; g.font = "800 30px Alegreya, Georgia, serif"; g.textBaseline = 'middle'; g.textAlign = 'left';
+    const w = g.measureText('?').width; g.fillText('?', 32 - w / 2, 26);
+  },
   mond() {
     g.fillStyle = '#f2d77a'; g.beginPath(); g.arc(32, 32, 20, 0, Math.PI * 2); g.fill();
     g.save(); g.globalCompositeOperation = 'destination-out'; g.beginPath(); g.arc(42, 26, 17, 0, Math.PI * 2); g.fill(); g.restore();
