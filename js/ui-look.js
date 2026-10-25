@@ -89,14 +89,14 @@ function paintSlab(w, h, role, seed, look = uiLookId) {
   x.scale(dpr, dpr); x.translate(pad, pad);
   const pts = slabOutline(w, h, Math.min(L.r, h / 2.2), L.j, R, L.step);
   if (L.deco === 'wolke') {                                // Wolke: Unterseite bläulich
-    // geordnet wie die Hecke (Nutzer 25.10.2026): runde Ecken, gleicher Abstand, im Wechsel große und kleine Buckel; Knöpfe als glatte
-    // Wölkchen mit drei Buckeln oben
+    // geordnet wie die Hecke (Nutzer 25.10.2026): runde Ecken, gleicher Abstand, Buckel fast gleich groß; Knöpfe als glatte
+    // Wölkchen mit drei Buckeln oben (nur gemalte Knopf-Platten – die Knöpfe im Spiel sind CSS und bleiben glatt: „blaue Pickel“)
     const rr = Math.min(L.r, h / 2.2);
     let B;
     if (L.bump) {                                          // Knopf: glatt, oben drei Buckel
       B = [[w * 0.3, h * 0.2, h * 0.36], [w * 0.55, h * 0.12, h * 0.48], [w * 0.78, h * 0.24, h * 0.32]];
     } else {
-      const big = role === 'bar' ? 16 : 15, small = role === 'bar' ? 11 : 10;
+      const big = role === 'bar' ? 15 : 14, small = role === 'bar' ? 13 : 12;      // nur leicht verschieden (Nutzer: „etwas gleichmäßiger“)
       B = roundRectRing(w, h, rr, role === 'bar' ? 24 : 22, true).map(([px, py], i) => [px, py, i % 2 ? small : big]);
     }
     const body = (dy, col) => { for (const [px, py, r] of B) slabDot(x, px, py + dy, r, col); x.beginPath(); x.roundRect(0, dy, w, h, rr); x.fillStyle = col; x.fill(); };
