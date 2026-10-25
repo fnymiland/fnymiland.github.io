@@ -532,6 +532,11 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     `--hero` am Fenster, damit das Neuzeichnen alle 0,2 s es nicht wegnimmt). Kinder von `#panel` nie per `lookSlab` bemalen: `patch()` nimmt
     fremde Klassen/Attribute wieder weg – Knöpfe darin sind reines CSS (`#panel .btn`). Wolken färben Braun → Blaugrau über die Variablen
     (`--brown`, `--brown2` … an `#panel`, `#goal`, `#sheet`). Die Meldung „ResizeObserver loop …“ ist kein Fehler (Melder überspringt sie).
+    Große Fenster: `#modal-card` hat die Platte als Hintergrund (Merker `data-slab-in`, weil `openModal` die Klassen neu setzt; CSS über
+    `#modal-card:not(.basar-night)` – der Sternenbasar bleibt dunkel). `.btn`/`.look` sind überall Plättchen. Emojis in Texten: `setHtml`
+    und `openModal` schicken HTML durch `wiText` (`WI_TEXT`: 🪙 📦 👥 💡 🔒 🌸 → `<i class="wt">🪙</i>` mit Bild aus `--wt-…`). Das
+    Zeichen bleibt im Text (Tests, Vorlesen); nur Text zwischen Tags wird ersetzt, nie Attribute. Neue Zuordnung: Symbol in `UI_DRAW`
+    oder ein Ding, Eintrag in `WI_TEXT` – nur eindeutige Emojis (✨ ist mal Sternstaub, mal Glitzer → nicht).
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

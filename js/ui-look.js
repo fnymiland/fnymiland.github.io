@@ -117,7 +117,7 @@ function drawSlab(el) {
   if (!w || !h) return;
   if (el.dataset.slabKey === key) return;
   el.dataset.slabKey = key;
-  const inset = el.classList.contains('slab-in'), L = SLAB_STYLE[uiLookId][el.dataset.slab], p0 = L.pad ?? 12;
+  const inset = el.dataset.slabIn === '1', L = SLAB_STYLE[uiLookId][el.dataset.slab], p0 = L.pad ?? 12;
   // slab-in: ganz im Element (als Hintergrund) – für Fenster, die selbst scrollen (::before würde mitgeschnitten bzw. mitscrollen)
   const { canvas, pad, depth } = inset ? paintSlab(Math.max(20, w - 2 * p0), Math.max(20, h - 2 * p0 - L.depth), el.dataset.slab, +el.dataset.slabSeed || 1)
     : paintSlab(w, h, el.dataset.slab, +el.dataset.slabSeed || 1);
@@ -132,6 +132,7 @@ let slabSeedNext = 3;
 function lookSlab(el, role, inset = false) {
   if (!el) return;
   el.dataset.slab = role;
+  if (inset) el.dataset.slabIn = '1';                                     // als Merker im Datensatz: Fenster setzen ihre Klassen neu (openModal)
   el.classList.add(inset ? 'slab-in' : 'slab');
   if (!el.dataset.slabSeed) el.dataset.slabSeed = String(slabSeedNext += 7);
   if (!SLABS.has(el)) { SLABS.add(el); if (slabObs) slabObs.observe(el); }
@@ -177,6 +178,15 @@ const UI_DRAW = {
     g.beginPath(); g.arc(33, 34, 12, Math.PI * .95, Math.PI * 2.25); g.stroke();
     g.strokeStyle = '#b37b4c'; g.lineWidth = 3; g.beginPath(); g.arc(33, 33, 12, Math.PI * 1.05, Math.PI * 1.9); g.stroke();
     poly([[13, 30], [29, 30], [21, 42]], '#7a4f2e'); poly([[16, 31], [26, 31], [21, 38]], '#9a6a40');
+  },
+  riegel() {                                               // gesperrt: Vorhängeschloss
+    uiShadow(32, 57, 13);
+    g.strokeStyle = '#8a8f99'; g.lineWidth = 5; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(22, 34); g.lineTo(22, 24); g.arc(32, 24, 10, Math.PI, 0); g.lineTo(42, 34); g.stroke();
+    g.strokeStyle = '#b5bac3'; g.lineWidth = 1.6; g.beginPath(); g.arc(32, 24, 10, Math.PI * 1.1, Math.PI * 1.5); g.stroke();
+    poly([[17, 33], [47, 33], [47, 54], [17, 54]], '#d9a43a'); poly([[17, 52], [47, 52], [47, 56], [17, 56]], '#a77a22');
+    poly([[17, 33], [47, 33], [47, 36], [17, 36]], '#ecc061');
+    ellipse(32, 42, 3.2, 3.2, '#6b4a16'); poly([[30.6, 43], [33.4, 43], [34, 49], [30, 49]], '#6b4a16');
   },
   stern() {                                                // Favoriten: dicker goldener Stern mit Kante
     uiShadow(32, 57, 15);
@@ -297,12 +307,26 @@ function menuIcon(el, id) {
   ic.replaceWith(wiEl(name));
 }
 
+// Emojis in Texten → Spiel-Symbole (nur die eindeutigen). Das Zeichen bleibt im Text (Vorlesen, Suchen, Tests), sichtbar ist das Bild
+// (.wt, style.css; Bild über --wt-…, einmal am Dokument gesetzt – so bleibt der Text bei jedem Neuzeichnen gleich und patch() ruhig)
+const WI_TEXT = { '🪙': 'taler', '📦': 'kiste', '👥': 'haus:2', '💡': 'bibliothek', '🔒': 'riegel', '🌸': 'blumen' };
+const WI_TEXT_RE = new RegExp(Object.keys(WI_TEXT).join('|'), 'gu');
+const wtVar = name => '--wt-' + name.replace(/[^a-z0-9]/g, '');
+function wiText(html) {
+  if (typeof html !== 'string' || !WI_TEXT_RE.test(html)) return html;
+  WI_TEXT_RE.lastIndex = 0;
+  return html.split(/(<[^>]*>)/).map(part => part.startsWith('<') ? part
+    : part.replace(WI_TEXT_RE, e => `<i class="wt" style="background-image:var(${wtVar(WI_TEXT[e])})">${e}</i>`)).join('');
+}
+
 // ---------- anwenden ----------
 function applyUiLook() {
   const b = document.body;
   if (!b) return;
   for (const id of Object.keys(UI_LOOKS)) b.classList.toggle('look-' + id, id === uiLookId);
   fillUiIcons();
+  for (const name of new Set(Object.values(WI_TEXT))) { const u = uiIcon(name); if (u) document.documentElement.style.setProperty(wtVar(name), `url(${u})`); }
+  lookSlab(document.getElementById('modal-card'), 'paper', true);        // große Fenster
   lookSlab(document.getElementById('cats-isle'), 'bar');                 // Bauleiste: Beet in der Hecke bzw. Wolke
   lookSlab(document.getElementById('sheet'), 'paper', true);              // aufklappendes Feld (scrollt selbst: Platte als Hintergrund)
   lookSlab(document.getElementById('panel'), 'paper', true);              // Infofenster (scrollt selbst)

@@ -1213,7 +1213,7 @@ body:has(#minimap:not([hidden])) #rot-btn { bottom: calc(var(--bar, 56px) + 6px 
 
 /* Infofenster und Ziel-Fenster (Aussehen, Schritt 4): Platte mit Hecke bzw. Wolke, Gebäude oben rechts, Knöpfe als Plättchen.
    Wolken: Braun → Blaugrau über die Farb-Variablen (gilt für alles darin) */
-body.look-wolke #panel, body.look-wolke #goal, body.look-wolke #sheet { --brown: #3b4763; --brown2: #74819c; --cream2: #eaf0f9; --shadow: #c6d2e6; --yellow: #d6e4fa; }
+body.look-wolke #panel, body.look-wolke #goal, body.look-wolke #sheet, body.look-wolke #modal-card:not(.basar-night) { --brown: #3b4763; --brown2: #74819c; --cream2: #eaf0f9; --shadow: #c6d2e6; --yellow: #d6e4fa; }
 #panel.slab-in { background-color: transparent; background-size: 100% 100%; background-repeat: no-repeat; box-shadow: none; border-radius: 0;
   width: min(360px, calc(100% - 16px)); right: 6px; padding: 34px 34px 44px; }
 body.look-wolke #panel.slab-in { padding: 36px 38px 46px; }
@@ -1224,20 +1224,20 @@ body.look-wolke #panel.slab-in { padding: 36px 38px 46px; }
   letter-spacing: .12em; text-transform: uppercase; color: #a0603a; }
 body.look-wolke #panel h3 .lvl { color: #5b86c9; }
 #panel .stats span, #goal .task-chips .chip { border-radius: 7px; box-shadow: none; }
-#panel .look { border-radius: 9px 11px 10px 12px / 11px 9px 12px 10px; }
-#panel .look.on { background: #f2d27a; box-shadow: 0 2px 0 #c9a443; }
-body.look-wolke #panel .look.on { background: var(--yellow); box-shadow: 0 2px 0 #9bb5df; }
+.look { border-radius: 9px 11px 10px 12px / 11px 9px 12px 10px; }
+.look.on { background: #f2d27a; box-shadow: 0 2px 0 #c9a443; }
+body.look-wolke .look.on { background: var(--yellow); box-shadow: 0 2px 0 #9bb5df; }
 /* Knöpfe: flache Oberseite mit Dicke unten, leicht unregelmäßig geschnitten (Hecke) bzw. rund (Wolken) */
-#panel .btn, #goal .task.ready .t-go { border-radius: 11px 14px 12px 13px / 13px 11px 14px 12px; background: #c9673f; color: #fff6e8; box-shadow: 0 4px 0 #93432a; }
-#panel .btn:active { box-shadow: 0 2px 0 #93432a; }
-#panel .btn.ghost { background: #e6cfa3; color: #5a3d24; box-shadow: 0 4px 0 #b48c5c; }
-#panel .btn.danger { background: #b8433a; box-shadow: 0 4px 0 #842e27; }
-#panel .btn:disabled { background: #d8ccb4; color: #8a7a62; box-shadow: 0 4px 0 #b9ab90; }
-body.look-wolke #panel .btn, body.look-wolke #goal .task.ready .t-go { border-radius: 16px; background: #6b95d8; color: #fff; box-shadow: 0 4px 0 #46699f; }
-body.look-wolke #panel .btn:active { box-shadow: 0 2px 0 #46699f; }
-body.look-wolke #panel .btn.ghost { background: #e3ecf8; color: #3b4763; box-shadow: 0 4px 0 #b3c3dd; }
-body.look-wolke #panel .btn.danger { background: #d9655a; box-shadow: 0 4px 0 #a8443a; }
-body.look-wolke #panel .btn:disabled { background: #dfe5ee; color: #8b95aa; box-shadow: 0 4px 0 #c3cbd8; }
+.btn, #goal .task.ready .t-go { border-radius: 11px 14px 12px 13px / 13px 11px 14px 12px; background: #c9673f; color: #fff6e8; box-shadow: 0 4px 0 #93432a; }
+.btn:active { box-shadow: 0 2px 0 #93432a; }
+.btn.ghost { background: #e6cfa3; color: #5a3d24; box-shadow: 0 4px 0 #b48c5c; }
+.btn.danger { background: #b8433a; box-shadow: 0 4px 0 #842e27; }
+.btn:disabled { background: #d8ccb4; color: #8a7a62; box-shadow: 0 4px 0 #b9ab90; }
+body.look-wolke .btn, body.look-wolke #goal .task.ready .t-go { border-radius: 16px; background: #6b95d8; color: #fff; box-shadow: 0 4px 0 #46699f; }
+body.look-wolke .btn:active { box-shadow: 0 2px 0 #46699f; }
+body.look-wolke .btn.ghost { background: #e3ecf8; color: #3b4763; box-shadow: 0 4px 0 #b3c3dd; }
+body.look-wolke .btn.danger { background: #d9655a; box-shadow: 0 4px 0 #a8443a; }
+body.look-wolke .btn:disabled { background: #dfe5ee; color: #8b95aa; box-shadow: 0 4px 0 #c3cbd8; }
 
 /* Ziel-Fenster: Aufgaben als Zeilen statt weißer Karten */
 #goal.slab { background: transparent; box-shadow: none; border-radius: 0; left: 22px; padding: 12px 14px 12px; }
@@ -1259,3 +1259,18 @@ body.phone #panel .p-hero { width: 84px; height: 70px; margin: -10px -6px 0 6px;
 #sheet.slab-in > * { flex: none; }
 #sheet.slab-in > .tools { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: flex-start; margin: 0 -8px; padding: 0 8px 4px; }
 body.phone #goal.slab { padding: 13px 16px 13px; }
+
+/* Große Fenster (Aussehen, Schritt 5): Platte als Hintergrund (lookSlab 'paper', inset), Überschrift in der Märchenbuch-Schrift.
+   openModal setzt die Klassen jedes Mal neu – darum hier über #modal-card, nicht über .slab-in. Sternenbasar (Nacht) bleibt dunkel */
+#modal-card:not(.basar-night) { background-color: transparent; background-size: 100% 100%; background-repeat: no-repeat; box-shadow: none; border-radius: 0; padding: 38px 40px 46px; }
+body.look-wolke #modal-card:not(.basar-night) { padding: 40px 44px 48px; }
+#modal-card.basar-night { background-image: none !important; }
+#modal-card.tabbed:not(.basar-night) > .tab-scroll { margin: 0 -8px; padding: 2px 8px 4px; }
+body.phone #modal-card:not(.basar-night) { padding: 34px 32px 42px; }
+#modal { background: rgba(40, 60, 50, .28); }
+.card h2 { font-family: Alegreya, Georgia, serif; font-weight: 800; font-size: 26px; line-height: 1.1; }
+#modal-card .tab-scroll > .me-edit { background: transparent; }
+/* Emojis in Texten als Spiel-Symbole (wiText): Zeichen bleibt im Text, sichtbar ist das Bild */
+i.wt { display: inline-block; width: 1.35em; height: 1.15em; vertical-align: -.24em; overflow: hidden; text-indent: 300%; white-space: nowrap;
+  font-style: normal; background: center bottom / contain no-repeat; }
+.tool .lock i.wt { width: 15px; height: 15px; }

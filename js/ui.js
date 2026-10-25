@@ -424,9 +424,9 @@ function renderTools() {
     b.onpointerleave = hideCardName;
     b.append(id === 'abriss' ? emojiPic('🧹') : id === 'verschieben' ? emojiPic('✋') : thumb(id));
     const n = document.createElement('span'); n.className = 'nm'; n.textContent = d.name; b.append(n);   // Name unter dem Bild (Nutzer: „ich finde nichts“)
-    const c = document.createElement('span'); c.className = 'cost'; c.textContent = cardPrice(id);
+    const c = document.createElement('span'); c.className = 'cost'; c.innerHTML = wiText(escHtml(cardPrice(id)));
     b.append(c);
-    if (locked) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = '🔒'; b.append(l); }
+    if (locked) { const l = document.createElement('span'); l.className = 'lock'; l.innerHTML = wiText('🔒'); b.append(l); }
     if (d.cost) b.dataset.cost = d.cost;
     if (d.mat) b.dataset.mat = JSON.stringify(d.mat);
     b.onclick = () => pickCard(id);
@@ -1237,6 +1237,7 @@ function patch(from, to) {
 }
 function setHtml(el, html, keep = liveNow) {
   const tpl = html instanceof HTMLTemplateElement ? html : null;
+  if (!tpl && typeof wiText === 'function') html = wiText(html);         // 🪙 📦 🔒 … als Spiel-Symbole (ui-look.js)
   if (!keep) { if (tpl) el.replaceChildren(tpl.content); else el.innerHTML = html; return; }
   const t = tpl || document.createElement('template');
   if (!tpl) t.innerHTML = html;
@@ -3182,7 +3183,7 @@ function openModal(html, live = null) {
   const c = $('modal-card'), same = !$('modal').hidden && modalLive && live && modalLive.toString() === live.toString();
   if (!same) spotSel = null;                                       // anderes Fenster: Markierung weg
   const was = $('modal').hidden ? null : (c.querySelector(':scope > .tab-scroll') || c).scrollTop;   // dieselbe Seite neu (gekauft): Scrollstand behalten
-  c.className = 'card'; setHtml(c, frameHtml(html)); $('modal').hidden = false; modalLive = live;
+  c.className = 'card'; setHtml(c, frameHtml(typeof wiText === 'function' ? wiText(html) : html)); $('modal').hidden = false; modalLive = live;
   modalFrame(c, same ? was : null);
   const box = spotBox(); if (box) box.classList.add('spot');
 }
@@ -3319,6 +3320,7 @@ const NEWS_HISTORY = [
     '🌿 <b>Aussehen:</b> Die Oberfläche kommt jetzt aus deiner Welt. Unter ☰ → Einstellungen → Aussehen wählst du zwischen <b>Hecke</b> (Standard) und <b>Wolken</b>.',
     '🏠 <b>Leiste oben:</b> Statt Emojis in Pillen stehen dort jetzt Bildchen, die das Spiel selbst zeichnet: Münzstapel, Haus, Bibliothek, Kristall, Kiste, Freundesbank und ein Wegweiser fürs Menü.',
     '🪟 <b>Infofenster und Ziele:</b> Beide haben jetzt die Hecke bzw. die Wolke als Rand. Oben rechts im Infofenster steht das angetippte Gebäude so, wie es bei dir aussieht, und die Knöpfe sind kleine Plättchen statt Pillen.',
+    '📜 <b>Große Fenster:</b> Rathaus, Forschung, Einstellungen und die anderen Fenster haben jetzt auch Hecke bzw. Wolke als Rand, und alle Knöpfe sind Plättchen. Taler, Lager, Einwohner, Ideen, Schönheit und das Schloss für Gesperrtes erscheinen in Texten als Spiel-Bildchen.',
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
   ] },
   { id: '2026-10-24-wundergarten', date: '24. Oktober', title: 'Riesenrad und Sternwarte', items: [

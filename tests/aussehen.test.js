@@ -82,4 +82,17 @@ describe('Aussehen', () => {
     game('closePanel()');
     expect(game("document.getElementById('goal').dataset.slab")).toBe('paper');
   });
+
+  it('Emojis in Texten: 🪙 📦 🔒 … werden Spiel-Symbole, das Zeichen bleibt im Text, Attribute bleiben unberührt', () => {
+    const out = game(`wiText('<b title="🪙 Taler">🪙 40</b> und 🔒')`);
+    expect(out).toContain('title="🪙 Taler"');
+    expect(out.match(/<i class="wt"/g).length).toBe(2);
+    expect(out).toContain('var(--wt-taler)');
+    expect(out).toContain('var(--wt-riegel)');
+    expect(game(`wiText('ohne')`)).toBe('ohne');
+    game("openTownHall('overview')");
+    expect(game("document.querySelectorAll('#modal-card i.wt').length")).toBeGreaterThan(0);
+    expect(game("document.getElementById('modal-card').dataset.slabIn")).toBe('1');
+    game('closeModal()');
+  });
 });
