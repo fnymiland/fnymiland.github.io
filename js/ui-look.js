@@ -54,6 +54,21 @@ function slabOutline(w, h, r, j, R, step = 18) {
   seg(w - r, h, r, h); arc(r, h - r, Math.PI / 2); seg(0, h - r, 0, r); arc(r, r, Math.PI);
   return pts;
 }
+// Punkte in gleichem Abstand auf dem Rand eines abgerundeten Rechtecks (w×h, Ecken r) – Abstand so angepasst, dass es rundum aufgeht
+function roundRectRing(w, h, r, step) {
+  const sx = w - 2 * r, sy = h - 2 * r, arc = Math.PI / 2 * r, L = 2 * sx + 2 * sy + 4 * arc, n = Math.max(8, Math.round(L / step)), out = [];
+  const segs = [                                                           // im Uhrzeigersinn ab oben links (nach der Ecke)
+    [sx, t => [r + t, 0]], [arc, t => { const a = -Math.PI / 2 + t / r; return [w - r + Math.cos(a) * r, r + Math.sin(a) * r]; }],
+    [sy, t => [w, r + t]], [arc, t => { const a = t / r; return [w - r + Math.cos(a) * r, h - r + Math.sin(a) * r]; }],
+    [sx, t => [w - r - t, h]], [arc, t => { const a = Math.PI / 2 + t / r; return [r + Math.cos(a) * r, h - r + Math.sin(a) * r]; }],
+    [sy, t => [0, h - r - t]], [arc, t => { const a = Math.PI + t / r; return [r + Math.cos(a) * r, r + Math.sin(a) * r]; }],
+  ];
+  for (let i = 0; i < n; i++) {
+    let d = i * L / n;
+    for (let k = 0; k < segs.length; k++) { const [len, at] = segs[k]; if (d < len || k === segs.length - 1) { out.push(at(Math.min(d, len))); break; } d -= len; }
+  }
+  return out;
+}
 // weich durch die Punkte (Mittelpunkte als Stützstellen)
 function slabPath(x, pts, dx, dy) {
   x.beginPath();
@@ -85,15 +100,19 @@ function paintSlab(w, h, role, seed, look = uiLookId) {
     const hi = L.top === '#ffffff' ? '#ffffff' : 'rgba(255,255,255,.35)';
     for (const [px, py, r] of B) if (py < h / 2) slabDot(x, px - r * .25, py - r * .3, r * .45, hi);
   } else if (L.deco === 'hecke') {                         // Hecke rundum wie die Gärten im Spiel, innen Papier bzw. Beet
-    x.save(); x.filter = 'blur(6px)'; slabPath(x, pts, 0, L.depth + 6); x.fillStyle = 'rgba(40,30,20,.2)'; x.fill(); x.restore();
-    const B = pts.map(p => [p[0], p[1], 9 + R() * 4]);
-    for (const [px, py, r] of B) slabDot(x, px, py + 6, r, '#3f7430');
-    for (const [px, py, r] of B) slabDot(x, px, py, r, '#5c9c43');
-    for (const [px, py, r] of B) slabDot(x, px - 2, py - 3, r * .55, '#79b85a');
-    const ip = slabOutline(w - 22, h - 22, Math.max(4, Math.min(L.r, h / 2.2) - 8), 1, R, 20).map(p => [p[0] + 11, p[1] + 11]);
-    slabPath(x, ip, 0, 0); x.fillStyle = L.top; x.fill();
+    // gleichmäßig (Nutzer: „so ungleichmäßig, unschön – auch die Ecken gehen gar nicht“): exaktes abgerundetes Rechteck, Büsche in
+    // festem Abstand entlang des Rands (auch durch die Ecken, die echte Viertelkreise sind), alle gleich groß
+    const rr = Math.min(L.r, h / 2.2), BR = 10.5;
+    const rect = (path, ox, oy, ww, hh, r) => { path.beginPath(); path.roundRect(ox, oy, ww, hh, r); };
+    x.save(); x.filter = 'blur(6px)'; rect(x, 0, L.depth + 6, w, h, rr); x.fillStyle = 'rgba(40,30,20,.2)'; x.fill(); x.restore();
+    const B = roundRectRing(w, h, rr, 17);
+    for (const [px, py] of B) slabDot(x, px, py + 5, BR, '#3f7430');
+    for (const [px, py] of B) slabDot(x, px, py, BR, '#5c9c43');
+    for (const [px, py] of B) slabDot(x, px - 2, py - 3, BR * .55, '#79b85a');
+    const ins = 11, ir = Math.max(4, rr - ins * 0.6);
+    rect(x, ins, ins, w - 2 * ins, h - 2 * ins, ir); x.fillStyle = L.top; x.fill();
     if (L.beet) {                                          // Erdkrümel im Beet
-      x.save(); slabPath(x, ip, 0, 0); x.clip();
+      x.save(); rect(x, ins, ins, w - 2 * ins, h - 2 * ins, ir); x.clip();
       for (let i = 0; i < w / 8; i++) slabDot(x, R() * w, R() * h, 1 + R() * 1.4, 'rgba(60,40,20,.18)');
       x.restore();
     }
