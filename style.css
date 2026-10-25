@@ -1323,3 +1323,15 @@ body.look-wolke .card.basar .basar-card { border-color: rgba(90, 110, 150, .2); 
 .al-e, .sv-e { background: none; }
 .album-page { border-radius: var(--cut); background: rgba(255, 255, 255, .45); }
 body.look-wolke .album-page { background: rgba(120, 160, 230, .08); }
+
+/* Ladebildschirm im neuen Stil: drehende Sonne, Umriss-Schrift; klein (Insel wird gezeichnet …) als Plättchen */
+.ld-spin.drawn { border: 0 !important; border-radius: 0; background: center / contain no-repeat; animation-duration: 2.6s; }
+#loading.big .ld-spin.drawn { width: 64px; height: 64px; filter: drop-shadow(0 3px 3px rgba(40, 60, 80, .25)); }
+#loading.big { color: #fff7e6; font-family: Alegreya, Georgia, serif; font-size: 26px; font-weight: 800; text-shadow: var(--ol); }
+#loading:not(.big) { background: var(--plate); box-shadow: 0 4px 0 var(--plate-side); font-family: 'Alegreya Sans', Nunito, system-ui, sans-serif; }
+/* Favoriten-Sterne (Baumenü, Infofenster): gezeichneter Goldstern statt Textzeichen; Zeichen bleibt im Text (Tests, Vorlesen) */
+#tools .tool .fav, #panel h3 .fav-head { font-size: 0; opacity: 1; background: var(--wt-stern) no-repeat; filter: grayscale(1) opacity(.4); }
+#tools .tool .fav { background-size: 15px 15px; background-position: right 5px top 4px; }
+#panel h3 .fav-head { background-size: 24px 24px; background-position: center; }
+#tools .tool .fav.on, #panel h3 .fav-head.on { filter: none; }
+@media (hover: hover) { #tools .tool .fav:hover, #panel h3 .fav-head:hover { filter: grayscale(.3); } }

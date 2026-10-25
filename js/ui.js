@@ -2688,8 +2688,9 @@ function openLandmark(x, y) {
       ${info.err ? `<div class="status"><div class="bad">${info.err}</div></div>` : ''}
       <div class="row"><button class="btn" id="p-restore" ${info.err ? 'disabled' : ''}>🏮 Restaurieren</button></div>`;
   } else body = '<p class="ok">Vollständig restauriert – alle drei Laternen brennen.</p>';
+  panelHeroNext = { ...t, lmStage: info.stage };                         // Bild der Sehenswürdigkeit in ihrer Stufe oben rechts (Aussehen)
   showPanel(`
-    <h3>${L.icon} ${L.name}</h3>
+    <h3>${L.name}</h3>
     <p class="hearts">${dots}</p>
     <p class="muted">Zustand: ${stageName}${info.stage ? ` · Wirkung: ${L.effect}` : ''}</p>
     ${info.stage && half ? '<div class="status"><div class="bad">🐌 Weit weg vom Dorf: wirkt nur halb.</div></div>' : ''}

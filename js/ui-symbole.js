@@ -309,3 +309,11 @@ Object.assign(UI_DRAW, {
     uiPath([[44, 30], [52, 30], [52, 37], [44, 37]], '#9aa3ad'); uiBox(14, 14, 4, 2, 6, '#7a7f88');
   },
 });
+
+// Ladebildschirm: eine langsam drehende Sonne statt des weißen Kreisels (läuft, während die übrigen Skripte noch laden)
+if (typeof document !== 'undefined') {
+  try {
+    const u = uiIcon('sonne');
+    if (u) for (const e of document.querySelectorAll('.ld-spin')) { e.classList.add('drawn'); e.style.backgroundImage = `url(${u})`; }
+  } catch (e) { /* dann bleibt der Kreisel */ }
+}

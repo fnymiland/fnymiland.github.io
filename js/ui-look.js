@@ -18,6 +18,7 @@ let uiLookId = (() => {
   try { v = localStorage.getItem(UI_LOOK_KEY); } catch (e) { /* privates Fenster */ }
   return UI_LOOKS[v] ? v : 'hecke';
 })();
+if (typeof document !== 'undefined' && document.body) document.body.classList.add('look-' + uiLookId);   // schon für den Ladebildschirm
 function setUiLook(id) {
   if (!UI_LOOKS[id] || id === uiLookId) return;
   uiLookId = id;
@@ -453,6 +454,7 @@ function applyUiLook() {
   for (const id of Object.keys(UI_LOOKS)) b.classList.toggle('look-' + id, id === uiLookId);
   fillUiIcons();
   watchUiEmojis();
+  wtEnsure('stern');                                                      // Favoriten-Sterne im Baumenü und Infofenster (style.css)
   lookSlab(document.getElementById('modal-card'), 'paper', true);        // große Fenster
   lookSlab(document.getElementById('cats-isle'), 'bar');                 // Bauleiste: Beet in der Hecke bzw. Wolke
   lookSlab(document.getElementById('sheet'), 'paper', true);              // aufklappendes Feld (scrollt selbst: Platte als Hintergrund)
