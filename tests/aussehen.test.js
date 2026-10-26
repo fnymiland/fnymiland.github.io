@@ -159,6 +159,16 @@ describe('Aussehen', () => {
     expect(tail).toMatch(/@media \(max-width: 720px\) \{\s*#hud \.hud-act \{ flex-direction: column/);   // schmal: Knöpfe untereinander
   });
 
+  it('Souvenirs: lange Namen („Freundschaftsbäumchen“) trennen statt über die Kachel zu laufen', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    expect(css).toMatch(/\.sv-e b, \.sv-e small, \.sv-opt small \{[^}]*hyphens: auto/);
+  });
+
+  it('„+7 in der Kunstakademie“ im Aufklappfeld: zwei Spalten breit (ragte über die Kachel)', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    expect(css).toMatch(/\.wpop \.wopt\.more \{ grid-column: span 2; \}/);
+  });
+
   it('Leiste oben passt sich an ihren Inhalt an: erst Ortsname weg, dann Knöpfe untereinander (Menü-Knopf ragte bei 1000 px hinaus)', () => {
     // jsdom misst nicht: Breite der Leiste je nach Stufe vorgeben (so breit wäre sie im Browser)
     const hud = document.getElementById('hud'), body = document.body;

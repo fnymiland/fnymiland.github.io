@@ -2849,5 +2849,9 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] 5j2 Leiste oben ragte bei 1000 px (auch 721–760 px, iPad quer 1024) rechts hinaus: passt sich jetzt am Inhalt an (`fitHud`) (v1304)
   - [x] 5k Emojis in Menüs (Nutzer: Vorschlag „passt“): schmückende Bildchen unsichtbar, zentral in `wiText` (v1308)
   - [x] 5l Menü-Knopf: drei Striche statt Wegweiser (Nutzer: „für den Menübutton reichen die 3 Striche“) (v1308)
+  - [x] 5m Anordnen zeigt Spielbilder statt Emojis; „+7 in der Kunstakademie“ zwei Spalten breit; „Das ist neu“ scrollt innen
+        (Rand wurde über 3000 px hoch gemalt → Ruckeln); Souvenir-Namen trennen statt überzulaufen (v1313)
+  - [ ] 5n Gestalten-Symbol (Beet zu braun) und eigenes Sternstaub-Symbol: Entwürfe zeigen
+  - [ ] 5o Erfolge mit Sinn und für Besucher sichtbar (Sterne für die Insel …): Konzepte besprechen
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

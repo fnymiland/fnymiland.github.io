@@ -106,6 +106,11 @@ describe('Baumenü', () => {
     expect(q('#tools .tool').length).toBe(0);                                   // nur die Liste
     const rows = () => q('#tools .arrange-row').map(r => r.dataset.group);
     expect(rows()[0]).toBe('wohnen');
+    // wie die Überschriften: Spielbild statt Emoji (Nutzer 26.10.2026: „wenn man auf ‚anordnen‘ klickt, sind da immer noch die alten Emojis“)
+    const wohnen = document.querySelector('#tools .arrange-row[data-group="wohnen"] .arrange-l');
+    expect(wohnen.querySelector('i.wi')).not.toBe(null);
+    expect(wohnen.querySelector('.ic')).toBe(null);
+    expect(wohnen.textContent.trim()).toBe('Wohnen');
     document.querySelector('#tools .arrange-row[data-group="gross"] .arrange-mv:first-of-type').click();   // Kaufhäuser eins hoch
     document.querySelector('#tools .arrange-row[data-group="bahn"] .arrange-mv:first-of-type').click(); // Bahn nach oben
     expect(rows().slice(0, 2)).toEqual(['bahn', 'wohnen']);

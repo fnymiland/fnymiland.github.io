@@ -67,6 +67,18 @@ describe('Das ist neu', () => {
     expect(document.querySelectorAll('#modal-card details.news-v').length).toBe(game('newsDays(NEWS_HISTORY).length'));   // je Tag eine Karte
     expect(document.getElementById('modal-card').textContent.match(/neu für dich/g).length).toBe(game('newsDays(NEWS_HISTORY.slice(0, 2)).length'));
   });
+  it('lange Geschichte scrollt innen, Überschrift und Knopf bleiben stehen (Nutzer 26.10.2026: „ruckelt kurz“ – der Rand wurde über 3000 px hoch gemalt)', () => {
+    game('showNews(true)');
+    const c = document.getElementById('modal-card'), sc = c.querySelector(':scope > .tab-scroll');
+    expect(c.classList.contains('scrolled')).toBe(true);
+    expect(sc).not.toBe(null);
+    expect(sc.querySelectorAll('details').length).toBe(game('newsDays(NEWS_HISTORY).length'));
+    expect(c.querySelector(':scope > h2').textContent).toContain('Das ist neu');
+    expect(c.querySelector(':scope > .row #m-ok')).not.toBe(null);
+    game('closeModal(); showMenu()');
+    expect(c.classList.contains('scrolled')).toBe(false);                    // andere Fenster wie gehabt
+  });
+
   it('jeder Eintrag hat id, Datum, Titel und Punkte; ids einmalig', () => {
     const h = game('NEWS_HISTORY.map(n => ({ id: n.id, ok: !!(n.date && n.title && n.items.length) }))');
     expect(h.every(n => n.ok)).toBe(true);

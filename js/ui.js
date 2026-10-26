@@ -505,7 +505,7 @@ function renderArrange(box, top, grs) {
   box.append(head);
   grs.forEach((gr, i) => {
     const r = document.createElement('div'); r.className = 'arrange-row'; r.dataset.group = gr.id;
-    const l = document.createElement('span'); l.className = 'arrange-l'; l.textContent = gr.label;
+    const l = document.createElement('span'); l.className = 'arrange-l'; menuLabel(l, gr.label); menuIcon(l, gr.id);   // Bild wie in der Überschrift
     const up = document.createElement('button'); up.className = 'arrange-mv'; up.textContent = '↑'; up.disabled = i === 0;
     up.setAttribute('aria-label', `${gr.label} nach oben`);
     const dn = document.createElement('button'); dn.className = 'arrange-mv'; dn.textContent = '↓'; dn.disabled = i === grs.length - 1;
@@ -3249,6 +3249,7 @@ let modalTabKey = null;
 function modalFrame(c, keepTop = null) {
   const tabs = c.querySelector('.hall-tabs'), on = tabs && tabs.querySelector('.look.on'), sc = c.querySelector(':scope > .tab-scroll') || c;
   c.classList.toggle('tabbed', !!tabs);
+  c.classList.toggle('scrolled', !tabs && !!c.querySelector(':scope > .tab-scroll'));   // ohne Reiter, aber lang („Das ist neu“): innen scrollen
   c.classList.toggle('you-win', !!c.querySelector('.you-tabs, .net-tabs'));            // Du und Online: alle Reiter gleich breit
   c.classList.toggle('help-win', !!c.querySelector('[data-hb]'));
   const key = on ? [...on.attributes].filter(a => a.name.startsWith('data-')).map(a => a.name + '=' + a.value).join() : null;
@@ -3648,9 +3649,11 @@ function showNews(all = false) {
     <ul class="news">${d.items.map(t => `<li>${t}</li>`).join('')}</ul></details>`;
   openModal(`
     <h2>✨ Das ist neu</h2>
+    <div class="tab-scroll">
     ${!all && days.length > 1 ? `<p class="muted">Seit du zuletzt hier warst, gab es an <b>${days.length} Tagen</b> Neues. Der neueste ist aufgeklappt. Die älteren kannst du antippen, wenn du magst.</p>` : ''}
     ${days.map(entry).join('')}
     ${!all ? '<p class="muted">Alle Updates: ☰ → ✨ Das ist neu.</p>' : ''}
+    </div>
     <div class="row"><button class="btn" id="m-ok" style="flex:1">Los geht's!</button></div>`);
   $('modal-card').classList.add('news-card');
   $('m-ok').onclick = closeModal;

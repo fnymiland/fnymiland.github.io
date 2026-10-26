@@ -537,6 +537,8 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .wpop-cols .wopt.on i { box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--brown); }
 @media (hover: hover) { .wopt:hover { background: var(--cream2); } .wpop-cols .wopt:hover { background: transparent; } }
 .wopt.more i { background: var(--cream2); }
+/* „+7 in der Kunstakademie“: zwei Spalten breit, „Kunstakademie“ ragte sonst links und rechts 9 px über die Kachel (Nutzer 26.10.2026) */
+.wpop .wopt.more { grid-column: span 2; }
 /* Wegform: Knöpfe immer gleich breit („schmal“/„ganz breit“, „Kurve rund“/„Kurve eckig“) – sonst änderte sich die Breite der
    Leiste beim Umschalten, alles verschob sich (Rückmeldung Nutzer) */
 #style-bar .shape-chip, #style-bar .shape-chip.on { padding: 4px 12px 4px 4px; }
@@ -909,6 +911,12 @@ body.visiting #you-btn { display: none !important; }
 .card.tabbed > * { flex: none; }
 .card.tabbed > .tab-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   margin: 0 -24px -22px; padding: 2px 24px 22px; }                  /* bis an den Rand: Scrollleiste außen, Inhalt bündig wie vorher */
+/* lange Fenster ohne Reiter („Das ist neu“): so hoch wie nötig, höchstens wie die mit Reitern, innen scrollen. Sonst malte der Rand
+   über 3000 px hoch und das Öffnen ruckelte (Nutzer 26.10.2026) */
+.card.scrolled { max-height: min(680px, calc(100vh - 32px)); max-height: min(680px, calc(100dvh - 32px)); display: flex; flex-direction: column; overflow: hidden; }
+.card.scrolled > * { flex: none; }
+.card.scrolled > .tab-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+#modal-card.scrolled:not(.basar-night) > .tab-scroll { margin: 0 -8px; padding: 2px 8px 4px; }
 .card.you-win { width: min(520px, 100%); }
 .card.help-win { width: min(480px, 100%); }
 /* Seitenfenster mit Reitern (Märchenschloss): gleich hoch für alle Reiter – die Obergrenze oben (max-height) gilt weiter */
@@ -947,6 +955,10 @@ body.visiting #net-btn { display: none !important; }
 .sv-e { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; background: var(--cream2); border-radius: 12px; padding: 6px; }
 .sv-e small { font-size: 11px; color: var(--brown2); }
 .sv-e small.ok { color: var(--green-d); font-weight: 800; }
+/* „Freundschaftsbäumchen“ lief weit über die Kachel (Nutzer 26.10.2026): lange Namen trennen, Kacheln dürfen schmaler als ihr Text sein */
+.sv-e { min-width: 0; }
+.sv-e b { font-size: 14px; line-height: 1.2; }
+.sv-e b, .sv-e small, .sv-opt small { max-width: 100%; overflow-wrap: anywhere; -webkit-hyphens: auto; hyphens: auto; }
 .fr-btns .btn.done { opacity: 0.5; }
 /* Freundesbuch (Block 141) */
 .fb-sum { display: flex; flex-wrap: wrap; gap: 6px; }
