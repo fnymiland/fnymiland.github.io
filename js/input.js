@@ -129,7 +129,7 @@ function endPointer(e) {
       plan.dragging = false; plan.fixed = true;
     } else if (plan && plan.dragging) { plan.dragging = false; plan.fixed = true; }   // Vorschau bleibt stehen
     else if (drag && !moved && e.type === 'pointerup') {
-      if (drag.right) { if (plan) cancelPlan(); else setTool('look'); }   // Rechtsklick: erst die Planung, dann das Werkzeug weg
+      if (drag.right) { if (plan) cancelPlan(); else if (tool !== 'look' || moving) setTool('look'); else if (!$('panel').hidden) closePanel(); }   // Rechtsklick: erst die Planung, dann das Werkzeug, dann das Infofenster weg (Nutzer 26.10.2026: „voller Wege, wegklicken öffnet den nächsten“)
       else if (!drag.pan) { const go = () => tap(e.clientX, e.clientY, e.pointerType !== 'mouse'); if (tool !== 'look' || moving) undoable(go); else go(); }   // Bauen & Co.: ein Schritt zum Zurücknehmen
     }
     drag = null;

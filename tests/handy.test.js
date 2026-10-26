@@ -70,7 +70,7 @@ describe('Leiste auf dem Handy', () => {
 });
 
 describe('Zielkasten auf dem Handy', () => {
-  it('von selbst klein, antippen klappt ihn auf; auf dem Desktop von selbst groß', () => {
+  it('von selbst eingeklappt, auf dem Handy und am Rechner (Nutzer 26.10.2026: „die Aufgabenliste sollte per default immer eingeklappt sein“); antippen klappt auf', () => {
     size(375, 812);
     game('goalSmall = null; updateHud()');
     const goal = document.getElementById('goal');
@@ -79,7 +79,7 @@ describe('Zielkasten auf dem Handy', () => {
     expect(goal.classList.contains('small')).toBe(false);
     size(1024, 768);
     game('goalSmall = null; updateHud()');
-    expect(goal.classList.contains('small')).toBe(false);
+    expect(goal.classList.contains('small')).toBe(true);
   });
 });
 

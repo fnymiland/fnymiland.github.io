@@ -956,11 +956,11 @@ function renderOwnStyleBar(t) {
 
 const canResearch = () => TECHS.some(t => techReady(t) && state.science >= techCost(t));
 
-let goalSmall = null, unlockSig = '';        // null: von selbst – auf dem Handy klein, sonst groß
+let goalSmall = null, unlockSig = '';        // null: von selbst eingeklappt (Nutzer 26.10.2026: „per default immer eingeklappt“)
 // Leiste oben: nur Rathaus, Geld, Einwohner, Ideen, Lager und Menü. Raten und Arbeitsplätze erst beim Antippen
 // (hudMore, ein paar Sekunden), Rohstoffe, Schönheit und Strom im Lager (📦).
 let hudMoreUntil = 0;
-const hudMore = () => { hudMoreUntil = Date.now() + 5000; updateHud(); };
+const hudMore = () => { hudMoreUntil = Date.now() < hudMoreUntil ? 0 : Date.now() + 5000; updateHud(); };   // nochmal antippen: gleich wieder kurz (Nutzer 26.10.2026)
 const hudNum = n => Date.now() < hudMoreUntil ? nf.format(Math.floor(n)) : fmtHud(n);   // angetippt: ein paar Sekunden die volle Zahl
 // Nur schreiben, was sich geändert hat (Block 52): Safari auf dem iPad schluckt sonst den ersten Tipp auf einen Knopf,
 // in dem sich gerade etwas tut (die Leiste frischt alle 0,2 s auf)
@@ -998,7 +998,7 @@ function updateHud() {
   const goal = $('goal');
   goal.style.top = top + 'px';
   if (!$('panel').classList.contains('float')) $('panel').style.top = window.innerWidth > 600 ? top + 'px' : '';   // schmal: CSS (unten) – sonst bliebe der alte Wert (Block 84e)
-  const goalSm = goalSmall ?? PHONE;
+  const goalSm = goalSmall ?? true;
   goal.classList.toggle('small', goalSm);
   if (goal.getAttribute('aria-expanded') !== String(!goalSm)) goal.setAttribute('aria-expanded', String(!goalSm));   // Pfeil oben rechts (style.css)
   setHtml(goal, state.tutorial >= 0 ? goalHtml() : goalHtml().replace('</h4>', '</h4>' + isleGoalHtml()), true);   // darunter: Weg zum nächsten Inselstern
@@ -1046,7 +1046,7 @@ $('goal').onclick = e => {
   if (e.target.closest('[data-album]')) { openAlbum(); return; }
   const isl = e.target.closest('[data-isle]');
   if (isl) { const i = ISLE_BY_ID[isl.dataset.isle], [x, y] = isleAnchor(i); jumpTo(x, y, 3, 3); openIsle(i.id); return; }
-  goalSmall = !(goalSmall ?? PHONE); updateHud();
+  goalSmall = !(goalSmall ?? true); updateHud();
 };
 $('money-btn').onclick = hudMore;
 $('pop-btn').onclick = hudMore;
@@ -3437,6 +3437,7 @@ const NEWS_HISTORY = [
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
     '🪵 <b>Knöpfe:</b> Bei der Hecke sind alle Knöpfe jetzt kleine Holzbretter mit Maserung und Nägeln, bei den Wolken kleine Schäfchenwolken. Was gewählt ist, ist grün bzw. kräftig blau.',
     '💬 <b>Texte überarbeitet:</b> Alle Hinweise, Meldungen und Beschreibungen im Spiel lesen sich jetzt ruhiger und natürlicher. Statt langer Gedankenstriche stehen dort kurze, klare Sätze.',
+    '🖱️ <b>Kleinigkeiten:</b> Rechtsklick auf die Karte schließt das Fenster rechts. Die Aufgabenliste startet eingeklappt. Zahlen oben gehen mit einem zweiten Tippen wieder zu.',
     '⭐ <b>Inselsterne:</b> Deine Erfolge machen jetzt etwas aus. Ab 10, 25, 45, 70 und 100 Erfolgs-Sternen bekommt deine Insel einen Inselstern: eine Medaille, erst ohne Rahmen, dann in Bronze, Silber, Gold und zuletzt im glitzernden Regenbogen. Jeder Inselstern bringt +5 % Taler. Die Medaille hängt über deinem Rathaus und steht oben neben deiner Flagge.',
     '👀 <b>Für Besucher sichtbar:</b> Wer dich besucht, sieht deine Medaille und kann deine Erfolge ansehen. In der Freundesliste steht sie neben jedem Namen, ein Tippen zeigt die Erfolge.',
     '🏆 <b>Viel mehr Erfolge:</b> 26 neue, zum Beispiel für volle Albumseiten, Läden, Brunnen, Feste, Päckchen und Hilfe bei Wünschen. Dazu 12 versteckte Erfolge, die nur einen Rätsel-Hinweis verraten. Viel Spaß beim Suchen!',

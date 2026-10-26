@@ -72,6 +72,9 @@ describe('Leiste oben', () => {
     expect(document.getElementById('pop').textContent).toBe(game('fmtHud(T.pop)'));
     document.getElementById('money-btn').onclick();                       // antippen: ein paar Sekunden die volle Zahl
     expect(['money', 'sci'].map(id => document.getElementById(id).textContent)).toEqual(['1.234.567', '1.587.556']);
+    document.getElementById('pop-btn').onclick();                         // nochmal antippen: gleich wieder kurz (Nutzer 26.10.2026)
+    expect(['money', 'sci'].map(id => document.getElementById(id).textContent)).toEqual(['1,2 Mio.', '1,5 Mio.']);
+    expect(document.getElementById('hud').classList.contains('more')).toBe(false);
     game('hudMoreUntil = 0; updateHud()');
   });
 
