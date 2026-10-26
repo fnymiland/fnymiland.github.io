@@ -1622,3 +1622,8 @@ body.phone .set-grid, .set-grid.set-one { grid-template-columns: minmax(0, 1fr);
    kleiner, damit „✓ Läuft auf der Insel herum“ einzeilig bleibt */
 body.phone #modal { padding-left: 8px; padding-right: 8px; }
 @media (max-width: 400px) { .me-edit { gap: 8px; } .me-edit canvas { width: 68px; height: 85px; } }
+
+/* Bildchen, die nur schmücken, unsichtbar (wiText, ui-look.js; Nutzer 26.10.2026: „sauviele Emojis … wäge mal ab, was alles weg kann“) */
+i.wt.deko { display: none; }
+/* Menü-Knopf: drei Striche, mit Luft in der Scheibe wie die anderen Bildchen (das Bild ist auf die Striche zugeschnitten) */
+#hud #menu-btn i.wi[data-ic="menue"] { background-position: center; background-size: 58% auto; }

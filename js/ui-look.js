@@ -243,6 +243,10 @@ const UI_DRAW = {
     };
     board(12, 1, '#d9a464'); board(28, -1, '#c98f52');
   },
+  menue() {                                                // Menü-Knopf (Nutzer 26.10.2026: „das Schilderzeichen lässt nicht erkennen, dass
+    g.strokeStyle = menueInk(); g.lineWidth = 6.5; g.lineCap = 'round';   // man dort ins Menü kommt“ → drei Striche, Farbe der Schrift)
+    for (const y of [18, 32, 46]) { g.beginPath(); g.moveTo(15, y); g.lineTo(49, y); g.stroke(); }
+  },
   lupe() {                                                 // Ansehen
     uiShadow(34, 57, 16);
     uiLine([[39, 39], [50, 52]], '#7a4f2e', 7); uiLine([[39.5, 38.5], [50, 50.5]], '#a5734a', 2.4);
@@ -280,6 +284,17 @@ const UI_DRAW = {
     poly(pts(30.5, 29.5, 9, 4.2), '#f8d978');
   },
 };
+const menueInk = () => uiLookId === 'wolke' ? '#3b4763' : '#5a3d24';   // wie der Pfeil am Ziel-Fenster (style.css --chev-up)
+// Symbole, deren Farbe am Aussehen hängt, beim Wechsel neu malen (Knöpfe und Bildchen in Texten)
+function uiIconsRelook() {
+  for (const n of ['menue']) {
+    if (!UI_ICON_CACHE.has(n)) continue;
+    UI_ICON_CACHE.delete(n); UI_ICON_CNV.delete(n);
+    const u = uiIcon(n);
+    for (const el of document.querySelectorAll(`i.wi[data-ic="${n}"]`)) { el.style.backgroundImage = u ? `url(${u})` : ''; el.dataset.icDone = n; }
+    if (WT_SET.has(n) && u) document.documentElement.style.setProperty(wtVar(n), `url(${u})`);
+  }
+}
 const uiShadow = (cx, cy, rx) => ellipse(cx, cy, rx, rx / 2.4, 'rgba(40,50,70,0.18)');
 function uiBox(cx, cy, a, b, h, col) {                     // Kiste: (cx, cy) = Mitte der Grundfläche
   poly([[cx - a, cy], [cx, cy + b], [cx, cy + b - h], [cx - a, cy - h]], col);
@@ -421,7 +436,7 @@ const WI_TEXT = {
   '☁': 'wolke', '💭': 'gedanke', '📖': 'buch', '📒': 'buch', '📚': 'bibliothek', '⚙': 'zahnrad', '⛵': 'boot', '🚢': 'boot', '⛴': 'boot', '👑': 'krone',
   '🏝': 'insel', '🧺': 'korb', '🐌': 'schnecke', '📜': 'rolle', '🌙': 'mond', '❤': 'herz', '💛': 'herz', '🚩': 'flagge', '📬': 'briefkasten', '📌': 'pin',
   '🪓': 'axt', '🧭': 'kompass', '🧹': 'besen', '🌊': 'welle', '🪜': 'leiter', '🏗': 'kran', '👷': 'kran', '⭐': 'stern', '✋': 'haken', '👁': 'glaskugel',
-  '👆': 'lupe', '🌐': 'freundesbank', '☰': 'wegweiser', '🛤': 'wegweiser', '⛰': 'stein', '⛱': 'pavillon',
+  '👆': 'lupe', '🌐': 'freundesbank', '☰': 'menue', '🪧': 'menue', '🛤': 'wegweiser', '⛰': 'stein', '⛱': 'pavillon',
   '🏛': 'rathaus', '🚆': 'station', '🚉': 'station', '🏠': 'haus:1', '🏘': 'reihenhaus', '🌉': 'seebruecke', '🌳': 'baum', '🌲': 'baum', '🎡': 'riesenrad',
   '❓': 'frage', '❔': 'frage', '🐾': 'tier:2', '👀': 'lupe', '⛩': 'bogen', '🌫': 'wolke', '🚧': 'kran', '📩': 'briefkasten',
   '🌅': 'sonne', '🧰': 'kiste', '⛺': 'pavillon',
@@ -462,10 +477,73 @@ function wtEnsure(name) {
   const u = uiIcon(name);
   if (u) { document.documentElement.style.setProperty(wtVar(name), `url(${u})`); WT_SET.add(name); }
 }
-function wiText(html) {
-  if (typeof html !== 'string' || !WI_TEXT_HAS.test(html)) return html;
-  return html.split(/(<[^>]*>)/).map(part => part.startsWith('<') ? part
-    : part.replace(WI_TEXT_RE, e => { const n = wiTextName(e); wtEnsure(n); return `<i class="wt" style="background-image:var(${wtVar(n)})">${e}</i>`; })).join('');
+// Bildchen, die nur schmücken, sind unsichtbar (Klasse deko; Nutzer 26.10.2026: „da sind noch sauviele Emojis drin … wäge mal ab,
+// was alles weg kann“, Vorschlag „passt“). Das Zeichen bleibt im Text (Vorlesen, Suchen, Tests).
+//   weg:   in Überschriften, Reitern, Knöpfen und Abschnitts-Schildern mit Text; vor einem Wort („🏮 Laternen“, „Das 📖 Tagebuch“)
+//   bleibt: vor einer Zahl (Einheit: „🏮 22 / 22“, „🪙 40“), als Wort selbst („unter 🌐.“), allein im Knopf, in Listen von Dingen
+// Bunte Emojis ohne eigenes Bild (💬 🔢 …) verschwinden an denselben Stellen, sonst bleiben sie stehen; ♥ ✓ ✦ sind Schrift.
+const WI_RAW = '[\\u{1F000}-\\u{1FAFF}\\u2795]\\uFE0F?';
+const WI_ANY_RE = new RegExp(`${WI_TEXT_RE.source}|${WI_RAW}`, 'gu'), WI_ANY_HAS = new RegExp(WI_ANY_RE.source, 'u');
+const WI_VOID = /^(br|img|input|hr|wbr|meta|link|source|area|col|embed|param|track)$/;
+const WI_HEAD_TAG = /^(h[1-6]|summary|button)$/, WI_HEAD_CLS = /(^|\s)(btn|look|label)(\s|$)/;
+const WI_LIST_CLS = /(^|\s)(chip|stat|res|cost|lx-ic|ic|alb|wish-ic)(\s|$)/;
+const wiCls = attrs => (/class\s*=\s*"([^"]*)"/.exec(attrs) || [])[1] || '';
+const wiKind = c => /[\p{L}„(]/u.test(c) ? 'wort' : /\d/.test(c) ? 'zahl' : 'zeichen';
+const WI_STATUS = /^(🔒|🔓|⚠)/u;                                         // Zustand (gesperrt, Warnung) – kein Schmuck
+function wiDeko(e, stack, prevText, next, afterDigit) {
+  if (next === 'zahl' || afterDigit) return false;                      // Einheit: „🏮 22 / 22“, „25 ✨ am Tag“
+  if (WI_STATUS.test(e)) return false;
+  if (!prevText && next === 'ende') return false;                        // allein: Bildknopf
+  if (next !== 'wort') return false;                                     // ist selbst das Wort: „unter 🌐.“, Abreißen „🗑️ +61.870“
+  if (stack.some(f => WI_HEAD_TAG.test(f.name) || WI_HEAD_CLS.test(wiCls(f.attrs)) || /\bdata-tab\b/.test(f.attrs))) return true;
+  return !stack.some(f => f.name === 'span' || WI_LIST_CLS.test(wiCls(f.attrs)));   // Listen von Dingen: „🌳 Baum“
+}
+// outer: umgebende Elemente (wiTextNodes: aus dem Dokument), prev/tail: Text davor bzw. danach im selben Element
+function wiText(html, outer = null) {
+  if (typeof html !== 'string' || !WI_ANY_HAS.test(html)) return html;
+  const parts = html.split(/(<[^>]*>)/), root = { name: '', attrs: '', text: !!(outer && outer.prev) };
+  const stack = outer ? outer.stack.map(f => ({ ...f, text: true })) : [];
+  const tagOf = t => { const m = /^<\s*(\/)?\s*([a-zA-Z][\w-]*)([^>]*)>$/.exec(t); return m && { close: !!m[1], name: m[2].toLowerCase(), attrs: m[3], open: !m[1] && !WI_VOID.test(m[2].toLowerCase()) && !/\/\s*>$/.test(t) }; };
+  const next = (i, rest) => {                                            // was nach dem Bildchen kommt: wort, zahl, zeichen oder ende
+    const r = rest.trimStart(); if (r) return wiKind(r[0]);
+    let depth = 0;
+    for (let j = i + 1; j < parts.length; j++) {
+      const p = parts[j];
+      if (p.startsWith('<')) { const t = tagOf(p); if (!t) continue; if (t.close) { if (!depth) return 'ende'; depth--; } else if (t.open) depth++; continue; }
+      const q = p.trimStart(); if (q) return wiKind(q[0]);
+    }
+    const tail = outer && outer.tail ? outer.tail.trimStart() : '';
+    return tail ? wiKind(tail[0]) : 'ende';
+  };
+  let lastCh = outer && outer.prev ? outer.prev.slice(-1) : '';         // letztes Zeichen davor (Zahl → Einheit)
+  const said = t => { root.text = true; for (const f of stack) f.text = true; const q = t.trimEnd(); if (q) lastCh = q.slice(-1); };
+  const out = [];
+  for (let i = 0; i < parts.length; i++) {
+    const p = parts[i];
+    if (p.startsWith('<')) {
+      out.push(p);
+      const t = tagOf(p); if (!t) continue;
+      if (t.close) { const k = stack.map(f => f.name).lastIndexOf(t.name); if (k >= 0) stack.length = k; }
+      else if (t.open) stack.push({ name: t.name, attrs: t.attrs, text: false });
+      continue;
+    }
+    const top = stack[stack.length - 1] || root;
+    if (top.name === 'i' && /(^|\s)wt(\s|$)/.test(wiCls(top.attrs))) { out.push(p); continue; }   // schon umgewandelt (wiText zweimal)
+    let res = '', last = 0;
+    for (const m of p.matchAll(WI_ANY_RE)) {
+      const before = p.slice(last, m.index), e = m[0];
+      res += before; if (before.trim()) said(before);
+      const dk = wiDeko(e, stack, top.text, next(i, p.slice(m.index + e.length)), /\d/.test(lastCh)), name = wiTextName(e);
+      const sp = dk && /\s/.test(p[m.index + e.length] || '') ? p[m.index + e.length] : '';   // unsichtbar samt Leerzeichen: „(🏘️ Stadt“ → „(Stadt“
+      if (name) { wtEnsure(name); res += `<i class="wt${dk ? ' deko' : ''}" style="background-image:var(${wtVar(name)})">${e}${sp}</i>`; }
+      else res += dk ? `<i class="wt deko">${e}${sp}</i>` : e;
+      said(e); last = m.index + e.length + sp.length;
+    }
+    const rest = p.slice(last);
+    res += rest; if (rest.trim()) said(rest);
+    out.push(res);
+  }
+  return out.join('');
 }
 
 // Leisten, die ihren Text selbst setzen (Hinweis, Auswahl, Erfolg …): Textknoten nachträglich umwandeln. Nicht für Fenster, die
@@ -474,11 +552,13 @@ function wiTextNodes(root) {
   if (!root || typeof document.createTreeWalker !== 'function') return;
   const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), hits = [];
   for (let n = w.nextNode(); n; n = w.nextNode()) {
-    if (WI_TEXT_HAS.test(n.nodeValue) && !(n.parentElement && n.parentElement.closest('i.wt, canvas, input, textarea'))) hits.push(n);
+    if (WI_ANY_HAS.test(n.nodeValue) && !(n.parentElement && n.parentElement.closest('i.wt, canvas, input, textarea'))) hits.push(n);
   }
   for (const n of hits) {
+    const stack = [], sib = (from, dir) => { let t = ''; for (let x = from[dir]; x; x = x[dir]) t += x.textContent; return t; };
+    for (let a = n.parentElement; a && a !== document.body; a = a.parentElement) stack.unshift({ name: a.tagName.toLowerCase(), attrs: ` class="${a.getAttribute('class') || ''}"${a.hasAttribute('data-tab') ? ' data-tab' : ''}` });
     const t = document.createElement('template');
-    t.innerHTML = wiText(escHtml(n.nodeValue));
+    t.innerHTML = wiText(escHtml(n.nodeValue), { stack, prev: sib(n, 'previousSibling').trim(), tail: sib(n, 'nextSibling') });
     n.replaceWith(t.content);
   }
 }
@@ -553,6 +633,7 @@ function applyUiLook() {
   const b = document.body;
   if (!b) return;
   for (const id of Object.keys(UI_LOOKS)) b.classList.toggle('look-' + id, id === uiLookId);
+  uiIconsRelook();
   fillUiIcons();
   watchUiEmojis();
   wtEnsure('stern'); wtEnsure('drehen');                                                      // Favoriten-Sterne im Baumenü und Infofenster (style.css)

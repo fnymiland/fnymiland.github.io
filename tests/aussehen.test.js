@@ -33,11 +33,11 @@ describe('Aussehen', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
     const hud = html.slice(html.indexOf('<div id="hud">'), html.indexOf('<div id="store"'));
     for (const e of ['🪙', '👥', '💡', '✨', '📦', '🌐', '☰']) expect(hud.includes(e)).toBe(false);
-    expect(game("[...document.querySelectorAll('#hud i.wi')].map(e => e.dataset.ic)")).toEqual(['taler', 'haus:2', 'bibliothek', 'kristall', 'kiste', 'freundesbank', 'wegweiser']);
+    expect(game("[...document.querySelectorAll('#hud i.wi')].map(e => e.dataset.ic)")).toEqual(['taler', 'haus:2', 'bibliothek', 'kristall', 'kiste', 'freundesbank', 'menue']);
   });
 
   it('jedes Symbol lässt sich zeichnen, ohne dass etwas wirft', () => {
-    for (const n of ['taler', 'kiste', 'wegweiser', 'haus:2', 'bibliothek', 'kristall', 'freundesbank']) {
+    for (const n of ['taler', 'kiste', 'menue', 'haus:2', 'bibliothek', 'kristall', 'freundesbank']) {
       expect(game(`(() => { UI_ICON_CACHE.delete(${JSON.stringify(n)}); return typeof uiIcon(${JSON.stringify(n)}); })()`)).toBe('string');
     }
   });

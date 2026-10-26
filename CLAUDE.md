@@ -584,6 +584,12 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     **Leiste oben passt sich am Inhalt an, nicht nur an der Bildschirmbreite** (`fitHud`, ui.js): zu breit → `body.hud-noname` (Ortsname weg),
     weiter zu breit → `body.hud-rail` (Knöpfe untereinander). Die festen Stufen (860/720 px) reichten nicht: bei 1000 px ragte der Menü-Knopf
     hinaus (Inselname, Sternstaub, große Zahlen). Neue Teile der Leiste prüfen mit `LT_CHECK()` bei 640–1366 px.
+    **Bildchen nur, wo sie etwas zeigen** (Nutzer 26.10.2026, `wiText`/`wiDeko` in ui-look.js): schmückende werden `i.wt.deko`
+    (unsichtbar, das Zeichen bleibt im Text). Weg: in Überschriften, Reitern, Knöpfen, `.label` vor einem Wort, und überall vor einem Wort.
+    Bleibt: vor/nach einer Zahl (Einheit), als Wort selbst („unter 🌐.“), allein im Knopf, 🔒/⚠ (Zustand), in Listen von Dingen
+    (`span`, `.chip` …). Neue Texte also ohne Sorge mit Emoji schreiben, aber Bilder für Dinge in `span`/`.chip` setzen. Ein schmückendes
+    Bildchen nimmt sein Leerzeichen mit. **Menü-Knopf** = drei Striche (`menue`, Farbe je Aussehen: `menueInk`, `uiIconsRelook`); ☰ und 🪧
+    in Texten zeigen ihn.
     **Nichts darf über den Innenabstand eines Scrollbereichs (`.p-scroll`, `.tab-scroll`: 8 px) hinausragen** (negativer Rand, `::after`
     mit `left:-10px`): sonst scrollt er quer und unten erscheint ein grauer Balken. Prüfen: `await KT_QUER()`. Mitlaufende Köpfe (`.me-edit`)
     in Papierfarbe, nie durchsichtig – sonst scheint beim Scrollen alles darunter durch.
