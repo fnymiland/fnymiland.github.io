@@ -215,6 +215,20 @@ function cloudKnobImage(top, under, hi) {
   x.drawImage(l, 0, 0, W, H);
   try { return c.toDataURL(); } catch (e) { return ''; }
 }
+// Runde Knöpfe oben rechts (Lager, Du, Online, Menü) bei Wolken: Kreis mit zwölf kleinen Buckeln (Nutzer 26.10.2026: „die Kreise passen
+// nicht zu den Wolken“, Entwurf E in tools/wolkenknopf-entwurf.js) – weiße Oberseite mit Verlauf, blaue Unterseite, Glanz oben links
+function cloudDiscImage() {
+  const S = 3, N = 64, n = 12, R = 22, r = 6.2, pts = [[32, 31, R - r * 0.35]];
+  for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + i / n * Math.PI * 2; pts.push([32 + Math.cos(a) * R, 31 + Math.sin(a) * R, r]); }
+  const c = document.createElement('canvas'); c.width = c.height = N * S; const x = c.getContext('2d');
+  if (!x) return '';
+  x.scale(S, S);
+  const blob = (dy, fill) => { x.fillStyle = fill; for (const [cx, cy, rr] of pts) { x.beginPath(); x.arc(cx, cy + dy, rr, 0, Math.PI * 2); x.fill(); } };
+  blob(4, '#93abd6'); blob(0, '#ffffff');
+  const g = x.createLinearGradient(0, 6, 0, 58); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, '#dfe9f8'); blob(0, g);
+  x.fillStyle = 'rgba(255,255,255,.9)'; x.beginPath(); x.ellipse(22, 17, 7, 3, -0.5, 0, Math.PI * 2); x.fill();
+  try { return c.toDataURL(); } catch (e) { return ''; }
+}
 let cloudKnobsDone = false;
 function cloudKnobs() {
   if (cloudKnobsDone || !document.body) return;
@@ -223,6 +237,8 @@ function cloudKnobs() {
     if (!url) return;                                         // ohne Leinwand bleiben die glatten Knöpfe
     document.body.style.setProperty('--cloud-' + id, `url(${url})`);
   }
+  const disc = cloudDiscImage();
+  if (disc) document.body.style.setProperty('--cloud-disc', `url(${disc})`);
   cloudKnobsDone = true;
 }
 

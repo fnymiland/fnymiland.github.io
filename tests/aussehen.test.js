@@ -169,6 +169,13 @@ describe('Aussehen', () => {
     expect(tail).toMatch(/@media \(max-width: 720px\) \{\s*#hud \.hud-act \{ flex-direction: column/);   // schmal: Knöpfe untereinander
   });
 
+  it('Knöpfe oben rechts bei Wolken: Kreis mit zwölf kleinen Buckeln statt glattem Kreis (Nutzer 26.10.2026: „wölkchenhafter“, „E“)', () => {
+    expect(game('typeof cloudDiscImage')).toBe('function');
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    const tail = css.slice(css.indexOf('Knöpfe oben rechts als Wölkchen'));
+    expect(tail).toMatch(/body\.look-wolke #hud \.hud-act \.pill \{[^}]*var\(--cloud-disc,[\s\S]*?border: 0;[^}]*box-shadow: none/);
+  });
+
   it('Bauleiste unten: unter dem gemalten Rand bleibt Luft (Nutzer 26.10.2026: „im Wolkendesign unter der Iconleiste gar keine Luft“)', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
     const tail = css.slice(css.indexOf('Luft unter der Bauleiste'));
