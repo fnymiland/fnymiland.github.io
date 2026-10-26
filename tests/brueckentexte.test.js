@@ -22,14 +22,14 @@ describe('Brücken-Texte (160c G1e)', () => {
   it('Fenster der Brücke: was darunter geht – Holz mit Stützen nur quer, Stein mit Pfeilern, Metall/Kristall frei', () => {
     const text = () => game("(() => { openBkInfo(15, 12); const t = document.getElementById('panel').textContent; closePanel(); return t; })()");
     bruecke('holz');
-    expect(text()).toMatch(/Darunter bleibt Platz für Wege, Schienen, Wasser und Niedriges – an den Stützen nur quer darunter durch\./);
+    expect(text()).toMatch(/Darunter bleibt Platz für Wege, Schienen, Wasser und Niedriges \(an den Stützen nur quer darunter durch\)\./);
     bruecke('stahl');
     expect(text()).toMatch(/Darunter bleibt Platz für Wege, Schienen, Wasser und Niedriges\./);
     bruecke('holz', { bru: 'keine' });
     expect(text()).toMatch(/Wasser und Niedriges\./);
     bruecke('stein', {}, 4);                                                 // Stein: Pfeiler ab 4 Feldern
     expect(text()).toMatch(/an den Pfeilern nichts, Wege und Schienen dort nur quer/);
-    expect(game('ITEMS.bruecke.desc')).toMatch(/Niedriges – an Stützen und Pfeilern nur quer/);
+    expect(game('ITEMS.bruecke.desc')).toMatch(/Niedriges \(an Stützen und Pfeilern nur quer/);
     expect(game('ITEM_TIPS.bruecke')).toMatch(/quer durchführen/);
     expect(game('ITEM_TIPS.bruecke + ITEMS.weg.desc')).toMatch(/Holz.*Wegstil[\s\S]*Holz.*Wegstil/);   // Wegbrücke mit Holz in der Leiste: Material nach dem Wegstil (wbLeisteLook)
     expect(game('ITEMS.bruecke.desc + ITEM_TIPS.bruecke')).not.toMatch(/Flaches/);

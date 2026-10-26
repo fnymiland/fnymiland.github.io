@@ -52,6 +52,6 @@ describe('Hauptbahnhof (Block 85)', () => {
     expect(game("document.getElementById('panel').textContent")).toMatch(/Weg vor das Portal/);
     const [ex, ey] = game("hbfEntrance(state.tiles.get('10,10'), 10, 10)[0]");
     game(`for (let i = 0; i < 3; i++) state.tiles.set((${ex} + i) + ',' + ${ey}, { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set((${ex} + 2) + ',' + (${ey} + 1), { b: 'haus', lvl: 1 }); recalc(); openInfo(10, 10)`);
-    expect(game("document.getElementById('panel').textContent")).toMatch(/Weg am Eingang – mit dem Dorf verbunden/);
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Weg am Eingang, mit dem Dorf verbunden/);
   });
 });

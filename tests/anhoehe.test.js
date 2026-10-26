@@ -92,13 +92,13 @@ describe('Anhöhen (Block 157)', () => {
     game("build('dach', 16, 10, true); state.edges.set(edgeBetween(18, 10, 19, 10), { b: 'zaun', style: currentStyle('zaun') })");
     game("const ds = newSlots(); ds[VSLOT] = { b: 'laterne', rot: 0 }; state.decos.set('21,21', ds); state.tiles.set('5,12', { b: 'brunnen', lvl: 1 }); recalc()");
     expect(game('hillRaiseError(10, 10)')).toBe(null);                               // Weg kommt mit hinauf (Stufe 2)
-    expect(game('hillRaiseError(12, 10)')).toBe('Hier steht ein Gebäude – erst mit ✋ wegtragen, dann oben absetzen');   // 157j
-    expect(game('hillRaiseError(15, 15)')).toMatch(/Große Deko erst wegnehmen/);
+    expect(game('hillRaiseError(12, 10)')).toBe('Hier steht ein Gebäude. Trag es erst mit ✋ weg und setz es dann oben ab.');   // 157j
+    expect(game('hillRaiseError(15, 15)')).toMatch(/Nimm große Deko erst weg/);
     expect(game('hillRaiseError(16, 10)')).toBe('Unter einer Überdachung geht keine Anhöhe');
-    expect(game('hillRaiseError(18, 10)')).toBe('Am Rand steht: Zaun – erst entfernen');
+    expect(game('hillRaiseError(18, 10)')).toBe('Am Rand steht: Zaun. Das musst du erst entfernen.');
     expect(game('hillRaiseError(20, 20)')).toBe('An der Ecke steht schon etwas');   // Eckpunkt 21,21 = vordere Ecke von 20,20
     game("buildSmall('stuetze', 18, 18, 0)");                                         // Stütze im Eckplatz, auch ohne Dach: oben gibt es keine
-    expect(game('hillRaiseError(18, 18)')).toBe('Hier steht eine Stütze – erst wegnehmen');
+    expect(game('hillRaiseError(18, 18)')).toBe('Hier steht eine Stütze. Nimm sie erst weg.');
     expect(game("[...state.hills.keys()]")).toEqual([]);
     expect(game('hillRaiseError(5, 12)')).toBe(null);
     expect(game("build('anhoehe', 5, 12)")).toBe(true);

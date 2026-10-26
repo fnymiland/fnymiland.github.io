@@ -1641,7 +1641,7 @@ function groupPreview(z) {
   const n = moving.items.length;
   const hp = toScreen(hover.x, hover.y);
   if (HILL_MARKS) hp.y -= hillLift(hover.x, hover.y) * z;                // Schild über der Anhöhe (Block 157)
-  return { groupGhost: ghosts, preview: { ok: !first, text: first || (moving.copy ? `⧉ Kopie · 🪙 ${fmt(moving.cost.money || 0)}${state.money < (moving.cost.money || 0) ? ' – zu wenig Taler' : ''} · hierhin` : `${n} Dinge · hierhin`), p: hp } };
+  return { groupGhost: ghosts, preview: { ok: !first, text: first || (moving.copy ? `⧉ Kopie · 🪙 ${fmt(moving.cost.money || 0)}${state.money < (moving.cost.money || 0) ? ', zu wenig Taler' : ''} · hierhin` : `${n} Dinge · hierhin`), p: hp } };
 }
 // Nacht: Die Lichter haben beim Zeichnen Löcher gestanzt (glowQuad). Nur das übrige Bild wird dunkel, dann kommt
 // hinter die Löcher das Licht – wo inzwischen etwas davor steht, ist kein Loch mehr. Große Gebäude werden in

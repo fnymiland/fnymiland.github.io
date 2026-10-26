@@ -26,7 +26,7 @@ const sdAlbumFull = p => albumKeys(p).every(k => state.album.has(k) || LATE_ALBU
 function sdCheck(silent = false) {
   if (!state || !state.achieved) return 0;
   let sum = 0;
-  const give = (n, key, why) => { const got = sdAdd(n, key, !silent); if (got && !silent) toast(`✨ +${fmt(got)} Sternstaub – ${why}`); sum += got; };
+  const give = (n, key, why) => { const got = sdAdd(n, key, !silent); if (got && !silent) toast(`✨ +${fmt(got)} Sternstaub: ${why}`); sum += got; };
   for (const a of ACHIEVEMENTS) for (let t = 1; t <= (state.achieved[a.id] || 0); t++) give(SD.tier * t, `a:${a.id}:${t}`, `Erfolg „${a.name}“ Stufe ${t}`);
   if (state.album) for (const p of ALBUM) if (sdAlbumFull(p)) give(SD.album, 'album:' + p.id, `Albumseite „${p.name}“ voll`);
   if (state.festival) give(SD.fest, 'fest', 'das Laternenfest');
@@ -78,7 +78,7 @@ function sdCount(bs, where = null) {                                       // kl
 const TW_LIST = [
   { id: 'bank', need: 3, items: ['bank'], text: n => `${n} Bänke am Wasser`, count: () => sdCount(['bank'], sdNearWater) },
   { id: 'baum', need: 6, items: ['baum'], text: n => `${n} neue Bäume`, count: () => sdCount(['baum']) },
-  { id: 'blumen', need: 4, items: ['blumen', 'blumentopf'], text: n => `${n} Blumen – Beet oder Topf`, count: () => sdCount(['blumen', 'blumentopf']) },
+  { id: 'blumen', need: 4, items: ['blumen', 'blumentopf'], text: n => `${n} Blumen, im Beet oder im Topf`, count: () => sdCount(['blumen', 'blumentopf']) },
   { id: 'busch', need: 6, items: ['busch'], text: n => `${n} Büsche`, count: () => sdCount(['busch']) },
   { id: 'laterne', need: 4, items: ['laterne', 'strassenlaterne'], text: n => `${n} Laternen für die Abende`, count: () => sdCount(['laterne', 'strassenlaterne']) },
   { id: 'brunnen', need: 1, items: ['brunnen'], text: () => 'einen Brunnen zum Plaudern', count: () => sdCount(['brunnen', 'kristallbrunnen']) },
@@ -117,7 +117,7 @@ function twUndo(today = sdDay()) {
   if (state.sdGot) state.sdGot.delete('wish:' + w.day);
   const back = Math.min(SD.wish, state.stardust || 0);
   state.stardust = (state.stardust || 0) - back;
-  toast(`💭 Tageswunsch wieder offen${back ? ` – ✨ −${back}` : ''}`);
+  toast(`💭 Tageswunsch wieder offen${back ? ` (✨ −${back})` : ''}`);
   return back;
 }
 let twAt = 0;
@@ -131,7 +131,7 @@ function twTick(now = Date.now(), today = sdDay()) {                    // aus d
   w.done = true;
   sdAdd(SD.wish, 'wish:' + w.day);
   confettiBurst(); sfx('star');
-  toast(`💭 ${w.icon} ${w.who} freut sich: ${d.text(d.need)} – ✨ +${SD.wish} Sternstaub`);
+  toast(`💭 ${w.icon} ${w.who} freut sich: ${d.text(d.need)}. ✨ +${SD.wish} Sternstaub`);
   save();
 }
 function twHtml() {
@@ -139,7 +139,7 @@ function twHtml() {
   if (!w) return '';
   const d = TW_BY_ID[w.id], got = Math.min(d.need, twGot(w));
   return `<h4>💭 Tageswunsch</h4><div class="sd-wish${w.done ? ' done' : ''}"><span>${w.icon} <b>${escHtml(w.who)}</b> hätte gern ${d.text(d.need)}.</span>
-    <b>${w.done ? '✓ erfüllt – morgen kommt ein neuer' : `${got}/${d.need} · ✨ ${SD.wish}`}</b></div>`;
+    <b>${w.done ? '✓ erfüllt, morgen kommt ein neuer' : `${got}/${d.need} · ✨ ${SD.wish}`}</b></div>`;
 }
 
 // --- Anzeige ---
@@ -155,7 +155,7 @@ const SD_SOURCES = [
 function sdHtml(today = sdDay()) {
   const t = sdTreasury(today), p1 = sdPrice(t.n), p5 = sdPriceOf(5, t.n);
   return `<h2>✨ Sternstaub</h2>
-    <p>Du hast <b class="sd-have">✨ ${fmt(state.stardust || 0)}</b> Sternstaub. Er ist selten – damit schaltest du besondere, schöne Dinge frei
+    <p>Du hast <b class="sd-have">✨ ${fmt(state.stardust || 0)}</b> Sternstaub. Er ist selten. Damit schaltest du besondere, schöne Dinge frei
       im ⛺ Sternenbasar (Einrichtungen) und die ✦ Meisterstücke der 🎨 Kunstakademie.</p>
     ${twHtml()}
     <h4>So bekommst du ihn</h4>
@@ -185,8 +185,8 @@ function sdWelcome(n) {
     if (!$('modal').hidden) { setTimeout(tryShow, 1500); return; }
     state.sdSeen = true; save();
     openModal(`<h2>✨ Sternstaub ist da!</h2>
-      <p>Neu auf deiner Insel: <b>Sternstaub</b> – selten und kostbar. Damit schaltest du bald besondere, schöne Dinge frei.</p>
-      <p>Für alles, was du schon geschafft hast – Erfolge, volle Albumseiten${state.festival ? ', das Laternenfest' : ''} –, bekommst du
+      <p>Neu auf deiner Insel: <b>Sternstaub</b>, selten und kostbar. Damit schaltest du bald besondere, schöne Dinge frei.</p>
+      <p>Für alles, was du schon geschafft hast (Erfolge, volle Albumseiten${state.festival ? ', das Laternenfest' : ''}), bekommst du
         <b>✨ ${fmt(n)}</b> gutgeschrieben.</p>
       <p class="muted">Tipp oben auf ✨, um zu sehen, wie du mehr bekommst. In der Schatzkammer kannst du auch Taler eintauschen.</p>
       <div class="row"><button class="btn" id="m-close" style="flex:1">Schön!</button></div>`);
@@ -293,14 +293,14 @@ function sdBuyItem(id, fromKatalog = false) {
   if (!s || state.sdItems.has(id)) return false;
   if (fromKatalog && (s.rare || s.mon || !state.sdShown || !state.sdShown.has(id))) return false;
   if (s.mon && !fromKatalog && monOfMonth() !== id) { fail('Diesen Bauplan gibt es diesen Monat nicht'); return false; }   // Wahrzeichen des Monats (Block 162)
-  if (!s.mon && !fromKatalog && !basarOffers().some(o => o.id === id)) { fail('Das gibt es heute nicht im Basar – schau im Katalog'); return false; }   // Prüfung 19.10.
+  if (!s.mon && !fromKatalog && !basarOffers().some(o => o.id === id)) { fail('Das gibt es heute nicht im Basar. Schau im Katalog nach.'); return false; }   // Prüfung 19.10.
   const price = fromKatalog ? sdKatalogPrice(s) : s.price;
   if ((state.stardust || 0) < price) { fail(`Zu wenig Sternstaub (✨ ${fmt(price)} nötig)`); return false; }
   state.stardust -= price;
   state.sdItems.add(id);
   if (typeof cloudTouched === 'function') cloudTouched();
   sfx('bell'); if (typeof buildToolbar === 'function') buildToolbar(); save();
-  toast(`✨ Freigeschaltet: ${ITEMS[id].name} – jetzt im Baumenü`);
+  toast(`✨ Freigeschaltet: ${ITEMS[id].name}, jetzt im Baumenü`);
   return true;
 }
 const sdThumbs = new Map();
@@ -346,29 +346,29 @@ function sdUntilNew(now = new Date()) {
 // Der Mondhase sagt jeden Tag etwas – erst, was gerade wichtig ist, sonst einen der Tagessprüche (gleicher Tag = gleicher Spruch)
 const SD_HARE_SAYS = [
   'Willkommen im Sternenbasar! Schau dich ruhig um.', 'Psst … heute Nacht sind besonders viele Sterne gefallen.',
-  'Ich habe die ganze Nacht Sternstaub gefegt. Hatschi!', 'Der Mond ist heute schön rund – gute Zeit für Schönes!',
+  'Ich habe die ganze Nacht Sternstaub gefegt. Hatschi!', 'Der Mond ist heute schön rund. Gute Zeit für Schönes!',
   'Meine Laterne hat mir den Weg zu deiner Insel gezeigt.', 'Alles hier ist frisch vom Himmel gefallen.',
   'Was einmal da war, kommt wieder. Versprochen!', 'Hast du heute schon den Tageswunsch erfüllt? Der bringt Sternstaub.',
   'Ich sammle Sternschnuppen. Und du?', 'Morgen bringe ich neue Sachen mit. Bis dann!',
   'Eine Insel ohne Lieblingsstück ist wie ein Himmel ohne Stern.', 'Deine Insel gefällt mir. So gemütlich!',
-  'Schon mein Opa hat auf dem Mond Waren verkauft.', 'Leise, leise – die Sterne schlafen noch.',
-  'Gemütlich hier, oder? Ich hab extra Lichter aufgehängt.', 'Für Sternstaub gibt es nichts Nützliches – nur Schönes. So soll es sein!',
+  'Schon mein Opa hat auf dem Mond Waren verkauft.', 'Leise, leise, die Sterne schlafen noch.',
+  'Gemütlich hier, oder? Ich hab extra Lichter aufgehängt.', 'Für Sternstaub gibt es nichts Nützliches, nur Schönes. So soll es sein!',
   'Montags bringe ich immer etwas ganz Seltenes mit.', 'Im Sammelbuch siehst du, was es noch alles gibt.',
   'Ich hab Möhrenkuchen gebacken. Leider nicht zu verkaufen.', 'Heute glitzert alles ein bisschen mehr.',
-  'Wer viel baut, findet viel Sternstaub.', 'Tipp aufs Herzchen – dann sag ich dir Bescheid, wenn es wieder da ist.',
+  'Wer viel baut, findet viel Sternstaub.', 'Tipp aufs Herzchen, dann sag ich dir Bescheid, wenn es wieder da ist.',
   'Mit „Ausprobieren“ siehst du, wie es auf deiner Insel aussieht.', 'Meine Ohren hören jede Sternschnuppe fallen.',
   'Was ich nicht verkaufe, findest du im Katalog.', 'Heute duftet es nach Sternenstaub und Zimt.',
   'Weißt du, warum der Mond leuchtet? Weil er sich freut, dich zu sehen.', 'Ich hab gehört, deine Bewohner mögen Blumen.',
-  'Einen schönen Tag dir – und eine sternenklare Nacht!', 'Komm morgen wieder, dann ist alles neu.'];
+  'Einen schönen Tag dir und eine sternenklare Nacht!', 'Komm morgen wieder, dann ist alles neu.'];
 function sdHareSay(offers, today = sdDay()) {
   const rare = offers.find(s => s.rare && !state.sdItems.has(s.id)), left = sdWeekLeft(today), nm = s => ITEMS[s.id].name;
   if (rare && left === 1) return `Das ${nm(rare)} ist nur noch heute da …`;
   const wish = offers.find(s => state.sdWish && state.sdWish.has(s.id) && !state.sdItems.has(s.id));
-  if (wish) return `Schau mal, ${nm(wish)} ist da – das hattest du dir doch gemerkt!`;
+  if (wish) return `Schau mal, ${nm(wish)} ist da! Das hattest du dir doch gemerkt.`;
   for (const s of offers) {
     if (state.sdItems.has(s.id)) continue;
     const key = sdSammlung(s.id), [n, all] = sdSmlgCount(key);
-    if (n > 0 && all - n <= 2) return `Nur noch ${all - n} bis ${sdSmlg(key)[2]} komplett – und ${nm(s)} ist heute da!`;
+    if (n > 0 && all - n <= 2) return `Nur noch ${all - n} bis ${sdSmlg(key)[2]} komplett, und ${nm(s)} ist heute da!`;
   }
   if (rare && left === 7) return `Ganz neu diese Woche: ${nm(rare)}! Es bleibt sieben Tage.`;
   const neu = offers.find(s => sdIsNew(s.id, today) && !state.sdItems.has(s.id));
@@ -418,7 +418,7 @@ function basarCard(s, kat = false, feature = false) {
     <div class="basar-pic">${url ? `<img src="${url}" alt="">` : ''}${s.rare && !have ? SD_SPARKLES : ''}</div>
     <b class="basar-name">${escHtml(d.name)}</b>
     <span class="basar-smlg">${sm[1]} ${escHtml(sm[2])} ${n}/${all}</span>
-    ${have ? '<span class="basar-have">✓ gekauft – im Baumenü</span>'
+    ${have ? '<span class="basar-have">✓ gekauft, steht im Baumenü</span>'
       : `<div class="basar-buy"><button class="btn small" data-sdbuy="${s.id}"${kat ? ' data-kat="1"' : ''}${(state.stardust || 0) < price ? ' disabled' : ''}>✨ ${fmt(price)}</button><button class="btn small basar-try" data-sdtry="${s.id}" aria-label="Ausprobieren" title="Ausprobieren">👁${feature ? ' Ausprobieren' : ''}</button></div>`}
   </div>`;
 }
@@ -430,7 +430,7 @@ function basarMonuments() {
     const how = have ? (m.wahr ? '✓ Bauplan da' : '✓ gekauft') : !m.wahr ? 'kommt als Seltenes der Woche' : nx && nx.in === 0 ? 'diesen Monat' : nx ? `kommt im ${nx.name}` : '';
     return `<div class="book-item${have ? ' have' : ''}">${url ? `<img src="${url}" alt="">` : ''}<span>${escHtml(ITEMS[id].name)}</span><small>${how}</small></div>`;
   };
-  return `<p class="muted">Jeden Monat ein Wahrzeichen: Bauplan kaufen, dann im Baumenü (🌸 Gestalten → 🏛️ Monumente) hinstellen und in drei Abschnitten bauen – so oft du magst.</p>
+  return `<p class="muted">Jeden Monat ein Wahrzeichen: Bauplan kaufen, dann im Baumenü (🌸 Gestalten → 🏛️ Monumente) hinstellen und in drei Abschnitten bauen, so oft du magst.</p>
     ${basarCard(sdShopItem(cur), false, `🏛️ Wahrzeichen im ${MON_MONTHS[new Date().getMonth()]} · noch ${left} ${left === 1 ? 'Tag' : 'Tage'}`)}
     <div class="book-sec"><div class="book-head"><b>🏛️ Wahrzeichen</b></div><div class="book-grid mon-list">${MON_WAHR.map(row).join('')}</div></div>
     <div class="book-sec"><div class="book-head"><b>✦ Prachtstücke</b></div><div class="book-grid mon-list">${Object.keys(MONUMENTS).filter(id => !MONUMENTS[id].wahr).map(row).join('')}</div></div>`;
@@ -454,7 +454,7 @@ function sdTryStart(id, kat = false) {
   if (!sdShopItem(id) || state.sdItems.has(id)) return;
   if (typeof viewOnly === 'function' && viewOnly()) { if (typeof cloudBlocked === 'function') cloudBlocked(); return; }
   closeModal(); setTool('look'); sdTry = id; sdTryKat = !!kat; setTool(id); sdTryBar();
-  toast('👁 Probe: tipp auf deine Insel – gebaut wird nichts');
+  toast('👁 Probe: Tipp auf deine Insel, gebaut wird nichts');
 }
 function sdTryBar() {
   const bar = $('sd-try-bar');
@@ -506,15 +506,15 @@ function openBasar(tab = basarTab) {
   if (neu) { if (typeof cloudTouched === 'function') cloudTouched(); save(); }
   const kat = sdKatalog(), rare = offers.find(s => s.rare), norm = offers.filter(s => !s.rare);
   const body = tab === 'katalog'
-    ? `<p class="muted">Alles, was du hier schon gesehen hast, kannst du nachbestellen – für den anderthalbfachen Preis. Seltenes gibt es nur in seiner Woche.</p>`
-      + (kat.length ? `<div class="basar-grid">${kat.map(s => basarCard(s, true)).join('')}</div>` : '<p class="muted">Noch leer – was du im Angebot siehst und nicht kaufst, landet hier.</p>')
+    ? `<p class="muted">Alles, was du hier schon gesehen hast, kannst du nachbestellen, für den anderthalbfachen Preis. Seltenes gibt es nur in seiner Woche.</p>`
+      + (kat.length ? `<div class="basar-grid">${kat.map(s => basarCard(s, true)).join('')}</div>` : '<p class="muted">Noch leer. Was du im Angebot siehst und nicht kaufst, landet hier.</p>')
     : tab === 'monumente' ? basarMonuments()
     : tab === 'buch' ? `<p class="muted">Alle Waren des Sternenbasars. Was du noch nie gesehen hast, ist ein Geheimnis.</p>${basarBook()}`
     : offers.length ? `<p class="basar-when">Neue Ware in ${sdUntilNew()}</p>${rare ? basarCard(rare, false, true) : ''}<div class="basar-grid">${norm.map(s => basarCard(s)).join('')}</div>`
-      : '<p class="muted">Die ersten Waren sind unterwegs – schau bald wieder vorbei!</p>';
+      : '<p class="muted">Die ersten Waren sind unterwegs. Schau bald wieder vorbei!</p>';
   const hare = sdHareUrl();
   openModal(`<div class="basar-head">${hare ? `<img class="basar-hare" src="${hare}" alt="Mondhase">` : ''}<div class="basar-say">„${escHtml(sdHareSay(offers, today))}“</div></div>
-    <h2 class="basar-title">✦ Sternenbasar ✦ <button class="sd-have" data-btab="sd" aria-label="Sternstaub: ${fmt(state.stardust || 0)} – woher, Schatzkammer">✨ ${fmt(state.stardust || 0)}</button></h2>
+    <h2 class="basar-title">✦ Sternenbasar ✦ <button class="sd-have" data-btab="sd" aria-label="Sternstaub: ${fmt(state.stardust || 0)}. Woher er kommt, Schatzkammer">✨ ${fmt(state.stardust || 0)}</button></h2>
     <div class="looks hall-tabs"><button class="look${tab === 'heute' ? ' on' : ''}" data-btab="heute">🌟 Heute</button><button class="look${tab === 'katalog' ? ' on' : ''}" data-btab="katalog">📦 Katalog</button><button class="look${tab === 'monumente' ? ' on' : ''}" data-btab="monumente">🏛️ Monumente</button>
       <button class="look${tab === 'buch' ? ' on' : ''}" data-btab="buch">📖 Sammelbuch</button></div>
     ${body}
@@ -686,4 +686,4 @@ SD_SHOP.push(
   top.groups.push({ id: 'sternstaub', label: '✨ Sternenbasar', get items() { return SD_SHOP.map(s => s.id).filter(id => !ITEMS[id].mon && state && state.sdItems && state.sdItems.has(id)); } });
 })();
 // Tipps (Bau-Info, „Neu freigeschaltet“): je Ware aus dem Basar
-for (const s of SD_SHOP) if (!ITEM_TIPS[s.id]) ITEM_TIPS[s.id] = ITEMS[s.id].small ? 'Aus dem Sternenbasar ✨ – kleine Deko für eine Ecke, bis zu 4 pro Feld.' : 'Aus dem Sternenbasar ✨ – braucht ein ganzes Feld Wiese.';
+for (const s of SD_SHOP) if (!ITEM_TIPS[s.id]) ITEM_TIPS[s.id] = ITEMS[s.id].small ? 'Aus dem Sternenbasar ✨. Kleine Deko für eine Ecke, bis zu 4 pro Feld.' : 'Aus dem Sternenbasar ✨, braucht ein ganzes Feld Wiese.';

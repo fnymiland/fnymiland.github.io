@@ -35,7 +35,7 @@ describe('Brücke bauen', () => {
     game("state.tiles.set('15,12', { b: 'haus', lvl: 1 }); groundVersion++; recalc()");
     expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/kein Platz für: Haus/);
     game("state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('14,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");
-    expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/Stütze der Brücke – der Weg darf nur quer/);   // Holz, 3 Felder: Stützen auf den Kanten (160c C1), der Weg läuft längs hindurch
+    expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/Stütze der Brücke\. Der Weg darf nur quer/);   // Holz, 3 Felder: Stützen auf den Kanten (160c C1), der Weg läuft längs hindurch
     game("state.paintNew.bruecke = { form: 1 }");                                                     // Stahl
     expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/erst mit der Eisenbahn/);
     game("state.techs.add('bahn'); recalc()");                                                       // Forschen rechnet neu

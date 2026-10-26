@@ -137,7 +137,7 @@ function hbfUpgradePlan(k) {
     if (!bad) return { nk: nx + ',' + ny, mid };
     why = why || bad;
   }
-  return (why || 'Kein Platz') + ' – für die Halle muss neben dem Bahnhof ein Feld frei sein';
+  return (why || 'Kein Platz').replace(/\.$/, '') + '. Für die Halle muss neben dem Bahnhof ein Feld frei sein.';
 }
 function hbfUpgrade(k) {
   const p = hbfUpgradePlan(k);
@@ -180,7 +180,7 @@ function stationLenPlan(k, n) {
     if (!bad) return n <= stationLenPaid(t) || canPay(STATION_LEN_COST) ? { nk: nx + ',' + ny } : state.money < STATION_LEN_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
     why = why || bad;
   }
-  return why + ' – für ein Feld mehr muss links oder rechts eins frei sein';
+  return why.replace(/\.$/, '') + '. Für ein Feld mehr muss links oder rechts eins frei sein.';
 }
 function stationLenSet(k, n) {
   const p = stationLenPlan(k, n);
@@ -217,9 +217,9 @@ function hbfResizePlan(k, d, side = 1) {
   for (const [fx, fy] of footprint('hbf', nx, ny, r, t2)) {
     if (old.has(fx + ',' + fy)) continue;
     if (!ownedTile(fx, fy)) return 'Daneben ist nicht dein Grundstück';
-    if (COVER.has(fx + ',' + fy)) return 'Daneben steht etwas – dort ist kein Platz für ein Gleis';
+    if (COVER.has(fx + ',' + fy)) return 'Daneben steht etwas, dort ist kein Platz für ein Gleis';
     if (decosAt(fx + ',' + fy)) return 'Daneben stehen kleine Dekos';
-    { const e = growLevelErr(fx, fy, hillLevel(x, y)); if (e) return e + ' – dort ist kein Platz für ein Gleis'; }   // Block 157/157j: auf derselben Ebene
+    { const e = growLevelErr(fx, fy, hillLevel(x, y)); if (e) return e.replace(/\.$/, '') + '. Dort ist kein Platz für ein Gleis.'; }   // Block 157/157j: auf derselben Ebene
     if (terrainAt(fx, fy) !== 'grass') return terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen';
   }
   return m <= gleisePaid(t) || canPay(GLEIS_COST) ? plan : state.money < GLEIS_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
@@ -1190,7 +1190,7 @@ function centerTileErr(x, y) {
   const t = objAt(x, y);
   if (!t) return null;
   if (t.b === 'weg' && !t.bridge && (t.wide || pathQuads(x, y).length)) return null;   // Platz oder breiter Weg
-  return t.b === 'weg' ? 'Nicht mitten auf den Weg – die Mitte geht auf Plätzen und breiten Wegen' : 'Auf Gebäudefeldern nur an die Ecken';
+  return t.b === 'weg' ? 'Nicht mitten auf den Weg. Die Mitte geht auf Plätzen und breiten Wegen.' : 'Auf Gebäudefeldern nur an die Ecken';
 }
 const centerOk = (b, x, y) => baseOf(b) !== 'stuetze' && !centerTileErr(x, y);
 function centerWanted(x, y) {
@@ -1358,7 +1358,7 @@ function archRampEdge(k) {
 }
 // Getragener/kopierter Übergang mit Fußgängerbrücke (160c G2): am Ziel keine Linie auf den Rampenkanten (wie setCrossing). rail(x, y): dort
 // liegt Gleis – in einer Gruppe auch das, was mitkommt (sonst die Richtung wie crossingAxes aus der Karte am Ziel)
-const ARCH_RAMP_LINE = 'Erst die Linie zwischen Übergang und Weg abreißen – dort liegt die Rampe';
+const ARCH_RAMP_LINE = 'Reiß erst die Linie zwischen Übergang und Weg ab, dort liegt die Rampe';
 function archRampKeys(x, y, rail) {                                       // die beiden Rampenkanten am Ziel
   const n = !rail ? crossingAxes(x, y).n : rail(x - 1, y) || rail(x + 1, y) || !(rail(x, y - 1) || rail(x, y + 1)) ? [0, 1] : [1, 0];
   return [-1, 1].map(s => edgeBetween(x, y, x + s * n[0], y + s * n[1]));
@@ -1682,9 +1682,9 @@ function smallError(b, x, y, slot, opts = {}) {
     if (!POST_OK.has(baseOf(b))) return 'Auf die Ecke passt nur Schmales (Laterne, Blumentopf …)';
     if (state.hills && state.hills.size) {                       // Anhöhe (Block 157): alle vier Felder gleich hoch; oben keine Stützen (kein Dach)
       if (!sameLevel(vertexCorners(x, y))) return 'Nicht über die Kante einer Anhöhe';
-      if (baseOf(b) === 'stuetze' && hillAt(x, y)) return 'Auf einer Anhöhe geht keine Überdachung – Stützen nur unten';
+      if (baseOf(b) === 'stuetze' && hillAt(x, y)) return 'Auf einer Anhöhe geht keine Überdachung, Stützen nur unten';
       // Gleis-Rampe: der Eckpunkt läge auf ihrer Schräge (zwischen ihren Feldern, im breiten Einschnitt) – unten stehend steckte es in ihr
-      if (rampFresh().n && vertexCorners(x, y).some(([fx, fy]) => rampHeight(fx, fy, x - 0.5, y - 0.5) > 0)) return 'Nicht auf die Schräge der Gleis-Rampe – an ihren Fuß schon';
+      if (rampFresh().n && vertexCorners(x, y).some(([fx, fy]) => rampHeight(fx, fy, x - 0.5, y - 0.5) > 0)) return 'Nicht auf die Schräge der Gleis-Rampe, an ihren Fuß schon';
     }
     if (postAt(x, y)) return 'Hier steht schon etwas';
     if (edgesAt(x, y).length) return 'Hier steht der Pfosten einer Linie';
@@ -1703,7 +1703,7 @@ function smallError(b, x, y, slot, opts = {}) {
     return matError(d.mat);
   }
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
-  if (baseOf(b) === 'stuetze' && hillAt(x, y)) return 'Auf einer Anhöhe geht keine Überdachung – Stützen nur unten';   // Anhöhe (Block 157); sonst darf kleine Deko hinauf
+  if (baseOf(b) === 'stuetze' && hillAt(x, y)) return 'Auf einer Anhöhe geht keine Überdachung, Stützen nur unten';   // Anhöhe (Block 157); sonst darf kleine Deko hinauf
   const t = objAt(x, y);
   if (t && (BIG_ON_TILE.has(t.b) || isBig(t.b))) return 'Hier ist kein Platz für Deko';
   if (slot < 4 && postAt(...cornerVertex(x, y, slot))) return 'An dieser Ecke steht schon etwas';
@@ -1712,7 +1712,7 @@ function smallError(b, x, y, slot, opts = {}) {
     const ce = centerTileErr(x, y);
     if (ce) return ce;
     const ds = decosAt(k);
-    if (ds && [4, 5, 6, 7].some(i => ds[i])) return 'An den Seiten steht schon etwas – die Mitte ist zu eng';
+    if (ds && [4, 5, 6, 7].some(i => ds[i])) return 'An den Seiten steht schon etwas, die Mitte ist zu eng';
   }
   if (isSide(slot) && decosAt(k) && decosAt(k)[CSLOT]) return 'In der Mitte steht schon etwas';
   if (isSide(slot) && bkOn() && bkAt(x, y)) { const [dx, dy] = MID_SIDE[slot - 4]; if (bkEdgeSupport(edgeBetween(x, y, x + dx, y + dy))) return 'Hier steht eine Stütze der Brücke'; }   // 160c C1
@@ -2082,16 +2082,16 @@ function bridgeRowAxis(x, y) {
 }
 function bridgeShapeError(x, y, water) {
   if (water) {
-    if (!armsWith(x, y).length) return 'Brücken wachsen vom Ufer aus – zieh den Weg vom Land aufs Wasser';
+    if (!armsWith(x, y).length) return 'Brücken wachsen vom Ufer aus. Zieh den Weg vom Land aufs Wasser.';
     const ax = bridgeArmsAxis(x, y);
-    if (ax < 0) return 'Brücken nur gerade – keine Kurven auf dem Wasser';
-    for (const s of [-1, 1]) { const nx = ax ? x : x + s, ny = ax ? y + s : y; if (terrainAt(nx, ny) !== 'water' && hillAt(nx, ny)) return 'Am Ende einer Brücke übers Wasser muss das Ufer eben sein – hier ist eine Anhöhe'; }   // 160c D4 (wie hillRaiseError)
+    if (ax < 0) return 'Brücken nur gerade, keine Kurven auf dem Wasser';
+    for (const s of [-1, 1]) { const nx = ax ? x : x + s, ny = ax ? y + s : y; if (terrainAt(nx, ny) !== 'water' && hillAt(nx, ny)) return 'Am Ende einer Brücke übers Wasser muss das Ufer eben sein, hier ist aber eine Anhöhe'; }   // 160c D4 (wie hillRaiseError)
     // alle Brückenfelder daneben laufen in dieselbe Richtung: parallele Reihen (breit) ja, Abzweig oder Ecke auf dem Wasser nein
-    for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && bridgeArmsAxis(x + dx, y + dy, [x, y]) !== ax) return 'Brücken nur gerade – keine Abzweige auf dem Wasser';
+    for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && bridgeArmsAxis(x + dx, y + dy, [x, y]) !== ax) return 'Brücken nur gerade, keine Abzweige auf dem Wasser';
     if (bridgeRunLen(x, y, ax ? [0, 1] : [1, 0]) > BRIDGE_MAX) return `Brücken höchstens ${BRIDGE_MAX} Felder lang`;
     if (bridgeRunLen(x, y, ax ? [1, 0] : [0, 1]) > BRIDGE_WIDE) return `Brücken höchstens ${BRIDGE_WIDE} Felder breit`;
   }
-  for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && bridgeArmsAxis(x + dx, y + dy, [x, y]) < 0) return 'Brücken nur gerade – keine Abzweige auf dem Wasser';
+  for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && bridgeArmsAxis(x + dx, y + dy, [x, y]) < 0) return 'Brücken nur gerade, keine Abzweige auf dem Wasser';
   return null;
 }
 // Eine Brücke = alle zusammenhängenden Brückenfelder (sie sind gerade): Art und Farben gelten für sie alle (Block 66c)
@@ -2257,7 +2257,7 @@ function einAnchor(x, y) {
 // Schiene, die direkt an einen Tunnel stößt (ohne Einfahrt) – für den Hinweis im Fenster
 const railAtTunnel = (x, y) => bAt(x, y) === 'schiene' && DIRS.some(([dx, dy]) => tunnelAt(x + dx, y + dy));
 // Tunnel entfernen (Tunnel-Werkzeug, 🗑️): nur der Tunnel, oben bleibt alles; voll zurück wie beim Abreißen
-const tunnelEraseErr = (x, y) => bAt(x, y) === 'ubahn' ? 'Erst die U-Bahn-Station abreißen – sie steht auf dem Tunnel' : null;
+const tunnelEraseErr = (x, y) => bAt(x, y) === 'ubahn' ? 'Reiß erst die U-Bahn-Station ab, sie steht auf dem Tunnel' : null;
 function removeTunnel(x, y) {
   const k = x + ',' + y;
   if (!state.tunnels.has(k) || tunnelEraseErr(x, y)) return false;
@@ -2273,7 +2273,7 @@ function tunnelError(x, y, noCost) {
   if (!ownedTile(x, y) && !claimable(x, y)) return isSea(x, y) ? 'Im Meer nur direkt neben deinem Land' : notMine(x, y);
   if (tunnelAt(x, y)) return 'Hier ist schon ein Tunnel';
   const b = bAt(x, y);
-  if (b === 'schiene' || b === 'station' || b === 'hbf' || b === 'pb_gleis' || b === 'pb_station' || b === 'tunneleinfahrt' || b === 'huegelrampe' || b === 'bergportal') return 'Unter Schienen, Bahnhöfen und Einfahrten geht kein Tunnel – Schiene und Tunnel verbindet eine Tunneleinfahrt';   // Gleis-Rampe: ein Feld ist Gleis oder Tunnel
+  if (b === 'schiene' || b === 'station' || b === 'hbf' || b === 'pb_gleis' || b === 'pb_station' || b === 'tunneleinfahrt' || b === 'huegelrampe' || b === 'bergportal') return 'Unter Schienen, Bahnhöfen und Einfahrten geht kein Tunnel. Schiene und Tunnel verbindet eine Tunneleinfahrt.';   // Gleis-Rampe: ein Feld ist Gleis oder Tunnel
   if (noCost) return null;
   const c = costOf('tunnel', x, y);
   if (state.money < c.cost) return 'Zu wenig Taler';
@@ -2293,7 +2293,7 @@ function roofError(x, y, noCost) {
   if (t && t.b === 'huegeltreppe') return 'Über einer Treppe geht keine Überdachung';   // Block 157d: sie reicht bis an die Dachhöhe
   if (t && t.b === 'huegelrampe') return 'Über einer Gleis-Rampe geht keine Überdachung';
   if (terrainAt(x, y) === 'water' && !t) return 'Nicht übers Wasser';
-  if (!roofOver(t)) return 'Nicht über Gebäude – über Wege, Wiese, Parks und Deko';
+  if (!roofOver(t)) return 'Nicht über Gebäude, nur über Wege, Wiese, Parks und Deko';
   if (roofSame(x, y)) return 'Hier ist schon so ein Dach';
   if (roofAt(x, y) && roofForm(decoLookNew('dach')) !== 'arkaden') { const l = roofFormLock([x + ',' + y]); if (l) return l; }   // Stein mit Deko/Treppe: nicht überbauen
   { const tl = tallUnder(x, y, decoLookNew('dach').form || 0); if (tl) return `Darunter steht etwas zu Hohes (${ITEMS[tl.b].name})`; }   // Straßenlaterne, Palme … ragten durchs Dach
@@ -2894,7 +2894,7 @@ function announceSeaFlat(lost) {
   if (!$('modal').hidden) { setTimeout(() => announceSeaFlat(lost), 1500); return; }   // nach „Das ist neu“ und Co.
   const name = k => k[0] === 'f' ? '⛴️ ' + k.slice(2).split('|').map(s => typeof landingName === 'function' ? landingName(s) : s).join(' ↔ ') : '🧭 Expedition vom Bootssteg';
   openModal(`<h2>⛵ Boote und Brücken</h2>
-    <p>Seit diesem Update fahren Boote nur noch <b>unter Brückenbögen</b> durch – flache Brücken und Stege sind zu niedrig. Deshalb kommt gerade nicht mehr durch:</p>
+    <p>Seit diesem Update fahren Boote nur noch <b>unter Brückenbögen</b> durch. Flache Brücken und Stege sind zu niedrig. Deshalb kommt gerade nicht mehr durch:</p>
     <ul>${lost.map(k => `<li>${escHtml(name(k))}</li>`).join('')}</ul>
     <p class="muted">So geht es wieder: die Brücke über dem Fahrweg zu einem Bogen verlängern (Land an beiden Enden, mindestens 2 Felder Wasser) oder sie abreißen. Im Hafenfenster steht, wo es hängt.</p>
     <div class="row"><button class="btn" id="m-close" style="flex:1">Verstanden</button></div>`);
@@ -2908,7 +2908,7 @@ function seaRoutesWarn(before, rest = false) {                         // rest: 
   const now = seaRoutesNow(), lost = [...before].filter(k => !now.has(k) && steht(k));
   if (!lost.length) return false;
   const f = lost.find(k => k[0] === 'f'), names = f ? f.slice(2).split('|').map(k => typeof landingName === 'function' ? landingName(k) : k) : null;
-  toast(`⚠ ${rest ? 'Was von der Brücke bleibt, versperrt' : 'Die Brücke versperrt'} den Seeweg${names ? ' ' + names.join(' ↔ ') : ' zur Expedition'} – Boote fahren nur unter Bögen durch. ↶ macht es rückgängig.`);
+  toast(`⚠ ${rest ? 'Was von der Brücke bleibt, versperrt' : 'Die Brücke versperrt'} den Seeweg${names ? ' ' + names.join(' ↔ ') : ' zur Expedition'}. Boote fahren nur unter Bögen durch. ↶ macht es rückgängig.`);
   return true;
 }
 // Verkehr aller Verbindungen (Block 25b): Jede Insel zählt einmal. Pendler: ½ je Einwohner, wenn eine Insel, mit der
@@ -3033,8 +3033,8 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const r = ROTATABLE.has(b) || b === 'huegelrampe' ? rot : 0;                              // Gleis-Rampe (hills.js): Grundfläche [1, len] dreht mit
   if (d.edge) return 'Linien: Anfang und Ende antippen';
   if (d.fixed && !opts.move) return 'Das lässt sich nicht bauen';                           // Rathaus, Sehenswürdigkeit, Truhe (nur verschieben)
-  if (d.once && !opts.move && [...state.tiles.values()].some(t => t.b === b)) return `Es gibt schon einen ${d.name} – nur einer je Insel`;   // Sternenbasar (Block 161c); Kopie zählt als Neubau
-  if (d.old) return 'Den gibt es nicht mehr – bau dir einen Park aus Parkrasen und Deko';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
+  if (d.once && !opts.move && [...state.tiles.values()].some(t => t.b === b)) return `Es gibt schon einen ${d.name}, nur einer je Insel`;   // Sternenbasar (Block 161c); Kopie zählt als Neubau
+  if (d.old) return 'Den gibt es nicht mehr. Bau dir einen Park aus Parkrasen und Deko.';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (b === 'anhoehe') {                                                                   // Anhöhe (Block 157): Feld anheben
     const h = hillAt(x, y);                                                                // liegt schon eine: nur die Wand umstellen (kostenlos, raiseHill)
@@ -3049,11 +3049,11 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (b === 'huegeltreppe' && !opts.move && !opts.t && state.hills && state.hills.size && stairAt(x, y)) return stairRefitError(x, y);   // auf eine Treppe gesetzt: ausrichten (hills.js)
   if (b === 'huegeltreppe') { const e = stairError(x, y, rot, opts.move || !!opts.t); if (e) return e; }   // Treppe in die Anhöhe (Block 157d): unten bzw. in den Rand eingelassen (nicht getragen: Verschieben, Kopie), zur Anhöhe
   if (b === 'huegelrampe') { const e = rampError(x, y, rot, rampLen(opts.t), opts.move || !!opts.t, opts.t ? rampFormOf(opts.t) : null); if (e) return e; }   // Gleis-Rampe (hills.js): wie die Treppe; getragen/kopiert in ihrer Form
-  if (b === 'schiene' && rampTrackAt(x, y)) return 'Hier liegt die Gleis-Rampe – die Schiene schließt an ihren Fuß und oben an';
+  if (b === 'schiene' && rampTrackAt(x, y)) return 'Hier liegt die Gleis-Rampe. Die Schiene schließt an ihren Fuß und oben an.';
   if (state.hills && state.hills.size) {                                                   // Anhöhe (Block 157, Stufe 2): oben Wege, Plätze, Deko und Gelände (hillError), nie über die Kante (auch Verschieben)
     const he = b === 'graben' && hillAt(x, y) ? 'Auf einer Anhöhe geht kein Teich' : b === 'graben' && stairsAround(x, y, true).length ? 'Vor dem Fuß der Treppe muss Platz bleiben'   // Treppe (157d): wie hillRaiseError
       : b === 'graben' && rampsAround(x, y, true).length ? 'Vor dem Fuß der Gleis-Rampe muss Platz bleiben'
-      : b === 'graben' && bpFronts(x, y).length ? 'Vor dem Bergportal muss Platz bleiben – dort kommt die Schiene hinein'   // Block 157m
+      : b === 'graben' && bpFronts(x, y).length ? 'Vor dem Bergportal muss Platz bleiben, dort kommt die Schiene hinein'   // Block 157m
       : b === 'huegeltreppe' || b === 'huegelrampe' ? null : hillError(b, footprint(b, x, y, r, opts.t));          // Treppe: stairError kennt die Anhöhe (in den Rand eingelassen)
     if (he) return he;
     if (b === 'schiene' && opts.t && isCrossing(opts.t) && opts.t.foot) { const e = archHillError(x, y); if (e) return e; }   // getragene Fußgängerbrücke: nie über die Kante (hills.js)
@@ -3061,10 +3061,10 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (b === 'schiene' && opts.t && isArchTile(opts.t) && archRampLined(x, y, opts.rail)) return ARCH_RAMP_LINE;   // getragen/kopiert: nie eine Linie mitten in der Rampe (160c G2)
   if (bkOn()) { const e = bkPlaceError(b, footprint(b, x, y, r, opts.t), opts.t); if (e) return e; }   // unter einer Brücke nur Flaches (Block 160)
   if (state.roofs.size && b !== 'weg' && d.cat !== 'deko' && d.cat !== 'land' && !d.small && footprint(b, x, y, r, opts.t).some(([fx, fy]) => roofAt(fx, fy)))
-    return 'Unter einer Überdachung ist kein Platz für Gebäude – erst das Dach abreißen';
+    return 'Unter einer Überdachung ist kein Platz für Gebäude. Reiß erst das Dach ab.';
   if (b === 'ubahn' && !tunnelAt(x, y)) return 'Auf einen Tunnel setzen (Verkehr → Tunnel)';
   if ((b === 'schiene' || b === 'station' || b === 'hbf' || b === 'tunneleinfahrt' || b === 'huegelrampe') && footprint(b, x, y, r, opts.t).some(([fx, fy]) => tunnelAt(fx, fy)))
-    return b === 'schiene' || b === 'huegelrampe' ? `Über einem Tunnel ${b === 'schiene' ? 'keine Schiene' : 'keine Gleis-Rampe'} – Schiene und Tunnel verbindet eine Tunneleinfahrt` : b === 'tunneleinfahrt' ? 'Nicht auf den Tunnel – ans Ende davon setzen' : 'Nicht über einen Tunnel – dafür gibt es die U-Bahn-Station';
+    return b === 'schiene' || b === 'huegelrampe' ? `Über einem Tunnel ${b === 'schiene' ? 'keine Schiene' : 'keine Gleis-Rampe'}. Schiene und Tunnel verbindet eine Tunneleinfahrt.` : b === 'tunneleinfahrt' ? 'Nicht auf den Tunnel, sondern an sein Ende' : 'Nicht über einen Tunnel. Dafür gibt es die U-Bahn-Station.';
   if (b === 'fz_hoch' || b === 'fz_tief') {             // Höhen-Pinsel (Block 60e): nur über Schienen
     if (!available(b) && !opts.move) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
     const t = state.tiles.get(x + ',' + y);
@@ -3085,20 +3085,20 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   }
   if (b === 'weg' && !opts.move && decoOver(x, y)) {    // Weg unter vorhandene Deko legen bzw. dort umfärben (Block 58; nicht beim Tragen)
     if (!ownedTile(x, y)) return notMine(x, y);
-    if (decoOver(x, y)[0].b === 'huegeltreppe') return 'Auf der Treppe geht kein Weg – davor schon';   // Block 157d
-    if (decoOver(x, y)[0].b === 'huegelrampe') return 'Auf der Gleis-Rampe geht kein Weg – über die Schiene davor schon';
+    if (decoOver(x, y)[0].b === 'huegeltreppe') return 'Auf der Treppe geht kein Weg, davor schon';   // Block 157d
+    if (decoOver(x, y)[0].b === 'huegelrampe') return 'Auf der Gleis-Rampe geht kein Weg, über die Schiene davor schon';
     if (wegAt(x, y) === currentStyle('weg')) return 'Hier liegt schon dieser Weg';
     return state.money < d.cost ? 'Zu wenig Taler' : null;
   }
   if (TERRAFORM[b]) {                                   // Terraforming-Pinsel
     if (!ownedTile(x, y)) return notMine(x, y);
     const k = x + ',' + y, ter = terrainAt(x, y), look = terraLook(x, y);
-    if (ter === 'water') return 'Nicht auf dem Wasser – erst aufschütten';
+    if (ter === 'water') return 'Nicht auf dem Wasser. Schütte erst auf.';
     if (b === 'parkrasen' || b === 'fzboden') {          // unter Deko und Wege darf der Rasen/Boden, nur auf Wiese
       const t = state.tiles.get(COVER.get(k) || k), fz = b === 'fzboden';
-      if (t && !(fz ? fzOk(t.b) : parkOk(t.b))) return fz ? 'Hier steht ein Gebäude – auf den Freizeitpark gehören Fahrgeschäfte, Stände, Deko und Wege' : 'Hier steht ein Gebäude – auf den Parkrasen gehören nur Deko und Wege';
-      if (!['grass', 'forest', 'obst'].includes(ter) && !fz) return 'Parkrasen nur auf Wiese oder im Wald – Fels erst sprengen';
-      if (fz && ter !== 'grass') return 'Freizeitpark-Boden nur auf Wiese – Wald erst roden, Fels sprengen';
+      if (t && !(fz ? fzOk(t.b) : parkOk(t.b))) return fz ? 'Hier steht ein Gebäude. Auf den Freizeitpark gehören Fahrgeschäfte, Stände, Deko und Wege.' : 'Hier steht ein Gebäude. Auf den Parkrasen gehören nur Deko und Wege.';
+      if (!['grass', 'forest', 'obst'].includes(ter) && !fz) return 'Parkrasen nur auf Wiese oder im Wald, Fels erst sprengen';
+      if (fz && ter !== 'grass') return 'Freizeitpark-Boden nur auf Wiese. Wald erst roden, Fels sprengen.';
     } else {
       if (COVER.has(k)) return 'Hier steht etwas';
       if (decosAt(k) && !['wiese', 'strand'].includes(b)) return 'Hier stehen schon kleine Dekos';
@@ -3111,14 +3111,14 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     const ter = terrainAt(x, y);
     if (b === 'graben') {
       if (COVER.has(x + ',' + y)) return 'Hier steht etwas';
-      if (decosAt(x + ',' + y)) return 'Hier stehen kleine Dekos – erst wegnehmen';
+      if (decosAt(x + ',' + y)) return 'Hier stehen kleine Dekos. Nimm sie erst weg.';
       if (ter === 'water') return 'Hier ist schon Wasser';
       if ([[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([vx, vy]) => postAt(vx, vy))) return 'An der Ecke steht schon etwas';
       if (ter !== 'grass' && !willClear(b, ter)) return 'Erst roden bzw. sprengen';
     } else {
       if (ter !== 'water') return 'Aufschütten geht nur auf Wasser';
       const c = COVER.get(x + ',' + y), ct = c && state.tiles.get(c);   // Block 84a: nicht unter Hausboot, Steg, Seebrücke …
-      if (ct && !(ct.bridge && c === x + ',' + y)) return 'Hier steht etwas – erst wegräumen';
+      if (ct && !(ct.bridge && c === x + ',' + y)) return 'Hier steht etwas. Räum es erst weg.';
       for (const [dx, dy] of DIRS) {                                    // … und nicht das letzte Wasser vor Hafen, Fischer, Leuchtturm
         const a = anchorAt(x + dx, y + dy), t = a && state.tiles.get(a);
         if (!t || ITEMS[t.b].needs !== 'shore') continue;
@@ -3148,7 +3148,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
         if (!claimable(fx, fy)) return 'Im Meer nur direkt neben deinem Land';
         const bx = bridgeArmsAxis(fx, fy), arm = bx < 0 ? null : bx ? [0, 1] : [1, 0];
         if (!landWithin(fx, fy, BRIDGE_SEA) && !(arm && seaGapBridgeable(fx, fy, arm)))
-          return `Übers Meer höchstens ${BRIDGE_SEA} Felder vor die Küste – oder bis ${BRIDGE_MAX} Felder zu deiner nächsten Insel`;
+          return `Übers Meer höchstens ${BRIDGE_SEA} Felder vor die Küste oder bis ${BRIDGE_MAX} Felder zu deiner nächsten Insel`;
       } else if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy)) && !seaOk) return (rail || sea) && isSea(fx, fy) ? (d.needs === 'offshore' ? `Höchstens ${OFFSHORE_REACH} Felder vor deiner Küste` : 'Im Meer nur direkt neben deinem Land') : notMine(fx, fy);
       if (sea) {
         if (COVER.has(k)) return 'Hier steht schon etwas';
@@ -3189,7 +3189,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       const inside = new Set(tiles.map(p => p.join()));
       for (const [fx, fy] of tiles) for (const [nx, ny] of [[fx + 1, fy], [fx, fy + 1]]) {
         const e = inside.has(nx + ',' + ny) && state.edges.get(edgeBetween(fx, fy, nx, ny));
-        if (e) return `Quer durch läuft: ${ITEMS[e.b].name} – erst entfernen`;
+        if (e) return `Quer durch läuft: ${ITEMS[e.b].name}. Das musst du erst entfernen.`;
       }
     }
     if (b === 'weg') { const e = bridgeShapeError(x, y, false); if (e) return e; }       // Weg an der Seite einer Brücke: kein Abzweig
@@ -3200,9 +3200,9 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (d.needs === 'shore' && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => isWater(fx + dx, fy + dy)))) return 'Muss direkt am Wasser stehen';
     if ((d.needs === 'meer' || d.needs === 'boot') && !tiles.some(([fx, fy]) => nearOwnLand(fx, fy))) return d.needs === 'boot' ? 'Direkt ans Ufer legen' : 'Direkt vor die Küste bauen';
     if (d.needs === 'strand' && !tiles.every(([fx, fy]) => terraLook(fx, fy) === 'sand' || (terrainAt(fx, fy) === 'grass' && terraLook(fx, fy) !== 'wiese' && isBeach(fx, fy)))) return 'Nur auf Sand am Wasser (Strand)';
-    if (d.isle && !tiles.every(([fx, fy]) => regionAt(fx, fy) === d.isle)) return `Nur auf der ${regionName(d.isle)} – dort ist der Boden warm`;
-    if (d.far && !tiles.every(([fx, fy]) => (ISLE_BY_ID[regionAt(fx, fy)] || {}).far)) return 'Nur auf fernen Inseln – dort ist es warm genug';
-    if (!opts.move && d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
+    if (d.isle && !tiles.every(([fx, fy]) => regionAt(fx, fy) === d.isle)) return `Nur auf der ${regionName(d.isle)}, dort ist der Boden warm`;
+    if (d.far && !tiles.every(([fx, fy]) => (ISLE_BY_ID[regionAt(fx, fy)] || {}).far)) return 'Nur auf fernen Inseln, dort ist es warm genug';
+    if (!opts.move && d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner. Baue Häuser.';
   }
   if ((d.wonder || d.unique) && !opts.move && [...state.tiles.values()].some(t => t.b === b)) return `${d.wonder ? WONDERS[b].the : d.the} gibt es schon`;   // unique: Opernhaus (Block 161f)
   if (opts.move || opts.noCost) return null;            // noCost: Linie/Rechteck rechnen den Preis zusammen
@@ -3214,10 +3214,10 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
 // Rohstoff-Betriebe brauchen ihr Gelände – nach der passenden Forschung auch auf Wiesen (grass)
 function needError(d, ter, opts) {
   const need = d.needs, anywhere = ANYWHERE[need] && hasTech(ANYWHERE[need].tech) && (ter === 'grass' || ter === 'rock');
-  if (need === 'forest' && ter !== 'forest' && !anywhere) return 'Nur im Wald – überall mit „Forstwirtschaft“';
-  if (need === 'rock' && ter !== 'rock' && !anywhere) return 'Nur auf Fels – überall mit „Tiefbau“';
-  if (need === 'erz' && ter !== 'erz' && !anywhere) return 'Nur auf Erzadern – überall mit „Tiefbohrung“';
-  if (need === 'obst' && ter !== 'obst' && !anywhere) return 'Nur im Obsthain – überall mit „Höhere Agrartechnik“';
+  if (need === 'forest' && ter !== 'forest' && !anywhere) return 'Nur im Wald (überall mit „Forstwirtschaft“)';
+  if (need === 'rock' && ter !== 'rock' && !anywhere) return 'Nur auf Fels (überall mit „Tiefbau“)';
+  if (need === 'erz' && ter !== 'erz' && !anywhere) return 'Nur auf Erzadern (überall mit „Tiefbohrung“)';
+  if (need === 'obst' && ter !== 'obst' && !anywhere) return 'Nur im Obsthain (überall mit „Höhere Agrartechnik“)';
   if (need === 'kristall' && ter !== 'kristall') return 'Nur auf Kristallfels (Kristallinsel)';
   if (opts.move && anywhere && ter === 'rock' && need !== 'rock' && need !== 'erz') return 'Erst sprengen (Fels antippen → 🧨 Sprengen)';
   if ((need === 'grass' || need === 'shore' || need === 'strand') && ter !== 'grass') {                  // nur noch beim Verschieben
@@ -3442,17 +3442,17 @@ function growLighthouses() {
 }
 function announceHarbors(r) {
   if (!r) return;
-  toast([r.grown ? `⚓ Neu: größere Häfen mit Kai und Pier${r.gone.length ? ` – Platz gemacht: ${r.gone.join(', ')} (erstattet)` : ''}` : '',
-    r.refunded ? `${r.refunded} ${r.refunded === 1 ? 'Hafen passte' : 'Häfen passten'} nicht mehr – alles erstattet` : ''].filter(Boolean).join(' · '));
+  toast([r.grown ? `⚓ Neu: größere Häfen mit Kai und Pier${r.gone.length ? `. Platz gemacht: ${r.gone.join(', ')} (erstattet)` : ''}` : '',
+    r.refunded ? `${r.refunded} ${r.refunded === 1 ? 'Hafen passte' : 'Häfen passten'} nicht mehr, alles erstattet` : ''].filter(Boolean).join(' · '));
 }
 function announceHall(r) {
   if (!r) return;
-  toast(`🏛️ Das Rathaus ist gewachsen (3×3)${r.gone.length ? ` – Platz gemacht: ${r.gone.join(', ')} (alles erstattet)` : ''}`);
+  toast(`🏛️ Das Rathaus ist gewachsen (3×3)${r.gone.length ? `. Platz gemacht: ${r.gone.join(', ')} (alles erstattet)` : ''}`);
 }
 function announceWonders(list) {
   if (!list.length) return;
   const back = list.filter(e => e.refunded).map(e => e.name), grown = list.filter(e => !e.refunded).map(e => e.name);
-  toast([grown.length ? `🏛️ Größer geworden: ${grown.join(', ')}` : '', back.length ? `Kein Platz für ${back.join(', ')} – alles erstattet` : ''].filter(Boolean).join(' · '));
+  toast([grown.length ? `🏛️ Größer geworden: ${grown.join(', ')}` : '', back.length ? `Kein Platz für ${back.join(', ')}, alles erstattet` : ''].filter(Boolean).join(' · '));
 }
 
 // Alte Spielstände: Gebäude, die jetzt mehrere Felder belegen, bekommen ihre Grundfläche.
@@ -3624,7 +3624,7 @@ function demolishInfo(x, y, under = false) {                            // under
   if (t) {
     const d = ITEMS[t.b];
     if (t.b === 'lm') return { err: 'Sehenswürdigkeiten bleiben stehen' };
-    if (t.b === 'huegeltreppe' && !t.ecke && cornerOn(...keyXY(a))) return { err: 'Hier hängt eine Ecktreppe dran – erst die Ecktreppe abreißen' };   // Block 157
+    if (t.b === 'huegeltreppe' && !t.ecke && cornerOn(...keyXY(a))) return { err: 'Hier hängt eine Ecktreppe dran. Reiß erst die Ecktreppe ab.' };   // Block 157
     if (t.b === 'truhe') return { err: 'Die Truhe erst öffnen (antippen)' };
     if (d.fixed) return { err: 'Das Rathaus bleibt stehen' };
     if (d.pop) {
@@ -3652,13 +3652,13 @@ function demolishInfo(x, y, under = false) {                            // under
     return { anchor: a, refund: half + ships.money, mat: Object.keys(mat).length ? mat : null, lost: full ? 0 : price + staged - half, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   if (hillAt(x, y)) {                                                    // Anhöhe (Block 157): abtragen, voll zurück (lowerHill); kleine Deko oben landet unten
-    if (stairsAround(x, y).length) return { err: 'Hier führt eine Treppe hinauf – erst die Treppe abreißen' };   // Block 157d (lowerHill sperrt auch)
-    if (rampsAround(x, y).length) return { err: 'Hier führt eine Gleis-Rampe hinauf – erst die Gleis-Rampe abreißen' };   // Gleis-Rampe (hills.js) wie die Treppe
+    if (stairsAround(x, y).length) return { err: 'Hier führt eine Treppe hinauf. Reiß erst die Treppe ab.' };   // Block 157d (lowerHill sperrt auch)
+    if (rampsAround(x, y).length) return { err: 'Hier führt eine Gleis-Rampe hinauf. Reiß erst die Gleis-Rampe ab.' };   // Gleis-Rampe (hills.js) wie die Treppe
     if (archAround(x, y)) return { err: ARCH_HERE };                        // Fußgängerbrücke daneben (hills.js): Boden bleibt eben
     if (bkOnHill(x, y)) return { err: BK_ON_HILL };                         // Brücke liegt auf (Block 160, bruecken.js)
     for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])   // Linien/Eckpunkt-Deko am Rand stünden sonst an der Kante
-      if (state.edges.has(k)) return { err: `Am Rand steht: ${ITEMS[state.edges.get(k).b].name} – erst entfernen` };
-    for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return { err: `An der Ecke steht: ${ITEMS[postAt(vx, vy).b].name} – erst wegnehmen` };
+      if (state.edges.has(k)) return { err: `Am Rand steht: ${ITEMS[state.edges.get(k).b].name}. Das musst du erst entfernen.` };
+    for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return { err: `An der Ecke steht: ${ITEMS[postAt(vx, vy).b].name}. Das musst du erst wegnehmen.` };
     return { hill: x + ',' + y, refund: ITEMS.anhoehe.cost, mat: ITEMS.anhoehe.mat || null, full: true, label: 'Anhöhe abtragen' };
   }
   if (tunnelAt(x, y)) { const c = costOf('tunnel', x, y); return { tunnel: x + ',' + y, refund: c.cost, mat: c.mat, full: true, label: 'Tunnel entfernen' }; }   // Block 136: voll zurück wie Schienen

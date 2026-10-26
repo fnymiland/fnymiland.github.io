@@ -367,9 +367,9 @@ const MONUMENTS = {
   mon_leuchte: { art: 'leuchte', wahr: true, h: 154, wet: true, name: 'Sternenleuchte', desc: 'Ein weißer Turm auf einer Felseninsel, oben eine goldene Laterne mit Sternen im Glas. Steht im Wasser oder an Land.' },
   mon_obelisk: { art: 'obelisk', wahr: true, h: 168, name: 'Obelisk der Sonnenbucht', desc: 'Eine Steinnadel mit Sonnen-, Mond- und Sternzeichen, oben glänzt die goldene Spitze.' },
   mon_bogen: { art: 'bogen', wahr: true, h: 93, name: 'Triumphbogen', desc: 'Drei Bögen zum Durchgehen und eine Reihe bunter Wimpel obendrauf.' },
-  mon_statue: { art: 'statue', h: 100, name: 'Deine Statue', desc: 'Du selbst – in Gold auf einem hohen Sockel, mit deinem Namen auf der Tafel.' },
+  mon_statue: { art: 'statue', h: 100, name: 'Deine Statue', desc: 'Du selbst, in Gold auf einem hohen Sockel, mit deinem Namen auf der Tafel.' },
   mon_stern: { art: 'stern', h: 106, name: 'Sternendenkmal', desc: 'Ein goldener Stern über einer Kristallsäule auf drei runden Stufen.' },
-  mon_brunnen: { art: 'brunnen', h: 52, name: 'Prachtbrunnen', desc: 'Ein achteckiges Becken mit zwei Schalen – das Wasser quillt aus einer goldenen Muschel.' },
+  mon_brunnen: { art: 'brunnen', h: 52, name: 'Prachtbrunnen', desc: 'Ein achteckiges Becken mit zwei Schalen. Das Wasser quillt aus einer goldenen Muschel.' },
 };
 const MON_WAHR = Object.keys(MONUMENTS).filter(id => MONUMENTS[id].wahr);
 for (const [id, m] of Object.entries(MONUMENTS)) {
@@ -377,8 +377,8 @@ for (const [id, m] of Object.entries(MONUMENTS)) {
     ...(m.wahr ? { cost: 1e6, mat: { bretter: 50 }, monPhases: MON_PHASES } : { cost: 2e6, mat: { quader: 40 } }), ...(m.wet ? { wet: true } : { needs: 'grass' }) };
   BIG_ART[id] = (cx, cy, z, now, x, y, lvl, t) => drawMonument(id, cx, cy, z, now, t || {});
   SD_SHOP.push(m.wahr ? { id, price: MON_PLAN, mon: true } : { id, price: MON_PRACHT, rare: true });
-  ITEM_TIPS[id] = m.wahr ? 'Wahrzeichen ✨ – Bauplan im Sternenbasar, dann als Baustelle hinstellen und in drei Abschnitten bauen. Geht beliebig oft.'
-    : `Prachtstück aus dem Sternenbasar ✨ – braucht 2×2 Felder${m.wet ? '' : ' Wiese'}.`;
+  ITEM_TIPS[id] = m.wahr ? 'Wahrzeichen ✨. Den Bauplan gibt es im Sternenbasar, dann als Baustelle hinstellen und in drei Abschnitten bauen. Geht beliebig oft.'
+    : `Prachtstück aus dem Sternenbasar ✨, braucht 2×2 Felder${m.wet ? '' : ' Wiese'}.`;
 }
 SD_SAMMLUNGEN.push(['Monumente', '🏛️', 'Monumente']);
 // Baumenü: nur Gekauftes (Nutzer 21.10.2026, wie Animal Crossing) – ohne Kauf gibt es die Gruppe nicht; der Basar ist das Schaufenster

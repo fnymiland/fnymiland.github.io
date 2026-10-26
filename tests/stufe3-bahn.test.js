@@ -233,8 +233,8 @@ describe('Hauptbahnhof oben', () => {
     expect(net(gk)).not.toBe(null);
     game('state.hills = globalThis.__hl; delete globalThis.__hl; groundVersion++; recalc()');   // Anheben unter dem Hbf geht nicht (erst wegtragen)
     // Gleise dazu: links und rechts geht es hinunter
-    expect(game(`hbfResizeError('${anc.join()}', 1, 1)`)).toMatch(/Anhöhe hinunter – dort ist kein Platz für ein Gleis/);
-    expect(game(`hbfResizeError('${anc.join()}', 1, -1)`)).toMatch(/Anhöhe hinunter – dort ist kein Platz für ein Gleis/);
+    expect(game(`hbfResizeError('${anc.join()}', 1, 1)`)).toMatch(/Anhöhe hinunter\. Dort ist kein Platz für ein Gleis/);
+    expect(game(`hbfResizeError('${anc.join()}', 1, -1)`)).toMatch(/Anhöhe hinunter\. Dort ist kein Platz für ein Gleis/);
     game(`for (let y = 0; y <= 14; y++) for (const x of [${anc[0] - 2}, ${anc[0] - 1}, ${anc[0] + w}, ${anc[0] + w + 1}]) build('anhoehe', x, y, true); recalc()`);
     expect([game(`hbfResizeError('${anc.join()}', 1, 1)`), game(`hbfResizeError('${anc.join()}', 1, -1)`)]).toEqual([null, null]);   // oben Platz: geht
   });

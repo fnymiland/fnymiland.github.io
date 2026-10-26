@@ -122,13 +122,13 @@ function svMine(k) {                                                      // so 
 }
 function svCompose(friendUid, name) {
   if (viewOnly()) { cloudBlocked(); return; }
-  if (svSentToday(friendUid)) { toast(`🎁 ${name} hat heute schon ein Souvenir von dir – morgen wieder`); return; }
+  if (svSentToday(friendUid)) { toast(`🎁 ${name} hat heute schon ein Souvenir von dir. Morgen wieder!`); return; }
   let k = SV_KINDS[0].id;
   const draw = () => {
     openModal(`<h2>🎁 Souvenir für ${escHtml(name)}</h2>
       <p class="muted">Etwas zum Aufstellen, in den Farben deiner Insel und mit deinem Namen. Kostenlos, eins am Tag für jeden Freund.</p>
       <div class="sv-pick">${SV_KINDS.map(q => `<button class="look sv-opt${q.id === k ? ' on' : ''}" data-svk="${q.id}" aria-pressed="${q.id === k}"><span data-svpic="${q.id}"></span><small>${escHtml(q.name)}</small></button>`).join('')}</div>
-      <p><b>${escHtml(svKind(k).name)}</b> – ${escHtml(svKind(k).desc)}</p>
+      <p><b>${escHtml(svKind(k).name)}:</b> ${escHtml(svKind(k).desc)}</p>
       <div class="row"><button class="btn ghost" id="m-close">Abbrechen</button><button class="btn" id="sv-send" style="flex:1">🎁 Schicken</button></div>`);
     for (const el of document.querySelectorAll('[data-svpic]')) el.append(svCanvas(svMine(el.dataset.svpic), 60, 66));
     for (const b of document.querySelectorAll('[data-svk]')) b.onclick = () => { k = b.dataset.svk; draw(); };
@@ -140,7 +140,7 @@ function svCompose(friendUid, name) {
 let svBusy = false;
 async function svSend(friendUid, name, k) {
   if (svBusy || viewOnly()) return;
-  if (svSentToday(friendUid)) { toast(`🎁 ${name} hat heute schon ein Souvenir von dir – morgen wieder`); return; }
+  if (svSentToday(friendUid)) { toast(`🎁 ${name} hat heute schon ein Souvenir von dir. Morgen wieder!`); return; }
   svBusy = true;
   if ($('sv-send')) $('sv-send').disabled = true;
   try {
@@ -171,7 +171,7 @@ function svShelfHtml() {
     ${list.length ? `<div class="sv-grid">${list.map(s => `<div class="sv-e"><span data-svshelf="${escHtml(s.id)}"></span><b>${escHtml(svKind(s.k).name)}</b>
       <small>von ${escHtml(s.n)}${s.t ? ` · ${escHtml(s.t)}` : ''}<br>${when(s)}</small>
       ${placed.has(s.id) ? '<small class="ok">✓ steht auf deiner Insel</small>' : `<button class="btn small" data-svput="${escHtml(s.id)}">Aufstellen</button>`}</div>`).join('')}</div>`
-      : '<p class="muted">Noch keine. Souvenirs gibt es nur geschenkt: Freunde schicken sie dir unter 🌐 → Freunde → 🎁 – du ihnen auch.</p>'}</div>`;
+      : '<p class="muted">Noch keine. Souvenirs gibt es nur geschenkt: Freunde schicken sie dir unter 🌐 → Freunde → 🎁, und du ihnen auch.</p>'}</div>`;
 }
 function wireSvShelf(card) {
   for (const el of card.querySelectorAll('[data-svshelf]')) el.append(svCanvas(svById(el.dataset.svshelf)));

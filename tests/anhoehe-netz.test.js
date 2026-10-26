@@ -254,7 +254,7 @@ describe('Wege oben bauen, Pinsel über die Kante', () => {
     // mit Gleis-Rampe in der Linie: ihre Felder gehen nicht, verbunden wird nichts
     game("build('huegelrampe', 13, 12); startPlan('line', { x: 13, y: 17 }, { x: 13, y: 11 }, true)");   // A: 13,12 oben, 13,13 Fuß
     const s = game("(i => [i.states.get('13,13'), i.states.get('13,12'), i.states.get('13,14'), i.states.get('13,11'), i.n, i.firstErr])(planInfo(plan))");
-    expect(s).toEqual(['bad', 'bad', 'ok', 'ok', 5, 'Auf der Gleis-Rampe geht kein Weg – über die Schiene davor schon']);
+    expect(s).toEqual(['bad', 'bad', 'ok', 'ok', 5, 'Auf der Gleis-Rampe geht kein Weg, über die Schiene davor schon']);
     game('runPlan(); setTool("look")');
     expect([game('wegNetwork(13, 17).length'), game('wegNetwork(13, 11).length')]).toEqual([4, 1]);   // nicht über die Rampe verbunden
   });

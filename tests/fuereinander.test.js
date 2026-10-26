@@ -68,7 +68,7 @@ describe('Füreinander (Block 105)', () => {
     expect(txt).toMatch(/wünscht sich .*200 Bretter/);
     expect(txt).toMatch(/♡♡♡♡♡/);
     game("document.querySelector('[data-frhelp=\"f1\"]').click()");
-    expect(game("document.getElementById('modal-card').textContent")).toMatch(/es fehlen noch 150/);
+    expect(game("document.getElementById('modal-card').textContent")).toMatch(/Es fehlen noch 150/);
     game("document.getElementById('mm-send').click()"); await tick(20);
     const m = Object.values(tree().mail.f1)[0];
     expect(m.items.bretter).toBe(150);

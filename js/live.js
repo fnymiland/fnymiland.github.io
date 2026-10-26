@@ -206,7 +206,7 @@ function visitArrived() {
 function visitDenied(why) {
   loadingVisit = 0;
   liveFollowStop();
-  openModal(`<h2>🏝️ Besuch nicht möglich</h2><p>${why || 'Diese Insel kann man gerade nicht besuchen – vielleicht sind Besuche ausgeschaltet oder es gibt einen neuen Link.'}</p>
+  openModal(`<h2>🏝️ Besuch nicht möglich</h2><p>${why || 'Diese Insel kann man gerade nicht besuchen. Vielleicht sind Besuche ausgeschaltet oder es gibt einen neuen Link.'}</p>
     <div class="row"><button class="btn" id="m-home2">🏠 Zu meiner Insel</button></div>`);
   $('m-home2').onclick = visitLeave;
 }
@@ -255,7 +255,7 @@ async function frAdd(input) {
   const code = frCodeNorm(input), uid = cloudUser.uid;
   if (code.length !== 5) return 'Ein Freundescode sieht so aus: FNYMI-7F3QK';
   const other = await cloudApi.get(`codes/${code}`);
-  if (!other) return 'Diesen Code gibt es nicht – vertippt?';
+  if (!other) return 'Diesen Code gibt es nicht. Vertippt?';
   if (other === uid) return 'Das ist dein eigener Code 🙂';
   const e = frList[other];
   if (e && e.st === 'freund') return 'Ihr seid schon befreundet';
@@ -315,7 +315,7 @@ async function shareText(text, link = false) {
 }
 async function openFriends() {
   if (!cloudUser) {
-    openModal(`${netHead('freunde')}<h3>👥 Freunde & Besuch</h3><p>Melde dich unter ☁️ Online an – dann bekommst du einen Freundescode, kannst Freunde besuchen und deine Insel zeigen. Freunde können dir Herzen, Gästebuch-Einträge und Päckchen dalassen.</p>
+    openModal(`${netHead('freunde')}<h3>👥 Freunde & Besuch</h3><p>Melde dich unter ☁️ Online an, dann bekommst du einen Freundescode, kannst Freunde besuchen und deine Insel zeigen. Freunde können dir Herzen, Gästebuch-Einträge und Päckchen dalassen.</p>
       <div class="row"><button class="btn" id="m-cl">☁️ Zum Anmelden</button><button class="btn ghost" id="m-close">Schließen</button></div>`);
     $('m-cl').onclick = () => openNet('online'); $('m-close').onclick = closeModal;
     return;
@@ -339,15 +339,15 @@ async function openFriends() {
     const w = wishes[id], p = (myBonds[id] || {}).p, partner = state.partner && state.partner.uid === id;
     return `<div class="fr-friend"><div class="fr-row"><span>${escHtml(e.name || 'Freund')} <small class="bond" title="Freundschaft">${bondHearts(p)}</small>${onlineHtml(id, frOnline[id])}</span><span class="fr-btns">${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small${svSentToday(id) ? ' done' : ''}" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Souvenir schicken">🎁</button><button class="btn ghost small${partner ? ' on' : ''}" data-frpartner="${escHtml(id)}" aria-label="${partner ? 'Partnerstadt entfernen' : 'Als Partnerstadt wählen'}" aria-pressed="${partner}">🚩</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button></span></div>
       ${w && w.got < w.n ? (wishCovered(id, w) >= w.n
-        ? `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="ok">✓ du hast genug geschickt – es muss nur noch abgeholt werden</small></div>`
+        ? `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="ok">✓ du hast genug geschickt, es muss nur noch abgeholt werden</small></div>`
         : `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="muted">(${fmt(w.got)} da${wishSent(id, w).n ? `, ${fmt(wishSent(id, w).n)} von dir unterwegs` : ''} · ${wishLeft(w)})</small> <button class="btn small" data-frhelp="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}">🎁 Helfen</button></div>`) : ''}</div>`;
   };
   openModal(`
     ${netHead('freunde')}<div id="fr-box">
     ${friendsHallHtml('post')}
     <div class="label">Freunde</div>
-    ${by('freund').length ? by('freund').map(friendRow).join('') + '<p class="muted fr-hint">♥ Freundschaft wächst mit Besuchen, Herzen, Gästebuch, Souvenirs (🎁, eins am Tag) und Päckchen – am meisten, wenn du bei einem Wunsch hilfst. 🚩 = Partnerstadt.</p>'
-      : '<p class="muted">Noch keine – schick deinen Code an jemanden oder gib einen ein.</p>'}
+    ${by('freund').length ? by('freund').map(friendRow).join('') + '<p class="muted fr-hint">♥ Freundschaft wächst mit Besuchen, Herzen, Gästebuch, Souvenirs (🎁, eins am Tag) und Päckchen. Am meisten, wenn du bei einem Wunsch hilfst. 🚩 = Partnerstadt.</p>'
+      : '<p class="muted">Noch keine. Schick deinen Code an jemanden oder gib einen ein.</p>'}
     ${by('anfrage').length ? `<div class="label">📩 Anfragen</div>${by('anfrage').map(r => row(r, id => `<button class="btn small" data-fracc="${escHtml(id)}">Annehmen</button><button class="btn ghost small" data-frdel="${escHtml(id)}">Ablehnen</button>`)).join('')}` : ''}
     ${by('gesendet').length ? `<div class="label">Gesendet</div>${by('gesendet').map(r => row(r, id => `<span class="muted">wartet …</span><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Anfrage zurückziehen">✕</button>`)).join('')}` : ''}
     <div class="label">Dein Freundescode</div>
@@ -358,7 +358,7 @@ async function openFriends() {
     <div class="label">🔗 Besuchs-Link (nur ansehen, ohne Anmeldung)</div>
     <div class="looks"><button class="look${liveOpen ? ' on' : ''}" id="fr-open" aria-pressed="${liveOpen}">${liveOpen ? '✓ Besuche erlaubt' : 'Besuche aus'}</button></div>
     ${liveOpen && wid ? `<div class="fr-code"><small>${escHtml(visitLink(wid))}</small><button class="btn ghost small" id="fr-link">Teilen</button></div>
-      <div class="row"><button class="btn ghost small" id="fr-new">Neuen Link machen (der alte geht dann nicht mehr)</button></div>` : '<p class="muted">Freunde können dich immer besuchen – der Link ist für alle anderen.</p>'}
+      <div class="row"><button class="btn ghost small" id="fr-new">Neuen Link machen (der alte geht dann nicht mehr)</button></div>` : '<p class="muted">Freunde können dich immer besuchen, der Link ist für alle anderen.</p>'}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div></div>`);
   $('m-close').onclick = closeModal;
   if (typed) $('fr-in').value = typed;
@@ -366,7 +366,7 @@ async function openFriends() {
   $('fr-in').oninput = () => { const el = $('fr-in'), v = el.value; el.value = (v.length > 5 ? frCodeNorm(v) : v.toUpperCase().replace(/[^A-Z0-9]/g, '')).slice(0, 5); };
   const share = (text, link) => shareText(text, link);
   $('fr-copy').onclick = () => share(`Mein Fnymiland-Freundescode: ${code}`);
-  $('fr-send').onclick = async () => { try { const err = await frAdd($('fr-in').value); toast(err || '📩 Anfrage geschickt'); if (!err) openFriends(); } catch (e) { toast('Hat nicht geklappt – später nochmal'); } };
+  $('fr-send').onclick = async () => { try { const err = await frAdd($('fr-in').value); toast(err || '📩 Anfrage geschickt'); if (!err) openFriends(); } catch (e) { toast('Hat nicht geklappt, versuch es später nochmal'); } };
   for (const b of document.querySelectorAll('[data-fracc]')) b.onclick = async () => { try { await frAccept(b.dataset.fracc); toast('👥 Ihr seid jetzt befreundet'); } catch (e) { toast('Hat nicht geklappt'); } };
   for (const b of document.querySelectorAll('[data-frdel]')) b.onclick = async () => { try { await frRemove(b.dataset.frdel); } catch (e) { toast('Hat nicht geklappt'); } };
   wireFriendsHall($('modal-card'));
@@ -376,7 +376,7 @@ async function openFriends() {
   for (const b of document.querySelectorAll('[data-frvisit]')) b.onclick = () => { save(); location.href = visitLink(b.dataset.frvisit); };
   $('fr-open').onclick = async () => { try { await liveSetOpen(!liveOpen); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };
   if ($('fr-link')) $('fr-link').onclick = () => share(visitLink(wid), true);
-  if ($('fr-new')) $('fr-new').onclick = async () => { try { await liveNewLink(); toast('🔗 Neuer Link – der alte geht nicht mehr'); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };
+  if ($('fr-new')) $('fr-new').onclick = async () => { try { await liveNewLink(); toast('🔗 Neuer Link. Der alte geht nicht mehr.'); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };
 }
 
 if (VISIT) visitBoot();

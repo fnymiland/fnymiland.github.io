@@ -2839,5 +2839,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         runde Knöpfe, Inhalt senkrecht mittig, kurze Zahlen (3,1k · 1,5 Mio.), schmal Knöpfe untereinander; 1280 … 360 px geprüft (v1291)
   - [x] 5g Schrift (Nutzer 26.10.2026, zwölf Vorschläge im Spiel zum Umschalten, tools/schrift.html; gewählt „Schulheft“): nur noch Mali statt
         Alegreya/Alegreya Sans/Nunito, auch auf der Karte; Einstellungen und reine Bildchen-Kacheln angepasst; alle Fenster beide Aussehen geprüft (v1296)
+  - [x] 5h Sprache (Nutzer 26.10.2026, Skill humanizer-de): alle 681 Gedankenstriche in rund 650 Spieltexten umgeschrieben (Meldungen, Fenster,
+        Beschreibungen, Tagebuch, Neuigkeiten), Inhalt unverändert; Test tests/sprache.test.js verhindert neue (v1297)
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

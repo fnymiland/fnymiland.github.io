@@ -90,7 +90,7 @@ if (PROBE) {
   add(5, 1, 3, 'blumentopf'); add(7, 1, 3, 'bank', 1); add(9, 1, 3, 'busch');       // vor den Häusern
   add(2, 6, 1, 'blumentopf'); add(2, 8, 2, 'laterne');
   recalc();
-  toast('Probeansicht – hier wird nichts gespeichert');
+  toast('Probeansicht, hier wird nichts gespeichert');
 } else if (saved) {
   state = saved;
   cam = state.cam;
@@ -192,7 +192,7 @@ function benchTick(now) {
   while (i < BENCH_PLAN.length && t > BENCH_SETTLE + BENCH_PLAN[i].ms) { t -= BENCH_SETTLE + BENCH_PLAN[i].ms; i++; }
   if (i >= BENCH_PLAN.length) { benchEnd(); return; }
   const S = BENCH_PLAN[i], c = B.cam0;
-  if (i !== B.step) { B.step = i; B.rows[i] = { name: S.name, gaps: [], cpu: [] }; B.last = 0; $('bench-badge').textContent = `📏 Messlauf ${i + 1}/${BENCH_PLAN.length}: ${S.name} – bitte nicht tippen`; }
+  if (i !== B.step) { B.step = i; B.rows[i] = { name: S.name, gaps: [], cpu: [] }; B.last = 0; $('bench-badge').textContent = `📏 Messlauf ${i + 1}/${BENCH_PLAN.length}: ${S.name}. Bitte nicht tippen`; }
   B.rec = t > BENCH_SETTLE;
   const u = Math.max(0, t - BENCH_SETTLE);
   if (S.sweep) { const k = 1 - Math.abs(1 - 2 * (u / S.ms)); cam.z = Math.exp(Math.log(0.45) + (Math.log(2.2) - Math.log(0.45)) * k); cam.x = c.x; cam.y = c.y; }
@@ -226,10 +226,10 @@ function benchEnd() {
   const text = [head, 'Bild = Abstand zweier Bilder (Mitte / 95 % / längstes), Ruckler = Bilder über 50 ms', ...lines, `Ruckler gesamt: ${jank}`].join('\n');
   let prev = null; try { prev = JSON.parse(localStorage.getItem(BENCH_KEY)); localStorage.setItem(BENCH_KEY, JSON.stringify({ jank, head })); } catch (e) { /* privates Fenster */ }
   openModal(`<h2>📏 Messlauf</h2>
-    <p class="muted">${jank === 0 ? 'Keine Ruckler gemessen.' : `${jank} Ruckler (Bilder über 50 ms).`}${prev ? ` Letztes Mal: ${prev.jank}.` : ''} Mit „Kopieren“ kannst du die Zahlen weitergeben – zum Vergleichen mit anderen Geräten oder nach einem Update.</p>
+    <p class="muted">${jank === 0 ? 'Keine Ruckler gemessen.' : `${jank} Ruckler (Bilder über 50 ms).`}${prev ? ` Letztes Mal: ${prev.jank}.` : ''} Mit „Kopieren“ kannst du die Zahlen weitergeben, etwa zum Vergleichen mit anderen Geräten oder nach einem Update.</p>
     <pre class="bench-out">${escHtml(text)}</pre>
     <div class="row"><button class="btn" id="bench-copy" style="flex:1">📋 Kopieren</button><button class="btn ghost" id="bench-close" style="flex:1">Schließen</button></div>`);
-  $('bench-copy').onclick = () => { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast('Kopiert'), () => toast('Kopieren ging nicht – Text markieren')); };
+  $('bench-copy').onclick = () => { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast('Kopiert'), () => toast('Kopieren ging nicht. Markiere den Text von Hand.')); };
   $('bench-close').onclick = closeModal;
 }
 // ?messen (Block 124): Zeit je Bild (gleitend), Boden / Objekte / Nacht, Lichter, Bildchen fehlend/neu, Zoom
@@ -239,11 +239,11 @@ function messLine(ms) {
   MESS.gap = (MESS.gap || 16) + 0.1 * (Math.min(gap, 500) - (MESS.gap || 16));
   // als Kasten rechts in der Mitte (unten liegt die Bauleiste darüber), eine Sache je Zeile
   const bg = typeof GLB !== 'undefined' && GLB.st === 'run' && GLB.V ? ` · nächstes ${Math.round(100 * GLB.i / GLB.V.visible.length)} %` : '';
-  const sb = GL.cacheMode === 'play' ? 'spielt ✓' + bg : GL.cacheMode === 'rec' ? 'nimmt gerade auf' : 'aus – ' + (GLS.why || '?');
+  const sb = GL.cacheMode === 'play' ? 'spielt ✓' + bg : GL.cacheMode === 'rec' ? 'nimmt gerade auf' : 'aus (' + (GLS.why || '?') + ')';
   const lines = [
     `Bild: ${MESS.gap.toFixed(0)} ms  (${(1000 / MESS.gap).toFixed(0)} Bilder/s)`,
     `Rechnen: ${MESS.ms.toFixed(1)} ms`,
-    typeof GL === 'undefined' ? '' : GL.why ? `Grafikkarte: aus – ${GL.why}` : `Grafikkarte: an (${GL.stats.quads} Rechtecke)`,
+    typeof GL === 'undefined' ? '' : GL.why ? `Grafikkarte: aus (${GL.why})` : `Grafikkarte: an (${GL.stats.quads} Rechtecke)`,
     typeof GL === 'undefined' || GL.why ? '' : `Standbild: ${sb}`,
     `Boden ${MESS.boden.toFixed(1)} · Objekte ${MESS.obj.toFixed(1)} · Nacht ${MESS.nacht.toFixed(1)}`,
     `  davon Vorbereiten ${MESS.vor.toFixed(1)} · Felder ${MESS.feld.toFixed(1)} · Grafikkarte ${MESS.gl.toFixed(1)}`,
@@ -280,6 +280,6 @@ window.kachelhausen = { get state() { return state; }, recalc, save, checkStars,
 
 // Testwelt (?welt=name): fertigen Stand laden, nichts speichern
 if (TESTWELT) fetch(`testsave-${TESTWELT}.json?t=${Date.now()}`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(d => { adoptState(parseSave(d)); closeModal(); toast(`Testwelt „${state.town.name}“ – hier wird nichts gespeichert`); if (d.showcase) { SHOWCASE = d.showcase; jumpTo(...d.showcase.look); cam.z = 2.2; } })
+  .then(d => { adoptState(parseSave(d)); closeModal(); toast(`Testwelt „${state.town.name}“: Hier wird nichts gespeichert`); if (d.showcase) { SHOWCASE = d.showcase; jumpTo(...d.showcase.look); cam.z = 2.2; } })
   .catch(() => toast('Diese Testwelt gibt es hier nicht'));
 

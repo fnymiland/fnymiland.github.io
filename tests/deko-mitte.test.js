@@ -28,14 +28,14 @@ describe('Deko in der Feldmitte (Block 156)', () => {
     for (const s of [0, 1, 2, 3]) expect(game(`buildSmall('blumentopf', 5, 5, ${s})`)).toBe(true);
     expect(game("smallError('blumentopf', 5, 5, 6)")).toBe('In der Mitte steht schon etwas');
     expect(game("buildSmall('bank', 6, 6, 4)")).toBe(true);
-    expect(game("smallError('baum', 6, 6, CSLOT)")).toBe('An den Seiten steht schon etwas – die Mitte ist zu eng');
+    expect(game("smallError('baum', 6, 6, CSLOT)")).toBe('An den Seiten steht schon etwas, die Mitte ist zu eng');
     expect(game("smallError('stuetze', 7, 7, CSLOT)")).toBe('Stützen an Ecken, Seitenmitten oder zwischen vier Felder');
     expect(game("SLOTS_FRONT.includes(CSLOT) && !SLOTS_BACK.includes(CSLOT)")).toBe(true);   // wird gezeichnet
   });
 
   it('schmaler Weg und Gebäude: nein; breiter Weg und Platz (2×2 Wege): ja', () => {
     game("state.tiles.set('5,5', { b: 'weg', lvl: 1 }); state.tiles.set('8,8', { b: 'weg', lvl: 1, wide: true }); state.tiles.set('3,3', { b: 'haus', lvl: 1 }); for (const [x, y] of [[10, 10], [11, 10], [10, 11], [11, 11]]) state.tiles.set(x + ',' + y, { b: 'weg', lvl: 1 }); recalc()");
-    expect(game("smallError('laterne', 5, 5, CSLOT)")).toBe('Nicht mitten auf den Weg – die Mitte geht auf Plätzen und breiten Wegen');
+    expect(game("smallError('laterne', 5, 5, CSLOT)")).toBe('Nicht mitten auf den Weg. Die Mitte geht auf Plätzen und breiten Wegen.');
     expect(game("smallError('laterne', 3, 3, CSLOT)")).toBe('Auf Gebäudefeldern nur an die Ecken');
     expect(game("smallError('laterne', 8, 8, CSLOT)")).toBe(null);
     expect(game("smallError('laterne', 10, 10, CSLOT)")).toBe(null);

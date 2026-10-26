@@ -208,7 +208,7 @@ function cloudResolve(pick, cloud) {
         cloudState = 'ok';
         await cloudTakeNow(cloud, local, 'gewählt');
       }
-    } catch (e) { cloudState = 'fehler'; toast('☁️ Das hat nicht geklappt – später nochmal'); console.warn('Cloud', e); }
+    } catch (e) { cloudState = 'fehler'; toast('☁️ Das hat nicht geklappt. Versuch es später nochmal.'); console.warn('Cloud', e); }
   });
 }
 
@@ -243,8 +243,8 @@ async function cloudReady() {
   return cloudApi;
 }
 const cloudStateText = () => ({ aus: 'Nicht angemeldet', laden: 'Gleicht ab …', ok: cloudLastUp ? `Gesichert um ${new Date(cloudLastUp).toLocaleTimeString('de-DE', { timeStyle: 'short' })}` : 'Verbunden',
-  offline: 'Offline – wird gesichert, sobald Netz da ist', konflikt: 'Wartet auf deine Wahl', fehler: 'Gerade nicht erreichbar',
-  zweites: 'Das Spiel ist in einem anderen Fenster offen – bitte dieses hier schließen' })[cloudState];
+  offline: 'Offline. Wird gesichert, sobald Netz da ist', konflikt: 'Wartet auf deine Wahl', fehler: 'Gerade nicht erreichbar',
+  zweites: 'Das Spiel ist in einem anderen Fenster offen. Bitte schließ dieses hier.' })[cloudState];
 // Verständliche Meldungen, wenn die Anmeldung nicht klappt (iPhone: Pop-ups, privater Modus, App-Browser)
 function cloudLoginFail(e) {
   const code = (e && e.code) || '';
@@ -252,8 +252,8 @@ function cloudLoginFail(e) {
     'auth/popup-blocked': 'Das Anmeldefenster wurde blockiert. Erlaube Pop-ups für diese Seite (iPhone: Einstellungen → Safari → „Pop-ups blockieren“ aus) und tippe nochmal.',
     'auth/popup-closed-by-user': 'Das Anmeldefenster wurde geschlossen, bevor die Anmeldung fertig war.',
     'auth/cancelled-popup-request': 'Das Anmeldefenster wurde geschlossen, bevor die Anmeldung fertig war.',
-    'auth/unauthorized-domain': `Diese Adresse (${location.hostname}) ist in Firebase noch nicht erlaubt – unter Authentication → Einstellungen → Autorisierte Domains eintragen.`,
-    'auth/web-storage-unsupported': 'Im privaten Modus geht die Anmeldung nicht – bitte ein normales Fenster nehmen.',
+    'auth/unauthorized-domain': `Diese Adresse (${location.hostname}) ist in Firebase noch nicht erlaubt. Trag sie unter Authentication → Einstellungen → Autorisierte Domains ein.`,
+    'auth/web-storage-unsupported': 'Im privaten Modus geht die Anmeldung nicht. Nimm bitte ein normales Fenster.',
     'auth/operation-not-supported-in-this-environment': 'In diesem Browser geht die Anmeldung nicht. Öffne die Seite direkt in Safari oder Chrome (nicht in WhatsApp & Co.).',
     'auth/network-request-failed': 'Keine Verbindung zum Internet.',
   }[code];
@@ -263,12 +263,12 @@ function cloudLoginFail(e) {
   $('m-ok').onclick = openCloud;
 }
 async function openCloud() {
-  if (cloudOff()) { openModal(netHead('online') + '<h3>☁️ Online-Speicher</h3><p>In der Testwelt gibt es keinen Online-Speicher – sie ist zum Ausprobieren da und wird nie gespeichert.</p><div class="row"><button class="btn" id="m-ok">OK</button></div>'); $('m-ok').onclick = closeModal; return; }
+  if (cloudOff()) { openModal(netHead('online') + '<h3>☁️ Online-Speicher</h3><p>In der Testwelt gibt es keinen Online-Speicher. Sie ist zum Ausprobieren da und wird nie gespeichert.</p><div class="row"><button class="btn" id="m-ok">OK</button></div>'); $('m-ok').onclick = closeModal; return; }
   if (!cloudUser) {
     openModal(`
       ${netHead('online')}
       <h3>☁️ Online-Speicher</h3>
-      <p>Melde dich an, dann liegt deine Insel sicher in der Cloud und ist auf jedem Gerät da – iPad, Handy, Computer.</p>
+      <p>Melde dich an, dann liegt deine Insel sicher in der Cloud und ist auf jedem Gerät da, ob iPad, Handy oder Computer.</p>
       <p class="muted">Freiwillig: Ohne Anmeldung spielst du weiter wie bisher, nur in diesem Browser.</p>
       <div class="row"><button class="btn" id="c-google" disabled>Lädt …</button></div>
       <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
@@ -293,13 +293,13 @@ async function openCloud() {
     <h3>☁️ Online-Speicher</h3>
     <p>Angemeldet als <b>${escHtml(cloudUser.name)}</b></p>
     <div class="status"><div class="${cloudState === 'ok' ? 'ok' : cloudState === 'konflikt' || cloudState === 'fehler' ? 'bad' : ''}">${cloudStateText()}</div>
-      <div>${cloudWatching() ? `👀 Gerade wird auf dem ${escHtml(cloudLeadInfo.name || 'anderen Gerät')} gespielt – hier nur zuschauen` : cloudIsLeader() ? `🎮 Gespielt wird hier (${deviceName()})` : ''}</div></div>
+      <div>${cloudWatching() ? `👀 Gerade wird auf dem ${escHtml(cloudLeadInfo.name || 'anderen Gerät')} gespielt, hier kannst du nur zuschauen` : cloudIsLeader() ? `🎮 Gespielt wird hier (${deviceName()})` : ''}</div></div>
     ${cloudWatching() ? '<div class="row"><button class="btn" id="c-lead" style="flex:1">🎮 Hier weiterspielen</button></div>' : ''}
     <div class="row"><button class="btn" id="c-now" style="flex:1">☁️ Jetzt sichern</button></div>
     ${cloudState === 'konflikt' ? '<div class="row"><button class="btn" id="c-ask" style="flex:1">Stand wählen</button></div>' : ''}
     <div class="label">🕘 Frühere Stände</div>
     ${list.length ? list.map(b => `<div class="cloud-old"><p>${sumHtml(b.sum || {})}<br><small class="muted">${escHtml(b.why || '')} · gesichert ${new Date(b.at).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}</small></p>
-      <button class="btn ghost small" data-cback="${escHtml(b.id)}">Zurückholen</button></div>`).join('') : '<p class="muted">Noch keine – hier landet jeder Stand, der ersetzt wurde.</p>'}
+      <button class="btn ghost small" data-cback="${escHtml(b.id)}">Zurückholen</button></div>`).join('') : '<p class="muted">Noch keine. Hier landet jeder Stand, der ersetzt wurde.</p>'}
     <div class="row"><button class="btn ghost" id="c-out">Abmelden</button><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
   $('m-close').onclick = closeModal;
   if ($('c-lead')) $('c-lead').onclick = () => { closeModal(); cloudTakeLead(); };
@@ -424,8 +424,8 @@ setInterval(() => { if (typeof document !== 'undefined' && document.body) docume
 function cloudBlocked() {
   if (Date.now() - cloudBlockedAt < 2500) return;
   cloudBlockedAt = Date.now();
-  if (VISIT) { toast('🏝️ Du bist zu Besuch – hier kannst du nur schauen'); return; }
-  toast(`👀 Gerade wird auf dem ${(cloudLeadInfo && cloudLeadInfo.name) || 'anderen Gerät'} gespielt – zum Bauen oben „Hier weiterspielen“`);
+  if (VISIT) { toast('🏝️ Du bist zu Besuch und kannst hier nur schauen'); return; }
+  toast(`👀 Gerade wird auf dem ${(cloudLeadInfo && cloudLeadInfo.name) || 'anderen Gerät'} gespielt. Zum Bauen tippst du oben auf „Hier weiterspielen“.`);
 }
 const leadMe = () => ({ dev: cloudDevice(), name: deviceName(), at: true });   // at: true = Serverzeit
 // Wird hier gerade gespielt? (letzte Berührung/Taste in der letzten Minute) – nur dann übernimmt ein Gerät eine frei gewordene Führung
@@ -447,7 +447,7 @@ async function cloudTakeLead() {
     await new Promise(r => setTimeout(r, LEAD_WAIT));
     if (cloudLeadWant !== want || cloudIsLeader()) return;
     await cloudApi.leadTx(cloudUser.uid, cur => (!cur || cur.dev === me || (cur.req && cur.req.dev === me) || leadStale(cur)) ? leadMe() : undefined);
-  } catch (e) { toast('☁️ Übernehmen hat nicht geklappt – später nochmal'); }
+  } catch (e) { toast('☁️ Übernehmen hat nicht geklappt. Versuch es später nochmal.'); }
   finally { if (cloudLeadWant === want) { cloudLeadWant = 0; cloudLeadUi(); } }
 }
 // Hintergrund: sichern, dann freigeben
@@ -549,6 +549,6 @@ window.addEventListener('online', () => { if (cloudUser && cloudState === 'offli
 window.addEventListener('storage', e => {
   if (e.key !== SAVE_KEY || !cloudUser || cloudState === 'zweites' || cloudIsLeader()) return;
   cloudState = 'zweites';
-  toast('☁️ Das Spiel ist noch in einem anderen Fenster offen – hier wird nichts mehr in die Cloud gesichert');
+  toast('☁️ Das Spiel ist noch in einem anderen Fenster offen, deshalb wird hier nichts mehr in die Cloud gesichert');
 });
 cloudBoot();

@@ -73,13 +73,13 @@ const bkEdgeCells = (x0, y0, ax, k) => ax ? [[x0, y0 + k - 1], [x0, y0 + k]] : [
 function bkEdgeBlocker([xa, ya], [xb, yb]) {
   const dx = xb - xa, dy = yb - ya, ta = objAt(xa, ya), tb = objAt(xb, yb);
   const weg = (x, y) => bAt(x, y) === 'weg' || crossingAt(x, y) || wegAt(x, y) != null;
-  if (weg(xa, ya) && weg(xb, yb)) return 'Hier steht eine Stütze der Brücke – der Weg darf nur quer darunter durch';
-  if (ta && tb && ta.b === 'schiene' && tb.b === 'schiene' && railArms(xa, ya).some(([ex, ey]) => ex === dx && ey === dy)) return 'Hier steht eine Stütze der Brücke – das Gleis darf nur quer darunter durch';
+  if (weg(xa, ya) && weg(xb, yb)) return 'Hier steht eine Stütze der Brücke. Der Weg darf nur quer darunter durch.';
+  if (ta && tb && ta.b === 'schiene' && tb.b === 'schiene' && railArms(xa, ya).some(([ex, ey]) => ex === dx && ey === dy)) return 'Hier steht eine Stütze der Brücke. Das Gleis darf nur quer darunter durch.';
   const e = state.edges.get(edgeBetween(xa, ya, xb, yb));
-  if (e) return `Hier steht eine Stütze der Brücke – erst ${ITEMS[e.b] ? ITEMS[e.b].name : 'die Linie'} auf der Kante entfernen`;
+  if (e) return `Hier steht eine Stütze der Brücke. Entferne erst ${ITEMS[e.b] ? ITEMS[e.b].name : 'die Linie'} auf der Kante.`;
   for (const [x, y, sx, sy] of [[xa, ya, dx, dy], [xb, yb, -dx, -dy]]) {
     const ds = decosAt(x + ',' + y), i = MID_SIDE.findIndex(([mx, my]) => mx === sx && my === sy);
-    if (ds && ds[4 + i]) return `Hier steht eine Stütze der Brücke – erst ${ITEMS[ds[4 + i].b] ? ITEMS[ds[4 + i].b].name : 'die Deko'} daneben wegnehmen`;
+    if (ds && ds[4 + i]) return `Hier steht eine Stütze der Brücke. Nimm erst ${ITEMS[ds[4 + i].b] ? ITEMS[ds[4 + i].b].name : 'die Deko'} daneben weg.`;
   }
   return null;
 }
@@ -121,12 +121,12 @@ const bkOnHill = (x, y) => bkOn() ? bkFresh().end.get(x + ',' + y) || null : nul
 const bkEndsOf = (k, b) => { const [x0, y0] = keyXY(k), dx = b.ax ? 0 : 1, dy = b.ax ? 1 : 0; return [[x0 - dx, y0 - dy], [x0 + dx * b.n, y0 + dy * b.n]]; };
 const bkCellsOf = (k, b) => { const [x0, y0] = keyXY(k), dx = b.ax ? 0 : 1, dy = b.ax ? 1 : 0; return Array.from({ length: b.n }, (_, i) => [x0 + dx * i, y0 + dy * i]); };
 const bkStaysIn = inside => (bkOn() ? [...state.bruecken].filter(([k, b]) => bkCellsOf(k, b).some(([x, y]) => inside(x, y))).length : 0);   // Brücken mit Feldern im Rechteck: ziehen beim Verschieben/Kopieren nie mit (160c G1)
-const BK_ON_HILL = 'Hier liegt eine Brücke auf – erst die Brücke abreißen';
-const BK_UNDER_ONLY = 'Unter der Brücke ist nur Platz für Flaches – Wege, Schienen, Gelände und niedrige Deko';
+const BK_ON_HILL = 'Hier liegt eine Brücke auf. Reiß erst die Brücke ab.';
+const BK_UNDER_ONLY = 'Unter der Brücke ist nur Platz für Flaches: Wege, Schienen, Gelände und niedrige Deko';
 
 // Was unter dem Deck auf Feld (x, y) liegt: passt es? (Brücke bauen, Art wechseln)
 function bkUnderError(x, y, G = null, i = 0) {                             // G, i: Geometrie der Brücke und Feld (Stein: Pfeiler und Bögen, 160c C3)
-  if (state.roofs && roofAt(x, y)) return 'Unter einer Brücke geht keine Überdachung – erst das Dach abreißen';
+  if (state.roofs && roofAt(x, y)) return 'Unter einer Brücke geht keine Überdachung. Reiß erst das Dach ab.';
   const tr = terrainAt(x, y);
   if (tr === 'forest' || tr === 'obst') return 'Unter der Brücke erst roden (👆 aufs Feld)';
   if (tr === 'rock' || tr === 'erz' || tr === 'kristall') return `Unter der Brücke ist kein Platz für: ${TERRAIN_NAMES[tr]}`;
@@ -142,7 +142,7 @@ function bkUnderError(x, y, G = null, i = 0) {                             // G,
     const d = ds[j];
     if (!d) continue;
     const cl = G && G.stone && j !== VSLOT ? bkSlotClearG(G, i, x, y, j, d) : brClear(), nm = ITEMS[d.b] ? ITEMS[d.b].name : 'Das';
-    if (cl < 0) return `${BK_PIER} – erst ${nm} wegnehmen`;
+    if (cl < 0) return `${BK_PIER}. Nimm erst ${nm} weg.`;
     if (decoHeight(d.b, d.form) > cl) return `${nm} ist zu hoch für unter die Brücke`;
   }
   for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) { const p = postAt(vx, vy); if (p && decoHeight(p.b, p.form) > brClear()) return `${ITEMS[p.b] ? ITEMS[p.b].name : 'Das'} ist zu hoch für unter die Brücke`; }
@@ -166,7 +166,7 @@ function bkPlaceError(b, fp, t = null) {                                   // t:
       const [A, B2] = bkEdgeCells(c.x0, c.y0, c.b.ax, e), other = A[0] === x && A[1] === y ? B2 : B2[0] === x && B2[1] === y ? A : null;
       if (!other) continue;
       const ok2 = other[0] + ',' + other[1];
-      if ((BK_PLAN_SAME && BK_PLAN_SAME.has(ok2)) || (BK_GROUP && BK_GROUP[b] && BK_GROUP[b].has(ok2)) || (b === 'weg' ? bAt(...other) === 'weg' || crossingAt(...other) || wegAt(...other) != null : bAt(...other) === 'schiene')) return `Hier steht eine Stütze der Brücke – ${b === 'weg' ? 'der Weg' : 'das Gleis'} darf nur quer darunter durch`;
+      if ((BK_PLAN_SAME && BK_PLAN_SAME.has(ok2)) || (BK_GROUP && BK_GROUP[b] && BK_GROUP[b].has(ok2)) || (b === 'weg' ? bAt(...other) === 'weg' || crossingAt(...other) || wegAt(...other) != null : bAt(...other) === 'schiene')) return `Hier steht eine Stütze der Brücke. ${b === 'weg' ? 'Der Weg' : 'Das Gleis'} darf nur quer darunter durch.`;
     }
   }
   return null;
@@ -193,7 +193,7 @@ function bkTooTall(b, x, y, slot, form = 0, rot = 0) {                      // r
 // Spannweite aus einer gezogenen Linie: von einer Anhöhe (Ebene 1) über die tiefere Lücke zur nächsten Anhöhe derselben Höhe. Felder davor
 // und dahinter (oben auf den Anhöhen) zählen nicht – man darf großzügig ziehen
 function bkSpanOf(a, b) {
-  if (a.x !== b.x && a.y !== b.y) return { err: 'Nur gerade – von einer Anhöhe hinüber zur anderen' };
+  if (a.x !== b.x && a.y !== b.y) return { err: 'Nur gerade, von einer Anhöhe hinüber zur anderen' };
   const v = lineTiles(a, b), lv = v.map(([x, y]) => hillLevel(x, y));
   let i0 = -1;
   for (let i = 1; i < v.length; i++) if (lv[i - 1] >= 1 && lv[i] < lv[i - 1]) { i0 = i; break; }
@@ -208,7 +208,7 @@ function bkGapAt(v, i0) {
   while (i1 < v.length && lv[i1] < top) i1++;
   if (i1 >= v.length) return { err: 'Bis auf die Anhöhe gegenüber ziehen', i1 };
   const run = v.slice(i0 - 1, i1 + 1), ax = run[0][1] === run[1][1] ? 0 : 1;
-  if (run.some(([x, y]) => ax ? x !== run[0][0] : y !== run[0][1])) return { err: 'Nur gerade – von einer Anhöhe hinüber zur anderen', i1 };
+  if (run.some(([x, y]) => ax ? x !== run[0][0] : y !== run[0][1])) return { err: 'Nur gerade, von einer Anhöhe hinüber zur anderen', i1 };
   if (lv[i1] !== top) return { err: 'Beide Anhöhen müssen gleich hoch sein', i1 };
   if (top !== 1) return { err: 'Brücken gehen bisher nur zwischen Anhöhen der ersten Ebene', i1 };
   const gap = v.slice(i0, i1), [x0, y0] = gap.reduce((m, p) => (p[0] + p[1] < m[0] + m[1] ? p : m));
@@ -226,11 +226,11 @@ function bkError(sp, look, noCost) {
   for (const [x, y] of sp.gap) {
     const i = sp.ax ? y - sp.y0 : x - sp.x0;                               // Feld ab dem Anker (wie c.i), nicht in Zugrichtung (160c C9a)
     if (!ownedTile(x, y)) return notMine(x, y);
-    if (bkAt(x, y)) return 'Hier ist schon eine Brücke – das Material wechselst du im Fenster (👆)';
+    if (bkAt(x, y)) return 'Hier ist schon eine Brücke. Das Material wechselst du in ihrem Fenster (👆).';
     const e = bkUnderError(x, y, Gn, i);
     if (e) return e;
   }
-  for (const [x, y] of sp.gap) if (bpFronts(x, y).length) return 'Hier sitzt ein Bergportal in der Wand – die Brücke läge vor seiner Öffnung';   // R9, wie bpError
+  for (const [x, y] of sp.gap) if (bpFronts(x, y).length) return 'Hier sitzt ein Bergportal in der Wand, die Brücke läge vor seiner Öffnung';   // R9, wie bpError
   const se = bkSupportsError(sp.x0 + ',' + sp.y0, nb);                    // Stützen bzw. Pfeiler auf den Kanten (160c C1)
   if (se) return se;
   if (noCost) return null;
@@ -279,7 +279,7 @@ function bkDemolishAt(x, y, all = false) {                                // all
   if (nw) { back += nw * ITEMS.weg.cost; delete b.weg; }
   if (ng && !all) {                                                         // bleibt eine Steinbrücke stehen, wird sie ohne Gleis ein Bogen (160c C3): passt, was darunter steht?
     const Gf = bkGeom(b, null, false);
-    if (Gf.stone) for (const [i, [cx, cy]] of bkCellsOf(c.k, b).entries()) { const e = bkUnderError(cx, cy, Gf, i); if (e) { fail('Ohne Gleis wird die Brücke ein Bogen – ' + e); return false; } }
+    if (Gf.stone) for (const [i, [cx, cy]] of bkCellsOf(c.k, b).entries()) { const e = bkUnderError(cx, cy, Gf, i); if (e) { fail('Ohne Gleis wird die Brücke ein Bogen. ' + e); return false; } }
   }
   if (ng) { back += ng * ITEMS.schiene.cost; for (const [r, n] of Object.entries(ITEMS.schiene.mat || {})) state.res[r] += n * ng; delete b.gleis; }
   if ((!nw && !ng) || all) {
@@ -532,11 +532,11 @@ function bkPlanNew(p, tool) {
 }
 // Merk-Kennung fürs Planen (planInfo): Material, Farbe, Sperre und Freischaltung der Brücken-Leiste (ändert sich ohne recalc)
 const bkNewSig = () => { const L = bkLookNew(); return [L.mat, L.col, brMatLock(L.mat) ? 1 : 0, available('bruecke') ? 1 : 0].join(':'); };
-const BK_NO_STONES = 'Trittsteine gehen nicht über eine Brücke – einen anderen Belag wählen';
+const BK_NO_STONES = 'Trittsteine gehen nicht über eine Brücke. Wähl einen anderen Belag.';
 function bkWegCheck(x, y, c = bkAt(x, y)) {                               // c: auch eine gedachte Zelle (bkPlanNew)
   const st = currentStyle('weg');
   if (pathLook(styleDef('weg', st).id).stones) return { err: BK_NO_STONES };
-  if (bkRailAny(c.b)) return { err: 'Auf dieser Brücke liegt ein Gleis – Weg oder Gleis, nicht beides' };
+  if (bkRailAny(c.b)) return { err: 'Auf dieser Brücke liegt ein Gleis. Weg oder Gleis, beides geht nicht.' };
   if (c.b.weg && c.b.weg[c.i] === st) return { same: true };
   return { cost: ITEMS.weg.cost, mat: {} };
 }
@@ -544,7 +544,7 @@ function bkLayWeg(x, y) {
   const c = bkAt(x, y), st = currentStyle('weg');
   if (!c || (c.b.weg && c.b.weg[c.i] === st)) return false;
   if (pathLook(styleDef('weg', st).id).stones) { fail(BK_NO_STONES); return false; }
-  if (bkRailAny(c.b)) { fail('Auf dieser Brücke liegt ein Gleis – Weg oder Gleis, nicht beides'); return false; }
+  if (bkRailAny(c.b)) { fail('Auf dieser Brücke liegt ein Gleis. Weg oder Gleis, beides geht nicht.'); return false; }
   if (state.money < ITEMS.weg.cost) { fail('Zu wenig Taler'); return false; }
   state.money -= ITEMS.weg.cost;
   if (!c.b.weg) c.b.weg = Array(c.b.n).fill(null);
@@ -599,7 +599,7 @@ function bkRailJumps(x, y) {                                               // Sc
   }
   return out;
 }
-const BK_BOTH = 'Auf dieser Brücke liegt ein Weg – Weg oder Gleis, nicht beides';
+const BK_BOTH = 'Auf dieser Brücke liegt ein Weg. Weg oder Gleis, beides geht nicht.';
 function bkRailCheck(x, y, c = bkAt(x, y)) {                              // c: auch eine gedachte Zelle (bkPlanNew)
   const f = decoLookNew('schiene').form || 0;
   if (!available('schiene')) return { err: `Schiene: ${lockText('schiene').replace('🔒 ', 'erst mit ')}` };
@@ -609,7 +609,7 @@ function bkRailCheck(x, y, c = bkAt(x, y)) {                              // c: 
     const old = bkSupports(c.b);
     for (const e of bkSupports(c.b, null, true)) if (!old.includes(e)) { const se = bkEdgeBlocker(...bkEdgeCells(c.x0, c.y0, c.b.ax, e)); if (se) return { err: 'Mit Gleis braucht die Brücke mehr Stützen. ' + se }; }
     const Gb = bkGeom(c.b, null, true);                                     // Steinviadukt: flacher, niedrigere Bögen – passt, was darunter steht?
-    if (Gb.stone) for (const [i, [cx, cy]] of bkCellsOf(c.k, c.b).entries()) { const e = bkUnderError(cx, cy, Gb, i); if (e) return { err: 'Mit Gleis wird die Brücke ein Viadukt – ' + e }; }
+    if (Gb.stone) for (const [i, [cx, cy]] of bkCellsOf(c.k, c.b).entries()) { const e = bkUnderError(cx, cy, Gb, i); if (e) return { err: 'Mit Gleis wird die Brücke ein Viadukt. ' + e }; }
   }
   return { cost: ITEMS.schiene.cost, mat: { ...(ITEMS.schiene.mat || {}) } };
 }
@@ -918,7 +918,7 @@ function brLookHtml(L, o) {
       : `<button class="btn" data-brz="kaufen">✨ Zacken kaufen −${fmt(zk.cost)}${Object.keys(zk.mat).length ? ' · ' + matText(zk.mat) : ''}</button>`}</div>` : ''}
     <div class="label">Licht</div><div class="row">${L.licht ? opt('brl', 'an', 'An', L.licht === 'an') + opt('brl', 'aus', 'Aus', L.licht === 'aus')
       : `<button class="btn" data-brl="kaufen">💡 Licht kaufen −${fmt(lc.cost)}${Object.keys(lc.mat).length ? ' · ' + matText(lc.mat) : ''}</button>`}</div>
-    ${o.dunkel ? '<p class="muted">⚡ Ohne Strom bleibt das Licht dunkel – Brückenlicht bekommt Strom zuletzt (nach Laternen, Betrieben und Zügen).</p>' : ''}`;
+    ${o.dunkel ? '<p class="muted">⚡ Ohne Strom bleibt das Licht dunkel. Brückenlicht bekommt Strom zuletzt (nach Laternen, Betrieben und Zügen).</p>' : ''}`;
 }
 // Wasser-Wegbrücke (160c D3e, Entwurf abgenommen 13.10.2026): Abschnitte im Fenster (openInfo) – wie an der Anhöhe, Preise für die ganze Brücke,
 // Belag (Weg-Muster der Kacheln) bei Deck „Wie der Weg“; Kopf und Text liefert wbTitle/wbText
@@ -1039,11 +1039,11 @@ function ubSet(x, y, ch) {
 const gbTitle = (x, y) => `🌉 Gleisbrücke aus ${escHtml(BR_MAT[brSpanLook(x, y).mat].name)}`;
 function gbText(x, y) {
   const n = brRailSpan(x, y).length;
-  return `Gleis übers Wasser · Brücke aus ${n} ${n === 1 ? 'Feld' : 'Feldern'} – Material, Farbe und Licht gelten für die ganze Brücke. Boote fahren nur quer unter geraden Stücken durch.`;
+  return `Gleis übers Wasser · Brücke aus ${n} ${n === 1 ? 'Feld' : 'Feldern'}. Material, Farbe und Licht gelten für die ganze Brücke. Boote fahren nur quer unter geraden Stücken durch.`;
 }
 function wbText(x, y) {
   const c = wbAt(x, y), cells = bridgeSpan(x, y), us = cells.map(([a, b]) => c.ax ? b : a), N = Math.max(...us) - Math.min(...us) + 1, breit = Math.round(cells.length / N);
-  return `Übers Wasser · ${N} ${N === 1 ? 'Feld' : 'Felder'} lang${breit > 1 ? `, ${breit} breit` : ''} – Bewohner laufen gern hinüber. Material, Farbe und Licht gelten für die ganze Brücke.${c.A ? '' : ' Flach: Boote kommen nicht darunter durch.'}`;
+  return `Übers Wasser · ${N} ${N === 1 ? 'Feld' : 'Felder'} lang${breit > 1 ? `, ${breit} breit` : ''}. Bewohner laufen gern hinüber. Material, Farbe und Licht gelten für die ganze Brücke.${c.A ? '' : ' Flach: Boote kommen nicht darunter durch.'}`;
 }
 function wireBrLook(el, set) {
   for (const e of el.querySelectorAll('[data-bkart]')) e.onclick = () => set({ mat: e.dataset.bkart });
@@ -1063,7 +1063,7 @@ function openBkInfo(x, y) {
   const matPrice = id => brPrice({ ...brLook({ ...b, art: id, brz: undefined }, 'anhoehe'), zacken: false }, 'anhoehe', b.n).money - (paid.money || 0);
   const dunkel = L.licht === 'an' && T.rail.power.dark.has('B' + c.k);   // Licht (C7)
   const el = showPanel(`<h3>🌉 ${fuss ? 'Brücke' : 'Bahnbrücke'} aus ${escHtml(BR_MAT[L.mat].name)}</h3>
-    <p class="muted">Zwischen zwei Anhöhen · ${b.n} ${b.n === 1 ? 'Feld' : 'Felder'} Lücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Niedriges${!bkSupports(b).length ? '' : L.mat === 'stein' ? ' – an den Pfeilern nichts, Wege und Schienen dort nur quer' : ' – an den Stützen nur quer darunter durch'}.</p>
+    <p class="muted">Zwischen zwei Anhöhen · ${b.n} ${b.n === 1 ? 'Feld' : 'Felder'} Lücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Niedriges${!bkSupports(b).length ? '' : L.mat === 'stein' ? ' (an den Pfeilern nichts, Wege und Schienen dort nur quer)' : ' (an den Stützen nur quer darunter durch)'}.</p>
     ${brLookHtml(L, { at: 'anhoehe', mats: BK_ART_IDS, matPrice, deck: !!nw, fuss, zk: b.brz === 'an' || b.brz === 'aus' ? b.brz : null, n: b.n, dunkel, planken: fuss && L.mat === 'holz' && L.deck === 'muster' })}
     <div class="label">${ng ? 'Gleis darauf' : 'Weg oder Gleis darauf'}</div>
     ${nw ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Weg entfernen +${fmt(nw * ITEMS.weg.cost)}</button></div>`

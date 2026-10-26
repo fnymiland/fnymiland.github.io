@@ -197,7 +197,7 @@ function build(b, x, y, quiet) {
   if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost - back), '#d9534a');
   const s = statusOf(x, y);
   if (s && s.how === 'weit' && !quiet) toast(hillNoStair(x, y) ? 'Oben ohne Treppe: nur halbe Kraft. Eine Treppe hinauf hilft.' : 'Weit weg vom Dorf: nur halbe Kraft. Ein Weg zum Dorf hilft.');   // Anhöhe ohne Treppe (157j)
-  else if (!quiet && hillsOn() && hillStairBlock(x + ',' + y)) toast('Versperrt die Treppe – zu Fuß kommt sonst niemand mehr auf die Anhöhe');   // auf Fuß/oberem Feld (157j)
+  else if (!quiet && hillsOn() && hillStairBlock(x + ',' + y)) toast('Versperrt die Treppe. Zu Fuß kommt sonst niemand mehr auf die Anhöhe.');   // auf Fuß/oberem Feld (157j)
   if (b === 'leuchtturm') { if (!state.festival) undoCut = true; festival(); startFireworks([x + 1, y + 1]); }   // das Fest lässt sich nicht zurückkaufen   // Einweihung mit Feuerwerk (Block 83)
   checkStars();
   save();
@@ -300,8 +300,8 @@ function pickUp(x, y, slot) {
     const a = anchorAt(x, y), t = a && state.tiles.get(a);
     if (!t) { toast('Hier ist nichts zum Verschieben'); return; }
     if (t.b === 'lm' && lmStage(t.lm) < 1) { fail('Erst restaurieren, dann kann sie umziehen'); return; }
-    if (t.b === 'huegeltreppe' && !t.ecke && cornerOn(...keyXY(a))) { fail('Hier hängt eine Ecktreppe dran – erst die Ecktreppe aufnehmen'); return; }
-    if (t.b === 'bergportal') { fail('Das Bergportal sitzt in der Wand – abreißen und an der neuen Wand neu bauen'); return; }   // Block 157m
+    if (t.b === 'huegeltreppe' && !t.ecke && cornerOn(...keyXY(a))) { fail('Hier hängt eine Ecktreppe dran. Nimm erst die Ecktreppe auf.'); return; }
+    if (t.b === 'bergportal') { fail('Das Bergportal sitzt in der Wand. Reiß es ab und bau es an der neuen Wand neu.'); return; }   // Block 157m
     moving = { kind: 'tile', t, from: a, ...(isWegBridge(t) ? { sea0: seaRoutesNow() } : {}) };   // Seewege vor dem Aufnehmen (160c G2): der Rest kann flach werden
     state.tiles.delete(a);
     restoreUnder(t, ...keyXY(a));                     // Platz bleibt liegen (cancelMove legt es wieder drauf)
@@ -311,7 +311,7 @@ function pickUp(x, y, slot) {
   recalc();
   sfx('deco');
   $('rot-btn').hidden = !ROTATABLE.has(movingType()) && !wegFlipNow();   // Wegfeld mit Richtung: Muster drehen (Block 158)
-  toast('Tippe, wohin es soll' + (ROTATABLE.has(movingType()) ? ' – drehen mit ⟳ oder Mausrad' : wegFlipNow() ? ' – Muster drehen mit ⟳ oder R' : ''));
+  toast('Tippe, wohin es soll' + (ROTATABLE.has(movingType()) ? ' (drehen mit ⟳ oder Mausrad)' : wegFlipNow() ? ' (Muster drehen mit ⟳ oder R)' : ''));
 }
 // Mehrere Dinge auf einmal: alles, was ganz im Rechteck steht (samt Deko, Wegen, Schienen), wird angehoben und
 // zieht mit gleichen Abständen um. Das Gelände bleibt; Rathaus, Sehenswürdigkeiten und Brücken zwischen Anhöhen bleiben stehen.
@@ -357,7 +357,7 @@ function pickUpGroup(x0, y0, x1, y1) {
   $('rot-btn').hidden = false;                                           // die ganze Gruppe dreht sich (Block 117)
   recalc();
   sfx('deco');
-  toast(`${items.length} Dinge angehoben – tippe, wohin sie sollen · drehen mit ⟳` + (stays ? ' (manches bleibt stehen)' : ''));
+  toast(`${items.length} Dinge angehoben. Tippe, wohin sie sollen · drehen mit ⟳` + (stays ? ' (manches bleibt stehen)' : ''));
   return true;
 }
 // Überdachung verschieben (Block 138, Nutzer: „kein Verschieben-Knopf“): die Dachfelder samt Deko oben und den Stützen, die nur
@@ -396,7 +396,7 @@ function pickUpRoofs(keys) {
   $('rot-btn').hidden = false;
   recalc();
   sfx('deco');
-  toast(`${set.size === 1 ? 'Überdachung' : set.size + ' Dachfelder'} angehoben – tippe, wohin · drehen mit ⟳`);
+  toast(`${set.size === 1 ? 'Überdachung' : set.size + ' Dachfelder'} angehoben. Tippe, wohin · drehen mit ⟳`);
   return true;
 }
 // Deko oben dreht mit dem Dach (Gruppe drehen): Plätze und Blickrichtung wie bei Deko am Boden
@@ -674,7 +674,7 @@ function copyPipette(items) {
 function startCopy(x0, y0, x1, y1) {
   if (moving) return false;
   const { items, stays } = copyCollect(x0, y0, x1, y1);
-  if (!items.length) { toast(stays ? 'Das lässt sich nicht kopieren (Rathaus, Sehenswürdigkeit, Wunderwerk, Brücke zwischen Anhöhen – oder ragt hinaus)' : 'Hier ist nichts zum Kopieren'); return false; }
+  if (!items.length) { toast(stays ? 'Das lässt sich nicht kopieren (Rathaus, Sehenswürdigkeit, Wunderwerk, Brücke zwischen Anhöhen, oder es ragt hinaus)' : 'Hier ist nichts zum Kopieren'); return false; }
   const pip = copyPipette(items);
   if (pip) {                                                             // Pipette: Werkzeug mit diesem Stil in die Hand
     setTool(pip.tool);
@@ -683,14 +683,14 @@ function startCopy(x0, y0, x1, y1) {
     if (pip.tool === 'hecke') state.paintNew.hecke = pip.col ? { col: pip.col } : {};
     renderStyleBar(pip.tool); updateHint();
     const got = pip.tool === 'schiene' ? (decoLookNew('schiene').form || 0) === (pip.style || 0) : currentStyle(pip.tool) === pip.style;
-    toast(got ? `🖌️ ${ITEMS[pip.tool].name} in der Hand – zieh die Linie wie gewohnt` : `🖌️ ${ITEMS[pip.tool].name} in der Hand – diesen Stil hast du nicht freigeschaltet (Kunstakademie), darum der Standard`);
+    toast(got ? `🖌️ ${ITEMS[pip.tool].name} in der Hand. Zieh die Linie wie gewohnt.` : `🖌️ ${ITEMS[pip.tool].name} in der Hand. Diesen Stil hast du nicht freigeschaltet (Kunstakademie), darum der Standard.`);
     return true;
   }
   moving = { kind: 'group', copy: true, items, cost: copyCost(items), cx: Math.round((x1 - x0) / 2), cy: Math.round((y1 - y0) / 2), W: x1 - x0 + 1, H: y1 - y0 + 1, r: 0 };
   if (tool !== 'verschieben') setTool('verschieben');
   $('rot-btn').hidden = false;
   sfx('deco');
-  toast(`⧉ Kopie am Finger · 🪙 ${fmt(moving.cost.money)} je Stück – tippe, wohin · drehen mit ⟳ · fertig mit Esc` + (stays ? ' (manches bleibt draußen)' : ''));
+  toast(`⧉ Kopie am Finger · 🪙 ${fmt(moving.cost.money)} je Stück. Tippe, wohin · drehen mit ⟳ · fertig mit Esc` + (stays ? ' (manches bleibt draußen)' : ''));
   return true;
 }
 function moveError(x, y, slot) {
@@ -823,7 +823,7 @@ function upgradeMany(list) {
   } finally { QUIET = false; }
   if (!done) { fail('Dafür reicht es gerade nicht'); return 0; }
   sfx('star');
-  toast(`✨ ${done} ausgebaut · 🪙 −${fmt(m0 - state.money)}${done < todo.length ? ` – für ${todo.length - done} reicht es gerade nicht` : ''}`);
+  toast(`✨ ${done} ausgebaut · 🪙 −${fmt(m0 - state.money)}${done < todo.length ? `, für ${todo.length - done} reicht es gerade nicht` : ''}`);
   checkStars();
   save();
   return done;
@@ -1071,7 +1071,7 @@ function fulfillOrder(id, from) {
   if (o.kind === 'sell') {
     if (state.res[o.res] < o.amount) { fail(`Zu wenig ${RES[o.res].name} (${fmt(o.amount)} ${RES[o.res].icon} nötig)`); return false; }
     state.res[o.res] -= o.amount; state.money += o.pay;
-    toast(`🚢 Der Frachter lädt ${fmt(o.amount)} ${RES[o.res].icon} – 🪙 +${fmt(o.pay)}`);
+    toast(`🚢 Der Frachter lädt ${fmt(o.amount)} ${RES[o.res].icon} für 🪙 +${fmt(o.pay)}`);
   } else {
     if (state.money < o.pay) { fail('Zu wenig Taler'); return false; }
     state.money -= o.pay; state.res[o.res] += o.amount;
@@ -1134,7 +1134,7 @@ function pbSetModel(R, j, f) {
   const forms = pbForms(R);
   if (!(j in forms) || !lookOk('pb_station', 'form', f)) return false;
   forms[j] = f;
-  if (!pbRoom(R, forms)) { fail('Der Zug ist zu lang für diese Strecke – erst einen entfernen'); return false; }
+  if (!pbRoom(R, forms)) { fail('Der Zug ist zu lang für diese Strecke. Entferne erst einen Wagen.'); return false; }
   pbWrite(R, forms); sfx('deco'); save();
   return true;
 }
@@ -1206,7 +1206,7 @@ function undo() {
   if (!step) { toast('Nichts zum Rückgängigmachen'); return false; }
   for (const [n, k, , a] of step.changes) {                        // seitdem dort etwas verändert? Dann lieber nicht
     const v = UNDO_MAPS[n]().get(k);
-    if ((v === undefined ? undefined : undoStr(v)) !== a) { fail('Geht nicht mehr – dort hat sich seitdem etwas verändert'); return false; }
+    if ((v === undefined ? undefined : undoStr(v)) !== a) { fail('Geht nicht mehr, dort hat sich seitdem etwas verändert'); return false; }
   }
   const mine = new Set(step.changes.filter(c => c[0] === 'tiles').map(c => c[1]));    // große Gebäude: ist ihre Fläche noch frei?
   // Gebäude oben (157j): Ebene je Feld nach dem ↶ (Anhöhen dieses Schritts wie vorher, sonst wie jetzt) – ein Ding, das zurückkommt, steht nie
@@ -1216,26 +1216,26 @@ function undo() {
   for (const [n, k, b] of step.changes) {
     if (n !== 'tiles' || b === undefined) continue;
     const t = JSON.parse(b), [x, y] = keyXY(k), fp = footprint(t.b, x, y, t.rot || 0, t);
-    if (fp.some(([fx, fy]) => { const c = COVER.get(fx + ',' + fy); return c && !mine.has(c); })) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
+    if (fp.some(([fx, fy]) => { const c = COVER.get(fx + ',' + fy); return c && !mine.has(c); })) { fail('Geht nicht mehr, dort steht inzwischen etwas'); return false; }
     const lv = hl ? fp.map(([fx, fy]) => lvBack(fx, fy)) : null;
-    if (lv && lv.some(v => v !== lv[0])) { fail('Geht nicht mehr – das stünde jetzt über der Kante einer Anhöhe'); return false; }
-    if (lv && lv[0] && !hillOk(t.b)) { fail('Geht nicht mehr – dort ist inzwischen eine Anhöhe'); return false; }
-    if (t.b === 'bergportal') { const [dx, dy] = bpDir(t); if (lvBack(x, y) !== 1 || lvBack(x - dx, y - dy) !== 0) { fail('Geht nicht mehr – die Wand des Bergportals ist nicht mehr da'); return false; } }   // Block 157m
+    if (lv && lv.some(v => v !== lv[0])) { fail('Geht nicht mehr, das stünde jetzt über der Kante einer Anhöhe'); return false; }
+    if (lv && lv[0] && !hillOk(t.b)) { fail('Geht nicht mehr, dort ist inzwischen eine Anhöhe'); return false; }
+    if (t.b === 'bergportal') { const [dx, dy] = bpDir(t); if (lvBack(x, y) !== 1 || lvBack(x - dx, y - dy) !== 0) { fail('Geht nicht mehr, die Wand des Bergportals ist nicht mehr da'); return false; } }   // Block 157m
   }
   for (const [n, k, b] of step.changes) {                               // abgetragene Anhöhe zurück (Block 157): nicht unter Gebäude (Wege, Plätze, Deko dürfen hinauf: hillCarryOk)
-    if (n === 'hills' && b === undefined && stairsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier führt inzwischen eine Treppe hinauf'); return false; }   // Treppe (Block 157d): wie lowerHill
-    if (n === 'hills' && b === undefined && rampsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier führt inzwischen eine Gleis-Rampe hinauf'); return false; }   // Gleis-Rampe (hills.js) wie die Treppe
-    if (n === 'hills' && b === undefined && hillStuckOn(...keyXY(k)) && !mine.has(COVER.get(k))) { fail('Geht nicht mehr – oben steht inzwischen ein Gebäude'); return false; }   // Anhöhe weg (157j): wie lowerHill
+    if (n === 'hills' && b === undefined && stairsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr, hier führt inzwischen eine Treppe hinauf'); return false; }   // Treppe (Block 157d): wie lowerHill
+    if (n === 'hills' && b === undefined && rampsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr, hier führt inzwischen eine Gleis-Rampe hinauf'); return false; }   // Gleis-Rampe (hills.js) wie die Treppe
+    if (n === 'hills' && b === undefined && hillStuckOn(...keyXY(k)) && !mine.has(COVER.get(k))) { fail('Geht nicht mehr, oben steht inzwischen ein Gebäude'); return false; }   // Anhöhe weg (157j): wie lowerHill
     if (n !== 'hills' || b === undefined) continue;
     const cur = UNDO_MAPS.hills().get(k);
     if (cur && (cur.h || 1) === (JSON.parse(b).h || 1)) continue;       // nur die Wandart zurück (157j): die Höhe bleibt, was oben steht, darf bleiben
     const o = hillStuckOn(...keyXY(k));                                  // Gebäude, große Deko (157j); Treppe in die Anhöhe: geht mit zurück
-    if (o && !mine.has(COVER.get(k))) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
+    if (o && !mine.has(COVER.get(k))) { fail('Geht nicht mehr, dort steht inzwischen etwas'); return false; }
     if (cur) continue;
-    if (stairsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier steht inzwischen eine Treppe davor'); return false; }   // Fuß frei (wie hillRaiseError)
-    if (rampsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier steht inzwischen eine Gleis-Rampe davor'); return false; }
-    if (bpFronts(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier ist inzwischen ein Bergportal davor'); return false; }   // Block 157m
-    { const wk = wbEndAt(...keyXY(k)); if (wk && !mine.has(wk)) { fail('Geht nicht mehr – hier endet inzwischen eine Brücke übers Wasser'); return false; } }   // 160c D4 (wie hillRaiseError)
+    if (stairsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr, hier steht inzwischen eine Treppe davor'); return false; }   // Fuß frei (wie hillRaiseError)
+    if (rampsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr, hier steht inzwischen eine Gleis-Rampe davor'); return false; }
+    if (bpFronts(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr, hier ist inzwischen ein Bergportal davor'); return false; }   // Block 157m
+    { const wk = wbEndAt(...keyXY(k)); if (wk && !mine.has(wk)) { fail('Geht nicht mehr, hier endet inzwischen eine Brücke übers Wasser'); return false; } }   // 160c D4 (wie hillRaiseError)
   }
   // Brücken (Block 160): eine Anhöhe, auf der inzwischen eine Brücke aufliegt, kommt nicht weg; nichts Hohes und keine Anhöhe unter eine
   // stehende Brücke zurück; eine Brücke kommt nur zurück, wenn ihre Anhöhen dann da sind und darunter nichts Hohes steht
@@ -1243,23 +1243,23 @@ function undo() {
     const bkMine = new Set(step.changes.filter(c => c[0] === 'bruecken').map(c => c[1])), other = c => c && !bkMine.has(c.k);
     for (const [n, k, b] of step.changes) {
       const [x, y] = keyXY(k);
-      if (n === 'hills' && b === undefined && (bkOnHill(x, y) || []).some(other)) { fail('Geht nicht mehr – hier liegt inzwischen eine Brücke auf'); return false; }
-      if (n === 'hills' && b !== undefined && !UNDO_MAPS.hills().get(k) && other(bkAt(x, y))) { fail('Geht nicht mehr – darüber liegt inzwischen eine Brücke'); return false; }
-      if (n === 'roofs' && b !== undefined && other(bkAt(x, y))) { fail('Geht nicht mehr – darüber liegt inzwischen eine Brücke'); return false; }
+      if (n === 'hills' && b === undefined && (bkOnHill(x, y) || []).some(other)) { fail('Geht nicht mehr, hier liegt inzwischen eine Brücke auf'); return false; }
+      if (n === 'hills' && b !== undefined && !UNDO_MAPS.hills().get(k) && other(bkAt(x, y))) { fail('Geht nicht mehr, darüber liegt inzwischen eine Brücke'); return false; }
+      if (n === 'roofs' && b !== undefined && other(bkAt(x, y))) { fail('Geht nicht mehr, darüber liegt inzwischen eine Brücke'); return false; }
       if (n === 'tiles' && b !== undefined) {
         const t = JSON.parse(b);
         const flat = (t.b === 'weg' || t.b === 'schiene') && !t.bridge && !(isCrossing(t) && t.foot);   // Wasser- und Fußgängerbrücken sind zu hoch
-        if (!flat && footprint(t.b, x, y, t.rot || 0, t).some(([fx, fy]) => other(bkAt(fx, fy)))) { fail('Geht nicht mehr – darüber liegt inzwischen eine Brücke'); return false; }
+        if (!flat && footprint(t.b, x, y, t.rot || 0, t).some(([fx, fy]) => other(bkAt(fx, fy)))) { fail('Geht nicht mehr, darüber liegt inzwischen eine Brücke'); return false; }
       }
       if (n === 'bruecken' && b !== undefined) {                         // auch eine stehende: ein Gleis, das zurückkommt, braucht am Holzsteg Böcke (160b)
         const o = JSON.parse(b), art = bkArtOf(o);
-        if (!UNDO_MAPS.bruecken().get(k) && (bkEndsOf(k, o).some(([ex, ey]) => lvBack(ex, ey) !== 1) || bkCellsOf(k, o).some(([cx, cy]) => lvBack(cx, cy) !== 0))) { fail('Geht nicht mehr – die Anhöhen der Brücke sind nicht mehr da'); return false; }
+        if (!UNDO_MAPS.bruecken().get(k) && (bkEndsOf(k, o).some(([ex, ey]) => lvBack(ex, ey) !== 1) || bkCellsOf(k, o).some(([cx, cy]) => lvBack(cx, cy) !== 0))) { fail('Geht nicht mehr, die Anhöhen der Brücke sind nicht mehr da'); return false; }
         const stand = !!UNDO_MAPS.bruecken().get(k);                       // steht sie schon: darunter ist alles geprüft, nur neue Stützen zählen (160c C1)
         const hid = (step.bkHid && step.bkHid.get(k)) || [];               // vor dem Schritt schon verdeckt (alter Stand): zählt nicht
         const neu = (stand ? bkSupports(o).filter(e => !bkSupports(UNDO_MAPS.bruecken().get(k)).includes(e)) : bkSupports(o)).filter(e => !hid.includes(e)), [ox, oy] = keyXY(k);
         const Go = bkGeom(o);                                              // Stein (160c C3): Pfeiler und Bögen wie gebaut
         if ((!stand && bkCellsOf(k, o).some(([cx, cy], i) => { const a = COVER.get(cx + ',' + cy); return !(a && mine.has(a)) && bkUnderError(cx, cy, Go, i); }))
-          || neu.some(e => { const cs = bkEdgeCells(ox, oy, o.ax, e); return !cs.some(([cx, cy]) => { const a = COVER.get(cx + ',' + cy); return a && mine.has(a); }) && bkEdgeBlocker(...cs); })) { fail('Geht nicht mehr – unter der Brücke steht inzwischen etwas'); return false; }
+          || neu.some(e => { const cs = bkEdgeCells(ox, oy, o.ax, e); return !cs.some(([cx, cy]) => { const a = COVER.get(cx + ',' + cy); return a && mine.has(a); }) && bkEdgeBlocker(...cs); })) { fail('Geht nicht mehr, unter der Brücke steht inzwischen etwas'); return false; }
       }
     }
   }

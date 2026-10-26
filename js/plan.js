@@ -111,7 +111,7 @@ function planScan(p) {
   const quer = new Map();
   if (b === 'schiene' && p.kind === 'line' && hillsOn() && rampFresh().n) rest.forEach(([x, y], i) => {
     const r = rampAt(x, y);
-    if (r && [rest[i - 1], rest[i + 1]].some(q => q && (r.rot & 1 ? q[1] !== y : q[0] !== x))) quer.set(x + ',' + y, { err: 'Quer über die Gleis-Rampe geht kein Gleis – sie führt nur hinauf' });
+    if (r && [rest[i - 1], rest[i + 1]].some(q => q && (r.rot & 1 ? q[1] !== y : q[0] !== x))) quer.set(x + ',' + y, { err: 'Quer über die Gleis-Rampe geht kein Gleis, sie führt nur hinauf' });
   });
   try {
     for (let round = 0; rest.length; round++) {
@@ -311,8 +311,8 @@ function scanDemolish(p) {
     if (!hillAt(x, y) || !ownedTile(x, y) || states.get(k) === 'bad') continue;
     if ([[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([vx, vy]) => !inside(vx, vy) && postAt(vx, vy))) { states.set(k, 'bad'); firstErr = firstErr || 'An der Ecke der Anhöhe steht noch etwas'; continue; }
     // Treppe hinauf (Block 157d): nur mit ab, wenn sie selbst im Rechteck abgerissen wird (das passiert vorher, order)
-    if (stairsAround(x, y).some(([sx, sy]) => !inside(sx, sy) || states.get(sx + ',' + sy) === 'bad')) { states.set(k, 'bad'); firstErr = firstErr || 'Hier führt eine Treppe hinauf – erst die Treppe abreißen'; continue; }
-    if (rampsAround(x, y).some(([sx, sy]) => !inside(sx, sy) || states.get(sx + ',' + sy) === 'bad')) { states.set(k, 'bad'); firstErr = firstErr || 'Hier führt eine Gleis-Rampe hinauf – erst die Rampe abreißen'; continue; }   // Gleis-Rampe wie die Treppe
+    if (stairsAround(x, y).some(([sx, sy]) => !inside(sx, sy) || states.get(sx + ',' + sy) === 'bad')) { states.set(k, 'bad'); firstErr = firstErr || 'Hier führt eine Treppe hinauf. Reiß erst die Treppe ab.'; continue; }
+    if (rampsAround(x, y).some(([sx, sy]) => !inside(sx, sy) || states.get(sx + ',' + sy) === 'bad')) { states.set(k, 'bad'); firstErr = firstErr || 'Hier führt eine Gleis-Rampe hinauf. Reiß erst die Rampe ab.'; continue; }   // Gleis-Rampe wie die Treppe
     if (archAround(x, y)) { states.set(k, 'bad'); firstErr = firstErr || ARCH_HERE; continue; }   // Fußgängerbrücke daneben (hills.js)
     if (bkOnHill(x, y)) { states.set(k, 'bad'); firstErr = firstErr || BK_ON_HILL; continue; }   // Brücke liegt auf (Block 160)
     lower.push([x, y, () => lowerHill(x, y)]);

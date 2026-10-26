@@ -852,7 +852,7 @@ function roofTopError(b, x, y, slot, opts = {}) {
   if (!r) return 'Deko geht nur auf Steinarkaden';
   const top = roofTopsOf(r);
   if (top[slot]) return top.slice(0, 8).every(Boolean) ? 'Alle Plätze auf dem Dach sind belegt' : 'Dieser Platz ist schon belegt';
-  if (slot === CSLOT && [4, 5, 6, 7].some(i => top[i])) return 'An den Seiten steht schon etwas – die Mitte ist zu eng';   // Block 156
+  if (slot === CSLOT && [4, 5, 6, 7].some(i => top[i])) return 'An den Seiten steht schon etwas, die Mitte ist zu eng';   // Block 156
   if (isSide(slot) && top[CSLOT]) return 'In der Mitte steht schon etwas';
   if (inHole(roofHoles(x, y), x + roofTopPos(slot)[0], y + roofTopPos(slot)[1], 0.12)) return 'Hier ist die Öffnung der Treppe';
   if (opts.move || opts.noCost) return null;
@@ -891,11 +891,11 @@ function removeRoofTop(x, y, slot) {
 function roofFormLock(keys, toForm = null) {
   for (const k of keys) {
     const r = state.roofs.get(k);
-    if (r && toForm != null) { const tl = tallUnder(...keyXY(k), toForm); if (tl) return `Darunter steht etwas zu Hohes (${ITEMS[tl.b].name}) – erst wegräumen`; }
+    if (r && toForm != null) { const tl = tallUnder(...keyXY(k), toForm); if (tl) return `Darunter steht etwas zu Hohes (${ITEMS[tl.b].name}). Räum es erst weg.`; }
     if (!r || roofForm(r) !== 'arkaden') continue;
-    if (roofTopsOf(r).some(Boolean)) return 'Auf dem Dach steht Deko – erst wegräumen, dann die Form ändern';
+    if (roofTopsOf(r).some(Boolean)) return 'Auf dem Dach steht Deko. Räum sie erst weg, dann kannst du die Form ändern.';
     const [x, y] = keyXY(k), a = COVER.get(k) || k, t = state.tiles.get(a);
-    if (t && t.b === 'dachtreppe') return 'Unter dem Dach steht eine Treppe – erst abreißen, dann die Form ändern';
+    if (t && t.b === 'dachtreppe') return 'Unter dem Dach steht eine Treppe. Reiß sie erst ab, dann kannst du die Form ändern.';
   }
   return null;
 }
@@ -962,7 +962,7 @@ function pickUpRoofTop(x, y, slot) {
   buildRot = d.rot || 0; rotManual = false;
   recalc(); sfx('deco');
   $('rot-btn').hidden = !ROTATABLE.has(d.b);
-  toast('Tippe, wohin es soll – aufs Dach oder an den Boden' + (ROTATABLE.has(d.b) ? ' · drehen mit ⟳ oder Mausrad' : ''));
+  toast('Tippe, wohin es soll: aufs Dach oder auf den Boden' + (ROTATABLE.has(d.b) ? ' · drehen mit ⟳ oder Mausrad' : ''));
   return true;
 }
 function dropRoofTop(x, y, slot) {
@@ -1025,7 +1025,7 @@ function dtError(x, y, rot) {
   }
   // oben Platz zum Aussteigen: hinter dem oberen Ende noch Dach, nicht gleich die Brüstung
   const G = dtGeo(x, y, rot), eu = G.mu + G.Du * (DT_LEN + 0.25), ev = G.mv + G.Dv * (DT_LEN + 0.25), er = roofTopRoof(Math.round(eu), Math.round(ev));
-  if (!er || roofArea(roofCov(er)).dist(eu, ev) < 0.16) return 'Oben braucht die Treppe Platz zum Aussteigen – ein Feld weiter ins Dach';
+  if (!er || roofArea(roofCov(er)).dist(eu, ev) < 0.16) return 'Oben braucht die Treppe Platz zum Aussteigen, also ein Feld weiter ins Dach';
   return null;
 }
 // Stufen der Treppe als Quader vom Boden, oben bündig mit dem Dach, unten bis kurz hinter die Öffnung; P in Weltkoordinaten

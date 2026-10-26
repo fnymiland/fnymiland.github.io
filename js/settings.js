@@ -78,7 +78,7 @@ function showSettings() {
     <h2>Einstellungen</h2>
     <div class="label">Schnellwahl <span class="muted">(nur dieses Gerät)</span></div>
     <div class="looks set-presets">${Object.entries(GFX_PRESETS).map(([id, P]) => `<button class="look${cur === id ? ' on' : ''}" data-preset="${id}" aria-pressed="${cur === id}">${P.name}</button>`).join('')}</div>
-    <p class="muted set-note">${cur === 'schnell' ? 'Halbe Schärfe, weniger Einwohner, ohne Tiere, Schatten und Glitzer – für ältere Geräte.' : cur === 'schoen' ? 'Alles an, immer 60 Bilder pro Sekunde, Drehendes dreht sich auch weit weg.' : cur === 'ausgewogen' ? 'Wie das Spiel von selbst eingestellt ist.' : 'Eigene Einstellung – unten einzeln gewählt.'}</p>
+    <p class="muted set-note">${cur === 'schnell' ? 'Halbe Schärfe, weniger Einwohner, ohne Tiere, Schatten und Glitzer. Gut für ältere Geräte.' : cur === 'schoen' ? 'Alles an, immer 60 Bilder pro Sekunde, Drehendes dreht sich auch weit weg.' : cur === 'ausgewogen' ? 'Wie das Spiel von selbst eingestellt ist.' : 'Eigene Einstellung, unten einzeln gewählt.'}</p>
     <div class="set-grid set-one">${btn('id="m-sound"', 'Ton', onOff(!state.muted))}</div>
     <div class="label">Aussehen <span class="muted">(nur dieses Gerät)</span></div>
     <div class="look-pick">${Object.entries(UI_LOOKS).map(([id, L]) => `<button data-uilook="${id}" class="${uiLookId === id ? 'on' : ''}" aria-pressed="${uiLookId === id}"><canvas data-lookprev="${id}" width="300" height="92"></canvas>${L.name}</button>`).join('')}</div>
@@ -92,12 +92,12 @@ function showSettings() {
       sky && btn('id="m-sky"', 'Ballons & Zeppelin', onOff(skyShow), 'Heißluftballons und Zeppelin am Himmel zeigen oder ausblenden'),
       miniWanted() && btn('id="m-mini"', miniOpen ? 'Minimap ausschalten' : 'Minimap einschalten', '', 'Übersichtskarte unten rechts'))}
     <div class="label">Leistung <span class="muted">(nur dieses Gerät)</span></div>
-    ${grid(btn('id="m-fps"', 'Bildrate', fpsMode === 'fluessig' ? 'flüssig' : 'sparsam', fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'),
-      btn('id="m-sharp"', 'Schärfe', GFX.sharp, 'Halb: halb so viele Bildpunkte je Richtung – viel flüssiger auf älteren Geräten, etwas weicher'),
-      btn('id="m-people"', 'Einwohner', GFX.people, 'Nur was man sieht – gezählt und gerechnet wird immer mit allen'),
-      btn('id="m-animals"', 'Tiere', onOff(GFX.animals), 'Vögel, Schmetterlinge, Glühwürmchen und Co. – aus: man kann sie auch nicht fürs Album entdecken'),
-      btn('id="m-still"', 'Drehendes weit weg', stillFar ? 'steht still' : 'dreht sich', 'Mühlen, Windräder, Riesenrad und Fahrgeschäfte, wenn du weit rausgezoomt bist – still ist schneller, nah dran drehen sie sich immer'),
-      btn('id="m-gl"', 'Grafikkarte', onOff(glWanted()), 'Zeichnet weit weg über die Grafikkarte – viel flüssiger. Bei Darstellungsfehlern ausschalten (dann wie früher)'),
+    ${grid(btn('id="m-fps"', 'Bildrate', fpsMode === 'fluessig' ? 'flüssig' : 'sparsam', fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde, braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde. Schont den Akku und hält das Gerät kühl'),
+      btn('id="m-sharp"', 'Schärfe', GFX.sharp, 'Halb: halb so viele Bildpunkte je Richtung. Auf älteren Geräten viel flüssiger, dafür etwas weicher'),
+      btn('id="m-people"', 'Einwohner', GFX.people, 'Betrifft nur, was man sieht. Gezählt und gerechnet wird immer mit allen.'),
+      btn('id="m-animals"', 'Tiere', onOff(GFX.animals), 'Vögel, Schmetterlinge, Glühwürmchen und Co. Wenn aus, kann man sie auch nicht fürs Album entdecken.'),
+      btn('id="m-still"', 'Drehendes weit weg', stillFar ? 'steht still' : 'dreht sich', 'Mühlen, Windräder, Riesenrad und Fahrgeschäfte, wenn du weit rausgezoomt bist. Still ist schneller, nah dran drehen sie sich immer.'),
+      btn('id="m-gl"', 'Grafikkarte', onOff(glWanted()), 'Zeichnet weit weg über die Grafikkarte, das ist viel flüssiger. Bei Darstellungsfehlern ausschalten (dann wie früher)'),
       btn('id="m-bench"', 'Messlauf', '≈ 45 s', 'Zoomt und schiebt ~45 Sekunden von selbst und misst, wie flüssig es auf diesem Gerät läuft'))}
     <div class="row"><button class="btn ghost" style="flex:1" id="m-back">Zurück</button><button class="btn" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   const again = () => showSettings();
@@ -125,7 +125,7 @@ function showSettings() {
   click('m-still', () => setStillFar(!stillFar));                                                // Block 144
   if ($('m-gl')) $('m-gl').onclick = () => {
     setGlWanted(!glWanted()); again();
-    if (GL_Q) toast(`In der Adresse steht ?gl=${GL_Q} – das gilt, solange es dort steht`);
+    if (GL_Q) toast(`In der Adresse steht ?gl=${GL_Q}. Das gilt, solange es dort steht.`);
   };
   $('m-bench').onclick = () => benchStart();                                                     // Block 149
   $('m-back').onclick = () => showMenu();

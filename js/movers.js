@@ -246,10 +246,10 @@ function stepMovers(dt) {
   for (const list of [walkers, cars, strollers, paraders]) for (let i = list.length - 1; i >= 0; i--) if (list[i].gone) list.splice(i, 1);
 }
 // Sprechblasen (Block 55): selten (alle 20–30 s) sagt jemand im Bild etwas – zu seinen Wünschen, wohin er geht, zur Tageszeit
-const WISH_SAY = { weg: 'Ein Weg vor meiner Tür wäre schön …', deko: 'Ein paar Blumen vorm Haus – das wär’s!', baecker: 'Frische Brötchen! Gibt’s hier keine Bäckerei?',
+const WISH_SAY = { weg: 'Ein Weg vor meiner Tür wäre schön …', deko: 'Ein paar Blumen vorm Haus, das wär’s!', baecker: 'Frische Brötchen! Gibt’s hier keine Bäckerei?',
   ruhe: 'Puh, ist das laut hier …', markt: 'Ich vermisse einen Marktplatz.', park: 'Ein Park zum Spazieren, das wär schön.', laden: 'Wo kann man hier bloß einkaufen?',
   schule: 'Die Kleinen bräuchten eine Schule.', schoen: 'Hier dürfte es noch etwas schöner sein.', cafe: 'Ein Café um die Ecke … hach.',
-  kultur: 'Mal wieder ins Theater – oder ins Kino?' };
+  kultur: 'Mal wieder ins Theater. Oder ins Kino?' };
 const GOAL_SAY = { arbeit: ['Auf zur Arbeit!', 'Heute wird ein fleißiger Tag.'], schule: ['Ab in die Schule!', 'Heute lerne ich was Neues.'],
   essen: ['Mittagspause! ☕', 'Ich hab so einen Hunger …'], laden: ['Nur kurz was einkaufen.', 'Mal sehen, was es Neues gibt.'], markt: ['Auf zum Markt!', 'Hoffentlich gibt’s frische Äpfel.'],
   park: ['Herrlicher Abend für einen Spaziergang.', 'Gleich setz ich mich auf eine Bank.'], fzpark: ['Auf in den Freizeitpark!', 'Heute fahr ich Achterbahn!', 'Erst Zuckerwatte, dann Karussell.'], home: ['Feierabend!', 'Schön, gleich zu Hause zu sein.'],

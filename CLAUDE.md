@@ -593,6 +593,12 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     (Ladenschilder, Fragezeichen-Symbol, Baumenü-Bilder), malt `uiFontReady` nach dem Laden der Schrift neu. Mali ist breiter als die
     alten Schriften: neue Raster mit `minmax(0, 1fr)` bzw. `auto-fit` bauen, lange Wörter trennen (`hyphens: auto`, lang="de").
     Ausprobieren weiterer Schriften: tools/schrift.html (echtes Spiel, Testwelt, Umschalter).
+    **Sprache der Spieltexte** (Nutzer 26.10.2026: „überprüfe das ganze Spiel auf KI-Sprache, also Gedankenstriche usw.“): keine
+    Gedankenstriche „ – “ in Texten, die man sieht (Meldungen, Fenster, Beschreibungen, Neuigkeiten, aria-label/title). Statt dessen Punkt,
+    Komma, Doppelpunkt, Klammer oder den Satz umbauen; Inhalt nie ändern. Bindestriche in Wörtern und Bereiche („3–5“) bleiben.
+    Fehlermeldungen enden meist mit Punkt: wer zwei Meldungen verbindet, nimmt beim ersten Teil den Punkt weg (`.replace(/\.$/, '')`).
+    „… steht: Name“ + „Das musst du erst entfernen.“ (passt zu jedem Namen, „es“ nicht). tests/sprache.test.js prüft alle Texte
+    (Kommentare zählen nicht). Prüfen mit dem Skill humanizer-de (Modus „Locker“).
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

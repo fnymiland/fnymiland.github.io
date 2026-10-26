@@ -240,14 +240,14 @@ function glasInfoHtml(t) {
   if (t.b !== 'glaspalast') return '';
   const lvl = t.lvl || 1, nx = prachtNext(t), list = lvl >= 2 ? glasChoices() : [];
   return `<div class="label">${GLAS_STAGES[lvl - 1].name} · Stufe ${lvl} von ${GLAS_STAGES.length}</div>
-    ${lvl >= 2 && !list.length ? '<div class="label">🖼️ Ausstellungsstück in der Kuppel</div><p class="muted">Noch nichts zum Herzeigen – hier stellst du Stücke aus dem Sternenbasar ✨ und Pokale für deine Erfolge aus.</p>' : ''}
+    ${lvl >= 2 && !list.length ? '<div class="label">🖼️ Ausstellungsstück in der Kuppel</div><p class="muted">Noch nichts zum Herzeigen. Hier stellst du Stücke aus dem Sternenbasar ✨ und Pokale für deine Erfolge aus.</p>' : ''}
     ${lvl >= 2 && list.length ? `<div class="label">🖼️ Ausstellungsstück in der Kuppel</div>
       <div class="looks">${list.map(id => `<button class="look${t.stueck === id ? ' on' : ''}" data-glas="${id}">${escHtml(ITEMS[id].name)}</button>`).join('')}
         ${t.stueck ? '<button class="look" data-glas="">Vitrine leeren</button>' : ''}</div>` : ''}
-    ${lvl < 2 ? '<p class="muted">🖼️ Ab Stufe 2 wird die Kuppel eine Vitrine – darin zeigst du Seltenes aus dem Sternenbasar oder Pokale für deine Erfolge.</p>' : ''}
+    ${lvl < 2 ? '<p class="muted">🖼️ Ab Stufe 2 wird die Kuppel eine Vitrine. Darin zeigst du Seltenes aus dem Sternenbasar oder Pokale für deine Erfolge.</p>' : ''}
     ${nx ? `<div class="label">Nächste Stufe: ${nx.name}</div>
       <p class="muted">${nx.look[0].toUpperCase() + nx.look.slice(1)} · 🌸 +${ITEMS.glaspalast.beauty}.</p>
       <div class="stats">${costSpans(nx.cost.money, {})}</div>
       <div class="row"><button class="btn" id="p-pracht-up" ${canPay(nx.cost) ? '' : 'disabled'}>✨ Ausbauen</button></div>`
-    : '<p class="ok">Höchste Stufe – prächtiger geht es nicht!</p>'}`;
+    : '<p class="ok">Höchste Stufe, prächtiger geht es nicht!</p>'}`;
 }

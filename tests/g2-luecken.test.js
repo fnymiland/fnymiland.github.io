@@ -99,7 +99,7 @@ describe('Umfärben einer Brücke: kein Schild und kein Geist einer neuen Brück
 });
 
 describe('Übergang mit Fußgängerbrücke tragen/kopieren: nie mit einer Linie mitten in der Rampe (G2V-4)', () => {
-  const RAMPE = 'Erst die Linie zwischen Übergang und Weg abreißen – dort liegt die Rampe';
+  const RAMPE = 'Reiß erst die Linie zwischen Übergang und Weg ab, dort liegt die Rampe';
   const szene = () => {
     for (let x = 6; x <= 12; x++) game(`build('schiene', ${x}, 8, true)`);
     for (let y = 6; y <= 10; y++) game(`build('weg', 9, ${y}, true)`);

@@ -34,8 +34,8 @@ const hillOk = b => { const d = ITEMS[b]; return !!d && !HILL_NO.has(b) && !HILL
 // ✋ wegtragen, dann oben absetzen (157j); große Deko auch nicht (hillStuckOn)
 const HILL_CARRY_NO = new Set(['dach', 'dachtreppe', 'stuetze', 'pb_gleis', 'pb_station', 'seilbahn', 'ubahn', 'huegeltreppe', 'huegelrampe']);
 const hillCarryOk = b => { const d = ITEMS[b]; return !!d && !HILL_CARRY_NO.has(b) && (b === 'anhoehe' || b === 'weg' || b === 'schiene' || !!TERRAFORM[b] || (d.cat === 'deko' && !d.edge) || plazaOk(b)); };
-const HILL_STUCK_UP = 'Hier steht ein Gebäude – erst mit ✋ wegtragen, dann oben absetzen';
-const HILL_STUCK_DOWN = 'Oben steht ein Gebäude – erst abreißen oder mit ✋ wegtragen';
+const HILL_STUCK_UP = 'Hier steht ein Gebäude. Trag es erst mit ✋ weg und setz es dann oben ab.';
+const HILL_STUCK_DOWN = 'Oben steht ein Gebäude. Reiß es erst ab oder trag es mit ✋ weg.';
 // Steht auf Feld (x, y) etwas, das beim Anheben/Abtragen nicht mitkommt (Gebäude, große Deko)? → das Ding oder null. Nur, was noch in state.tiles
 // steht und das Feld deckt: im Abriss-Rechteck (batch) ist COVER noch vom alten Stand
 function hillStuckOn(x, y) {
@@ -52,11 +52,11 @@ function hillError(b, tiles) {
   if (!up) return null;
   if (!hillOk(b)) {
     const d = ITEMS[b];
-    return b === 'pb_gleis' || b === 'pb_station' ? 'Die Parkeisenbahn fährt unten – auf Anhöhen geht die Eisenbahn'
-      : b === 'tunneleinfahrt' ? 'Die Tunneleinfahrt steht unten – der Tunnel darf unter der Anhöhe weiterführen'
-      : b === 'seilbahn' ? 'Die Seilbahn-Station steht unten – nicht auf einer Anhöhe'
+    return b === 'pb_gleis' || b === 'pb_station' ? 'Die Parkeisenbahn fährt unten. Auf Anhöhen geht die Eisenbahn.'
+      : b === 'tunneleinfahrt' ? 'Die Tunneleinfahrt steht unten, der Tunnel darf unter der Anhöhe weiterführen'
+      : b === 'seilbahn' ? 'Die Seilbahn-Station steht unten, nicht auf einer Anhöhe'
       : HILL_ROOF.has(b) ? 'Auf einer Anhöhe geht keine Überdachung'
-      : d && HILL_WET.has(d.needs) ? 'Das gehört ans Wasser – oben auf der Anhöhe geht es nicht'
+      : d && HILL_WET.has(d.needs) ? 'Das gehört ans Wasser, oben auf der Anhöhe geht es nicht'
       : 'Das geht oben auf einer Anhöhe nicht';
   }
   if (!sameLevel(tiles)) return 'Nicht über die Kante einer Anhöhe';
@@ -83,7 +83,7 @@ function archAround(x, y) {
   }
   return false;
 }
-const ARCH_HERE = 'Hier steht eine Fußgängerbrücke – ihr Boden bleibt eben';
+const ARCH_HERE = 'Hier steht eine Fußgängerbrücke, ihr Boden bleibt eben';
 // Nach dem Laden (157l, 22.10.2026): Fußgängerbrücken, die schon vor archHillError an einer Kante standen, hingen über die Kante – sie werden wieder
 // Schranken. Bezahltes bleibt (footPaid/brp): im Fenster wieder einschalten kostet nichts, sobald der Boden eben ist. → Zahl der umgestellten
 function archHillRecheck() {
@@ -105,20 +105,20 @@ function hillRaiseError(x, y, noCost) {
   if (!available('anhoehe')) return `Anhöhe: ${lockText('anhoehe').replace('🔒 ', 'erst mit ')}`;
   if (!ownedTile(x, y)) return notMine(x, y);
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
-  if (bpFronts(x, y).length) return 'Vor dem Bergportal muss Platz bleiben – dort kommt die Schiene hinein';   // Block 157m
+  if (bpFronts(x, y).length) return 'Vor dem Bergportal muss Platz bleiben, dort kommt die Schiene hinein';   // Block 157m
   const t = objAt(x, y);
   if (t) {
-    if (t.b === 'huegeltreppe') return 'Hier steht eine Treppe – erst abreißen';   // Treppe (Block 157d)
-    if (t.b === 'huegelrampe') return 'Hier ist eine Gleis-Rampe – erst abreißen';
+    if (t.b === 'huegeltreppe') return 'Hier steht eine Treppe. Reiß sie erst ab.';   // Treppe (Block 157d)
+    if (t.b === 'huegelrampe') return 'Hier ist eine Gleis-Rampe. Reiß sie erst ab.';
     if (!hillCarryOk(t.b)) return HILL_STUCK_UP;                         // Gleise kommen mit hinauf (wie Wege); Gebäude nie (157j)
     const [w, h] = sizeOf(t.b, t.rot || 0, t);
-    if (w > 1 || h > 1) return 'Große Deko erst wegnehmen – sie kommt danach auf die fertige Anhöhe';
+    if (w > 1 || h > 1) return 'Nimm große Deko erst weg. Sie kommt danach auf die fertige Anhöhe.';
   }                                                                      // Wege (auch unter Platz-Dingen) kommen mit hinauf (Stufe 2)
   const ds = decosAt(x + ',' + y);                                       // Stütze im Eck-/Seitenplatz (geht auch ohne Dach): oben gibt es keine (smallError)
-  if (ds && ds.some(d => d && baseOf(d.b) === 'stuetze')) return 'Hier steht eine Stütze – erst wegnehmen';
+  if (ds && ds.some(d => d && baseOf(d.b) === 'stuetze')) return 'Hier steht eine Stütze. Nimm sie erst weg.';
   if (state.roofs && roofAt(x, y)) return 'Unter einer Überdachung geht keine Anhöhe';
   if (bkAt(x, y)) return 'Unter einer Brücke geht keine Anhöhe';             // Brücke (Block 160)
-  for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y]) if (state.edges.has(k)) return `Am Rand steht: ${ITEMS[state.edges.get(k).b].name} – erst entfernen`;
+  for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y]) if (state.edges.has(k)) return `Am Rand steht: ${ITEMS[state.edges.get(k).b].name}. Das musst du erst entfernen.`;
   for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return 'An der Ecke steht schon etwas';
   if (stairsAround(x, y, true).length) return 'Vor dem Fuß der Treppe muss Platz bleiben';   // Treppe (Block 157d): sonst führte sie in eine Wand
   if (rampsAround(x, y, true).length) return 'Vor dem Fuß der Gleis-Rampe muss Platz bleiben';
@@ -685,7 +685,7 @@ function stairRefitError(x, y) {
   const w = stairWidthTap(x, y), fit = refitStairs(x, y, true);
   if (w && w !== 'ecke') return null;
   if (fit) return null;
-  return w === 'ecke' ? 'Hier hängt eine Ecktreppe dran – um die Ecke geht nur die breite Treppe' : 'Hier steht schon eine Treppe, die passt';
+  return w === 'ecke' ? 'Hier hängt eine Ecktreppe dran. Um die Ecke geht nur die breite Treppe.' : 'Hier steht schon eine Treppe, die passt';
 }
 // Getragen abgelegt (✋, Gruppe, ⧉ Kopie: dropAt/dropGroup) wie gebaut: in der Ecke zwischen zwei breiten Treppen eine Ecktreppe (immer breit),
 // sonst gerade; dann die Treppen ringsum ausrichten. Sonst stand eine Ecktreppe vor gerader Wand bzw. eine gerade (auch schmale) in der Ecke –
@@ -779,28 +779,28 @@ function stairError(x, y, rot, move) {
   const into = !!hillAt(x, y);
   if (into) { const e = stairIntoError(x, y, move); if (e) return e; }
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
-  if (wegAt(x, y) != null) return 'Nicht auf einen Weg – stell die Treppe ans Ende des Wegs';
+  if (wegAt(x, y) != null) return 'Nicht auf einen Weg. Stell die Treppe ans Ende des Wegs.';
   if (archAround(x, y)) return ARCH_HERE;
-  if (bpFronts(x, y).length) return 'Vor dem Bergportal muss Platz bleiben – dort kommt die Schiene hinein';   // Block 157m
+  if (bpFronts(x, y).length) return 'Vor dem Bergportal muss Platz bleiben, dort kommt die Schiene hinein';   // Block 157m
   if (state.roofs && state.roofs.size && roofAt(x, y)) return 'Unter einer Überdachung geht keine Treppe';
   const ok = stairDirs(x, y, stairBase(x, y)), cd = ok.length ? [] : cornerDirs(x, y);
   if (cd.length) {                                                       // Ecktreppe zwischen zwei Treppen um die Ecke
     if (!cd.includes(rot & 3)) return 'Die Ecktreppe muss in die Ecke der Anhöhe zeigen';
-    for (const [ex, ey] of DIRS) { const e = state.edges.get(edgeBetween(x, y, x + ex, y + ey)); if (e) return `An der Ecktreppe steht: ${ITEMS[e.b].name} – erst entfernen`; }
+    for (const [ex, ey] of DIRS) { const e = state.edges.get(edgeBetween(x, y, x + ex, y + ey)); if (e) return `An der Ecktreppe steht: ${ITEMS[e.b].name}. Das musst du erst entfernen.`; }
     return null;
   }
   if (!ok.length && cornerDirs(x, y, stairBase(x, y), true).length) return STAIR_ECKE_BREIT;   // an schmalen Treppen keine Ecke
   if (!ok.length && into) {                                              // Randfeld, aber kein Fuß: davor Wasser, oder dahinter keine Anhöhe
     const lv = hillLevel(x, y), wet = DIRS.some(([dx, dy]) => hillLevel(x + dx, y + dy) === lv && hillLevel(x - dx, y - dy) < lv);
-    return wet ? 'Vor der Treppe braucht es Platz – kein Wasser' : 'Hinter der Treppe muss Anhöhe bleiben – hier ist sie zu schmal';
+    return wet ? 'Vor der Treppe braucht es Platz, kein Wasser' : 'Hinter der Treppe muss Anhöhe bleiben, hier ist sie zu schmal';
   }
-  if (!ok.length) return DIRS.some(([dx, dy]) => hillLevel(x + dx, y + dy) > hillLevel(x, y)) ? 'Vor der Treppe braucht es Platz – keine Anhöhe und kein Wasser' : 'Direkt vor die Wand einer Anhöhe stellen – die Treppe führt hinauf';
+  if (!ok.length) return DIRS.some(([dx, dy]) => hillLevel(x + dx, y + dy) > hillLevel(x, y)) ? 'Vor der Treppe braucht es Platz, keine Anhöhe und kein Wasser' : 'Stell sie direkt vor die Wand einer Anhöhe, die Treppe führt hinauf';
   if (!ok.includes(rot & 3)) return 'Die Treppe muss zur Anhöhe hinauf zeigen';
   const [dx, dy] = STAIR_UP[rot & 3];
-  for (const [nx, ny] of [[x - dx, y - dy], [x + dx, y + dy]]) { const e = state.edges.get(edgeBetween(x, y, nx, ny)); if (e) return `Quer vor der Treppe steht: ${ITEMS[e.b].name} – erst entfernen`; }
+  for (const [nx, ny] of [[x - dx, y - dy], [x + dx, y + dy]]) { const e = state.edges.get(edgeBetween(x, y, nx, ny)); if (e) return `Quer vor der Treppe steht: ${ITEMS[e.b].name}. Das musst du erst entfernen.`; }
   for (const [nx, ny] of [[x - dy, y + dx], [x + dy, y - dx]]) {         // daneben eine Treppe gleicher Richtung: wird breit, also keine Linie dazwischen
     const n = stairAt(nx, ny), e = n && stairRotOf(n) === (rot & 3) && state.edges.get(edgeBetween(x, y, nx, ny));
-    if (e) return `Zwischen den Treppen steht: ${ITEMS[e.b].name} – erst entfernen`;
+    if (e) return `Zwischen den Treppen steht: ${ITEMS[e.b].name}. Das musst du erst entfernen.`;
   }
   return null;
 }
@@ -812,7 +812,7 @@ function stairError(x, y, rot, move) {
 const stairBase = (x, y) => hillAt(x, y) ? hillLevel(x, y) - 1 : hillLevel(x, y);   // Ebene, auf der eine Treppe hier stünde
 const stairIntoBack = (x, y) => hillAt(x, y) ? ITEMS.anhoehe.cost : 0;   // Erstattung fürs Absenken (Preisprüfung, Schild, build)
 function stairIntoError(x, y, move) {
-  if (move) return 'Nur vor die Wand – in die Anhöhe die Treppe neu bauen';
+  if (move) return 'Nur vor die Wand. In die Anhöhe musst du die Treppe neu bauen.';
   const lv = hillLevel(x, y);
   if (lv !== 1) return 'Die Treppe führt nur auf die erste Ebene';
   if (DIRS.every(([dx, dy]) => hillLevel(x + dx, y + dy) >= lv)) return 'Die Treppe gehört an den Rand der Anhöhe';
@@ -824,10 +824,10 @@ function stairIntoError(x, y, move) {
   if (archAround(x, y)) return ARCH_HERE;
   if (bkOnHill(x, y)) return BK_ON_HILL;                                 // Brücke liegt auf (Block 160)
   const t = objAt(x, y), d = (decosAt(x + ',' + y) || []).find(Boolean);
-  if (t || d) return `Hier steht: ${ITEMS[(t || d).b].name} – erst wegnehmen`;
+  if (t || d) return `Hier steht: ${ITEMS[(t || d).b].name}. Das musst du erst wegnehmen.`;
   for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])   // wie lowerHill: stünden sonst an der Kante
-    if (state.edges.has(k)) return `Am Rand steht: ${ITEMS[state.edges.get(k).b].name} – erst entfernen`;
-  for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return `An der Ecke steht: ${ITEMS[postAt(vx, vy).b].name} – erst wegnehmen`;
+    if (state.edges.has(k)) return `Am Rand steht: ${ITEMS[state.edges.get(k).b].name}. Das musst du erst entfernen.`;
+  for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return `An der Ecke steht: ${ITEMS[postAt(vx, vy).b].name}. Das musst du erst wegnehmen.`;
   return null;
 }
 // Linie k an einer Treppe (edgeError): nicht quer vor den Fuß oder ans obere Ende, nicht mitten durch eine breite Treppe (die Linie
@@ -837,14 +837,14 @@ function stairEdgeError(k) {
   const [[ax, ay], [bx, by]] = edgeTiles(k), a = stairAt(ax, ay), b = stairAt(bx, by);
   if (bpOn()) for (const [px, py, ox, oy] of [[ax, ay, bx, by], [bx, by, ax, ay]]) {   // Bergportal (157m): nicht quer vor die Öffnung
     const t = bpAt(px, py);
-    if (t && ox === px - bpDir(t)[0] && oy === py - bpDir(t)[1]) return 'Nicht vor das Bergportal – dort fährt der Zug hinein';
+    if (t && ox === px - bpDir(t)[0] && oy === py - bpDir(t)[1]) return 'Nicht vor das Bergportal, dort fährt der Zug hinein';
   }
   if ((a && a.ecke) || (b && b.ecke)) return 'Nicht an die Ecktreppe';
   if (a && b && stairRotOf(a) === stairRotOf(b)) return stairSchmal(a) || stairSchmal(b) ? 'Nicht zwischen die Treppen' : 'Nicht mitten durch die breite Treppe';
   for (const [t, x, y, ox, oy] of [[a, ax, ay, bx, by], [b, bx, by, ax, ay]]) {
     if (!t) continue;
     const [dx, dy] = STAIR_UP[stairRotOf(t)];
-    if (Math.abs(ox - x) === Math.abs(dx) && Math.abs(oy - y) === Math.abs(dy)) return 'Nicht quer vor die Treppe – an ihre Seiten geht es';
+    if (Math.abs(ox - x) === Math.abs(dx) && Math.abs(oy - y) === Math.abs(dy)) return 'Nicht quer vor die Treppe, an ihre Seiten geht es';
   }
   if (!rampFresh().n) return null;
   const ra = rampAt(ax, ay), rb = rampAt(bx, by);
@@ -853,9 +853,9 @@ function stairEdgeError(k) {
   for (const [r, x, y, ox, oy] of [[ra, ax, ay, bx, by], [rb, bx, by, ax, ay]]) {
     if (!r) continue;
     const [dx, dy] = STAIR_UP[r.rot];
-    if (Math.abs(ox - x) === Math.abs(dx) && Math.abs(oy - y) === Math.abs(dy)) return 'Nicht quer vor die Gleis-Rampe – an ihre Seiten geht es';
+    if (Math.abs(ox - x) === Math.abs(dx) && Math.abs(oy - y) === Math.abs(dy)) return 'Nicht quer vor die Gleis-Rampe, an ihre Seiten geht es';
     // ganz breite Rampe A (157l, 22.10.2026): an ihrer offenen Seite (ohne Wange) reicht ihre Wand bis an die Feldgrenze – eine Linie stünde darin
-    if (rampWideForm(r.form) && !(ra && rb)) return 'Nicht an die offene Seite der Gleis-Rampe – dort steht ihre Wand';
+    if (rampWideForm(r.form) && !(ra && rb)) return 'Nicht an die offene Seite der Gleis-Rampe, dort steht ihre Wand';
   }
   return null;
 }
@@ -1351,10 +1351,10 @@ function rampError(x, y, rot, len = rampLen(), move = false, form = null) {
   for (const [fx, fy] of F) if (!ownedTile(fx, fy)) return notMine(fx, fy);
   if (into.length) { const e = rampIntoError(into, move, Fm); if (e) return e; }
   if (F.some(([fx, fy]) => terrainAt(fx, fy) === 'water')) return 'Nicht auf dem Wasser';
-  if (F.some(([fx, fy]) => wegAt(fx, fy) != null)) return 'Nicht auf einen Weg – Gleis und Weg kreuzen sich nur auf ebenem Boden';
+  if (F.some(([fx, fy]) => wegAt(fx, fy) != null)) return 'Nicht auf einen Weg. Gleis und Weg kreuzen sich nur auf ebenem Boden.';
   if (F.some(([fx, fy]) => archAround(fx, fy))) return ARCH_HERE;
-  if (F.some(([fx, fy]) => bpFronts(fx, fy).length)) return 'Vor dem Bergportal muss Platz bleiben – dort kommt die Schiene hinein';   // Block 157m
-  if (F.some(([fx, fy]) => { const t = objAt(fx, fy); return t && t.b === 'schiene'; })) return 'Nicht auf ein Gleis – stell die Rampe ans Ende des Gleises';
+  if (F.some(([fx, fy]) => bpFronts(fx, fy).length)) return 'Vor dem Bergportal muss Platz bleiben, dort kommt die Schiene hinein';   // Block 157m
+  if (F.some(([fx, fy]) => { const t = objAt(fx, fy); return t && t.b === 'schiene'; })) return 'Nicht auf ein Gleis. Stell die Rampe ans Ende des Gleises.';
   if (state.roofs && state.roofs.size && F.some(([fx, fy]) => roofAt(fx, fy))) return 'Unter einer Überdachung geht keine Gleis-Rampe';
   const ok = rampDirs(x, y, len, form);
   if (!ok.length) return rampWhy(x, y, len, form, into);
@@ -1366,11 +1366,11 @@ function rampError(x, y, rot, len = rampLen(), move = false, form = null) {
   const [dx, dy] = STAIR_UP[rot], [x0, y0] = F[0], [x1, y1] = F[len - 1];
   for (let vy = Math.min(y0, y1); vy <= Math.max(y0, y1) + 1; vy++) for (let vx = Math.min(x0, x1); vx <= Math.max(x0, x1) + 1; vx++) { const p = postAt(vx, vy); if (p) return `An der Ecke steht schon: ${ITEMS[p.b].name}`; }
   const edge = (ax, ay, bx, by) => state.edges.get(edgeBetween(ax, ay, bx, by));
-  for (const [ax, ay, bx, by] of [[x0, y0, x0 - dx, y0 - dy], [x1, y1, x1 + dx, y1 + dy]]) { const e = edge(ax, ay, bx, by); if (e) return `Quer vor der Gleis-Rampe steht: ${ITEMS[e.b].name} – erst entfernen`; }
-  for (let i = 1; i < len; i++) { const e = edge(...F[i - 1], ...F[i]); if (e) return `Quer über die Gleis-Rampe läuft: ${ITEMS[e.b].name} – erst entfernen`; }
+  for (const [ax, ay, bx, by] of [[x0, y0, x0 - dx, y0 - dy], [x1, y1, x1 + dx, y1 + dy]]) { const e = edge(ax, ay, bx, by); if (e) return `Quer vor der Gleis-Rampe steht: ${ITEMS[e.b].name}. Das musst du erst entfernen.`; }
+  for (let i = 1; i < len; i++) { const e = edge(...F[i - 1], ...F[i]); if (e) return `Quer über die Gleis-Rampe läuft: ${ITEMS[e.b].name}. Das musst du erst entfernen.`; }
   if (rampWideForm(form)) for (let i = 0; i < len; i++) for (const [nx, ny] of [[F[i][0] - dy, F[i][1] + dx], [F[i][0] + dy, F[i][1] - dx]]) {   // daneben ein gleicher Einschnitt
     const n = rampAt(nx, ny), e = n && n.rot === rot && n.form === form && n.i === i && edge(...F[i], nx, ny);
-    if (e) return `Zwischen den Einschnitten steht: ${ITEMS[e.b].name} – erst entfernen`;
+    if (e) return `Zwischen den Einschnitten steht: ${ITEMS[e.b].name}. Das musst du erst entfernen.`;
   }
   return null;
 }
@@ -1378,17 +1378,17 @@ function rampError(x, y, rot, len = rampLen(), move = false, form = null) {
 function rampWhy(x, y, len, form, into) {
   const G = [0, 1, 2, 3].map(r => rampFields(x, y, r, len)), at = (r, k) => { const [dx, dy] = STAIR_UP[r], [px, py] = G[r][k < 0 ? 0 : len - 1]; return [px + k * dx, py + k * dy]; };
   const base = r => { const lv = stairBase(...G[r][0]); return G[r].every(([px, py]) => stairBase(px, py) === lv) && hillLevel(...at(r, 1)) === lv + 1 && hillLevel(...at(r, -1)) === lv; };
-  if ([0, 1, 2, 3].some(r => base(r) && terrainAt(...at(r, -1)) === 'water')) return 'Vor der Gleis-Rampe braucht es Platz – kein Wasser';
+  if ([0, 1, 2, 3].some(r => base(r) && terrainAt(...at(r, -1)) === 'water')) return 'Vor der Gleis-Rampe braucht es Platz, kein Wasser';
   if ([0, 1, 2, 3].some(base)) return RAMP_FORMS[form].where;           // die Lage passt, nur nicht für diese Form
-  if (into.length) return [0, 1, 2, 3].every(r => hillLevel(...at(r, -1)) >= 1) ? 'Die Gleis-Rampe gehört an den Rand der Anhöhe' : 'Hinter der Gleis-Rampe muss Anhöhe bleiben – hier ist sie zu schmal';
-  return G[0].some(([fx, fy]) => DIRS.some(([dx, dy]) => hillLevel(fx + dx, fy + dy) > hillLevel(fx, fy))) ? 'Vor der Gleis-Rampe braucht es Platz – keine Anhöhe und kein Wasser' : RAMP_FORMS[form].where;
+  if (into.length) return [0, 1, 2, 3].every(r => hillLevel(...at(r, -1)) >= 1) ? 'Die Gleis-Rampe gehört an den Rand der Anhöhe' : 'Hinter der Gleis-Rampe muss Anhöhe bleiben, hier ist sie zu schmal';
+  return G[0].some(([fx, fy]) => DIRS.some(([dx, dy]) => hillLevel(fx + dx, fy + dy) > hillLevel(fx, fy))) ? 'Vor der Gleis-Rampe braucht es Platz, keine Anhöhe und kein Wasser' : RAMP_FORMS[form].where;
 }
 // In eine bestehende Anhöhe (A, C; wie stairIntoError): nur die erste Ebene, die Felder leer (nichts darauf, keine Linie am Rand, nichts an den
 // Ecken) und keine Treppe/Rampe, die auf sie hinaufführt (sie führte sonst ins Leere). Getragen (✋, Gruppe, ⧉ Kopie) nie: Ablegen senkt nichts
 // ab. B und D stehen immer davor
 function rampIntoError(into, move, Fm) {
   if (!Fm.cut) return Fm.where;
-  if (move) return 'Nur in einen schon vorhandenen Einschnitt – in die Anhöhe die Gleis-Rampe neu bauen';
+  if (move) return 'Nur in einen schon vorhandenen Einschnitt. In die Anhöhe musst du die Gleis-Rampe neu bauen.';
   if (into.some(([x, y]) => hillLevel(x, y) !== 1)) return 'Die Gleis-Rampe führt nur auf die erste Ebene';
   for (const [x, y] of into) {
     if (stairsAround(x, y).length) return 'Hierher führt schon eine Treppe hinauf';
@@ -1396,10 +1396,10 @@ function rampIntoError(into, move, Fm) {
     if (archAround(x, y)) return ARCH_HERE;
     if (bkOnHill(x, y)) return BK_ON_HILL;                               // Brücke liegt auf (Block 160)
     const t = objAt(x, y), d = (decosAt(x + ',' + y) || []).find(Boolean);
-    if (t || d) return `Hier steht: ${ITEMS[(t || d).b].name} – erst wegnehmen`;
+    if (t || d) return `Hier steht: ${ITEMS[(t || d).b].name}. Das musst du erst wegnehmen.`;
     for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])
-      if (state.edges.has(k)) return `Am Rand steht: ${ITEMS[state.edges.get(k).b].name} – erst entfernen`;
-    for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return `An der Ecke steht: ${ITEMS[postAt(vx, vy).b].name} – erst wegnehmen`;
+      if (state.edges.has(k)) return `Am Rand steht: ${ITEMS[state.edges.get(k).b].name}. Das musst du erst entfernen.`;
+    for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return `An der Ecke steht: ${ITEMS[postAt(vx, vy).b].name}. Das musst du erst wegnehmen.`;
   }
   return null;
 }
@@ -1433,8 +1433,8 @@ function rampFormPlan(x, y, form) {
   if (r.form === form) return `${Fm.name} ist sie schon`;
   const [Du, Dv] = STAIR_UP[r.rot], [tx, ty] = rampFields(r.ax, r.ay, r.rot, r.len)[r.len - 1], fx = tx - (Fm.len - 1) * Du, fy = ty - (Fm.len - 1) * Dv;
   const ax = Math.min(fx, tx), ay = Math.min(fy, ty);
-  if (!!RAMP_FORMS[r.form].cut !== !!Fm.cut) return Fm.cut ? `${Fm.name} liegt in der Anhöhe – diese Rampe steht davor. Dafür abreißen und auf den Rand der Anhöhe neu bauen`
-    : `${Fm.name} steht vor der Wand – diese Rampe liegt in der Anhöhe. Dafür abreißen und vor der Wand neu bauen`;
+  if (!!RAMP_FORMS[r.form].cut !== !!Fm.cut) return Fm.cut ? `${Fm.name} liegt in der Anhöhe, diese Rampe steht davor. Reiß sie dafür ab und bau sie auf dem Rand der Anhöhe neu.`
+    : `${Fm.name} steht vor der Wand, diese Rampe liegt in der Anhöhe. Reiß sie dafür ab und bau sie vor der Wand neu.`;
   rampIgnore = r.k;                                                     // probehalber ohne die alte prüfen (wie getragen: nichts absenken)
   let err;
   try { err = rampError(ax, ay, r.rot, Fm.len, true, form); } finally { rampIgnore = null; }
@@ -1886,22 +1886,22 @@ function bpRot(x, y) {
 }
 // Darf hier ein Portal stehen (placeError)? move: getragen (✋, Gruppe, ⧉ Kopie) – nie, es sitzt in der Wand
 function bpError(x, y, rot, move, noCost) {
-  if (move) return 'Das Bergportal sitzt in der Wand – abreißen und an der neuen Wand neu bauen';
+  if (move) return 'Das Bergportal sitzt in der Wand. Reiß es ab und bau es an der neuen Wand neu.';
   if (!ownedTile(x, y)) return notMine(x, y);
-  if (!hillAt(x, y)) return 'Auf den Rand einer Anhöhe setzen – die Öffnung kommt in ihre Wand';
+  if (!hillAt(x, y)) return 'Setz es auf den Rand einer Anhöhe, die Öffnung kommt in ihre Wand';
   if (hillLevel(x, y) !== 1) return 'Das Bergportal geht nur in die Wand der ersten Ebene';
   const ok = bpDirs(x, y);
-  if (!ok.length) return DIRS.some(([dx, dy]) => hillLevel(x - dx, y - dy) < 1) ? 'Vor der Wand braucht es ebenen Boden – kein Wasser, keine Treppe, keine Gleis-Rampe' : 'Das Bergportal gehört an den Rand der Anhöhe';
+  if (!ok.length) return DIRS.some(([dx, dy]) => hillLevel(x - dx, y - dy) < 1) ? 'Vor der Wand braucht es ebenen Boden, also kein Wasser, keine Treppe und keine Gleis-Rampe' : 'Das Bergportal gehört an den Rand der Anhöhe';
   if (!ok.includes(rot & 3)) return 'Das Bergportal muss in die Wand zeigen';
   const t = objAt(x, y), dd = (decosAt(x + ',' + y) || []).find(Boolean);
-  if (t || dd) return `Oben steht: ${ITEMS[(t || dd).b].name} – erst wegnehmen`;
-  if (tunnelAt(x, y)) return 'Nicht auf den Tunnel – das Portal kommt vor sein Ende';
+  if (t || dd) return `Oben steht: ${ITEMS[(t || dd).b].name}. Das musst du erst wegnehmen.`;
+  if (tunnelAt(x, y)) return 'Nicht auf den Tunnel, das Portal kommt vor sein Ende';
   if (stairsAround(x, y).length) return 'Hierher führt eine Treppe hinauf';
   if (rampsAround(x, y).length) return 'Hierher führt eine Gleis-Rampe hinauf';
   if (archAround(x, y)) return ARCH_HERE;
   const [dx, dy] = STAIR_UP[rot & 3], e = state.edges.get(edgeBetween(x, y, x - dx, y - dy));
-  if (e) return `Vor der Wand steht: ${ITEMS[e.b].name} – erst entfernen`;
-  if (bkAt(x - dx, y - dy)) return 'Vor dieser Wand liegt eine Brücke auf – die Öffnung käme unter ihr Ende';   // 160c R9
+  if (e) return `Vor der Wand steht: ${ITEMS[e.b].name}. Das musst du erst entfernen.`;
+  if (bkAt(x - dx, y - dy)) return 'Vor dieser Wand liegt eine Brücke auf, die Öffnung käme unter ihr Ende';   // 160c R9
   const ter = terrainAt(x, y);
   if (ter !== 'grass' && !willClear('bergportal', ter)) return needError(ITEMS.bergportal, ter, {}) || 'Hier geht es nicht';
   if (noCost) return null;

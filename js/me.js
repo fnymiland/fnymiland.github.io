@@ -211,7 +211,7 @@ function meTip() {
   const n = readyList().ready.length;
   if (n) return { say: `✨ ${n === 1 ? 'Eins kann' : n + ' können'} ausgebaut werden!`, text: 'Im Rathaus unter „Zu tun“ siehst du alles, was du jetzt ausbauen kannst.', real: true,
     go: () => openTownHall('ready'), goLabel: '🏛️ Zeig mir' };
-  return meWish() || { say: pickOne(ME_CHAT()), text: 'Alles läuft prima. Tipp mich an, wenn du nicht weiterweißt – ich sag dir, was gerade dran ist.' };
+  return meWish() || { say: pickOne(ME_CHAT()), text: 'Alles läuft prima. Tipp mich an, wenn du nicht weiterweißt. Ich sag dir, was gerade dran ist.' };
 }
 // ab und zu von selbst (alle 3–5 Minuten, nur wenn sie zu sehen ist und es etwas zu sagen gibt)
 function meHelp(now) {
@@ -226,7 +226,7 @@ function openMeInfo() {
   const L = meLook(), tip = meTip();
   speak(meFig, tip.say);
   showPanel(`<h3>${ANIMALS[L.a].icon} ${escHtml(L.name || ME_NAME)}</h3>
-    <p class="muted">Das bist du – ${ME_NAME} von ${escHtml(state.town.name)}.</p>
+    <p class="muted">Das bist du: ${ME_NAME} von ${escHtml(state.town.name)}.</p>
     <div class="status"><div>${tip.text}</div></div>
     <div class="row">${tip.go ? `<button class="btn" id="p-tip">${tip.goLabel}</button>` : ''}<button class="btn ghost" id="p-look">✏️ Aussehen</button><button class="btn ghost" id="p-close">Schließen</button></div>`);
   if ($('p-tip')) $('p-tip').onclick = () => { closePanel(); tip.go(); };
@@ -308,7 +308,7 @@ function meHallHtml() {
   };
   const wearBtns = (slot, none) => `<div class="looks"><button class="look${on(!L[slot])}" data-mew="${slot}:">${none}</button>${Object.entries(WEAR[slot]).map(([id, n]) => wearOk(id)
     ? `<button class="look${on(L[slot] === id)}" data-mew="${slot}:${id}">${n}</button>`
-    : `<button class="look locked${on(meLockOpen === id)}" data-mewlock="${id}" aria-label="${n} – gesperrt, antippen: wofür es das gibt">🔒 ${n}</button>`).join('')}</div>${lockInfo(slot)}`;
+    : `<button class="look locked${on(meLockOpen === id)}" data-mewlock="${id}" aria-label="${n} (gesperrt, antippen: wofür es das gibt)">🔒 ${n}</button>`).join('')}</div>${lockInfo(slot)}`;
   return `
     <div class="fig-edit me-edit"><canvas id="me-prev" width="120" height="150" aria-hidden="true"></canvas><div>
       <label class="label" for="me-name">Name auf dem Schild</label>
@@ -323,7 +323,7 @@ function meHallHtml() {
     <div class="label">Shirt</div>
     <div class="swatches fig-sw">${SHIRTS.map((c, i) => `<button class="sw${on(L.shirt === i)}" data-meshirt="${i}" style="background:${c}" aria-label="Shirt ${i + 1}"></button>`).join('')}</div>
     ${WEAR_SLOTS.map(([slot, label]) => `<div class="label">${label}</div>${wearBtns(slot, 'ohne')}`).join('')}
-    <p class="muted">🔒 Gesperrtes gibt es für Erfolge – antippen zeigt, wofür und wie weit du bist.</p>`;
+    <p class="muted">🔒 Gesperrtes gibt es für Erfolge. Tipp es an, dann siehst du, wofür und wie weit du bist.</p>`;
 }
 function wireMeHall(card) {
   // neu zeichnen, aber an derselben Stelle bleiben (Rückmeldung Nutzer: nach jeder Wahl sprang es nach oben)

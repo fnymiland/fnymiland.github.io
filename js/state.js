@@ -518,8 +518,8 @@ function afterLoad() {
   delete state.fitLm;
   nameHouses();
   recalc();
-  if (bgs.length) { for (const [bx, by, br] of bgs) bgGarden(bx, by, br); recalc(); setTimeout(() => toast('🌿 Neu: Der Botanische Garten ist umgebaut – Hecke, Weg, Beete, Bäume, Laternen und Teich sind jetzt echte Dinge, die du verändern kannst.'), 3600); }
-  if (wgs.length) { for (const [b, wx, wy, wr] of wgs) wonderGardenFor(b, wx, wy, wr); recalc(); setTimeout(() => toast(`🎡 Neu: ${wgs.map(w => ITEMS[w[0]].name).join(' und ')} ${wgs.length > 1 ? 'sind' : 'ist'} umgebaut – Wege, Zaun, Hecke, Bänke, Bäume und Laternen drumherum sind jetzt echte Dinge, die du verändern kannst.`), bgs.length ? 9000 : 3600); }
+  if (bgs.length) { for (const [bx, by, br] of bgs) bgGarden(bx, by, br); recalc(); setTimeout(() => toast('🌿 Neu: Der Botanische Garten ist umgebaut. Hecke, Weg, Beete, Bäume, Laternen und Teich sind jetzt echte Dinge, die du verändern kannst.'), 3600); }
+  if (wgs.length) { for (const [b, wx, wy, wr] of wgs) wonderGardenFor(b, wx, wy, wr); recalc(); setTimeout(() => toast(`🎡 Neu: ${wgs.map(w => ITEMS[w[0]].name).join(' und ')} ${wgs.length > 1 ? 'sind' : 'ist'} umgebaut. Wege, Zaun, Hecke, Bänke, Bäume und Laternen drumherum sind jetzt echte Dinge, die du verändern kannst.`), bgs.length ? 9000 : 3600); }
   const arches = archHillRecheck();                // Fußgängerbrücken an der Kante einer Anhöhe (157l, hills.js): wieder Schranken
   if (arches) recalc();
   collectAlbum();
@@ -531,9 +531,9 @@ function afterLoad() {
   if (hall) setTimeout(() => announceHall(hall), 1600);
   if (ports) setTimeout(() => announceHarbors(ports), 2000);
   if (lights) setTimeout(() => toast('🗼 Neu: Dein Leuchtturm ist jetzt ein ganzes Kap mit Wärterhaus und großem Leuchtfeuer!'), 2400);
-  if (hbfs) setTimeout(() => toast(`🚉 Neu: Der Hauptbahnhof hat die Eingangshalle in der Mitte – Gleis, Steig, Halle, Steig, Gleis. Gleise können ein Feld gerückt sein: Strecken davor prüfen${hbfs.stuck ? ` · ${hbfs.stuck === 1 ? 'Einer hatte' : hbfs.stuck + ' hatten'} keinen Platz – im Fenster umbauen` : ''}`), 2800);
-  if (arches) setTimeout(() => toast(`🌉 ${arches === 1 ? 'Eine Fußgängerbrücke stand' : arches + ' Fußgängerbrücken standen'} an der Kante einer Anhöhe – dort sind jetzt wieder Schranken. Bezahlt ist sie noch: im Fenster wieder einschalten, wenn der Boden eben ist.`), 3200);
-  if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
+  if (hbfs) setTimeout(() => toast(`🚉 Neu: Der Hauptbahnhof hat die Eingangshalle in der Mitte (Gleis, Steig, Halle, Steig, Gleis). Gleise können ein Feld gerückt sein: Strecken davor prüfen${hbfs.stuck ? ` · ${hbfs.stuck === 1 ? 'Einer hatte' : hbfs.stuck + ' hatten'} keinen Platz, im Fenster umbauen` : ''}`), 2800);
+  if (arches) setTimeout(() => toast(`🌉 ${arches === 1 ? 'Eine Fußgängerbrücke stand' : arches + ' Fußgängerbrücken standen'} an der Kante einer Anhöhe. Dort sind jetzt wieder Schranken. Bezahlt ist sie noch: im Fenster wieder einschalten, wenn der Boden eben ist.`), 3200);
+  if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')}, die Kosten sind erstattet.`), 800);
 }
 
 // Export als Datei (landet auf dem iPad in „Dateien“)

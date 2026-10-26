@@ -37,7 +37,7 @@ describe('Regeln brechen', () => {
     game("rampNewForm = 'b'; build('huegelrampe', 12, 15)");                  // 12,15 oben … 12,17 Fuß, längs y
     game("tool = 'schiene'; startPlan('line', { x: 9, y: 16 }, { x: 15, y: 16 }, true)");   // quer über das mittlere Feld
     let s = game('(r => [r.states.get("12,16"), r.firstErr, r.order.length])(planScan(plan))');
-    expect(s).toEqual(['bad', 'Quer über die Gleis-Rampe geht kein Gleis – sie führt nur hinauf', 6]);
+    expect(s).toEqual(['bad', 'Quer über die Gleis-Rampe geht kein Gleis, sie führt nur hinauf', 6]);
     game("startPlan('line', { x: 12, y: 21 }, { x: 12, y: 11 }, true)");      // längs: unten, Rampe, oben
     s = game('(r => [r.states.get("12,16"), r.states.get("12,15"), r.firstErr, r.bad])(planScan(plan))');
     expect(s).toEqual(['same', 'same', null, 0]);

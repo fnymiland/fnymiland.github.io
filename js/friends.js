@@ -165,7 +165,7 @@ async function visitHeart() {
     toast('❤️ Herz dagelassen!');
   } catch (e) {
     const err = String((e && (e.code || e.message)) || '');
-    toast(/permission/i.test(err) ? '❤️ Ging nicht – heute schon eins dagelassen (oder die Datenbank-Regeln sind noch alt)' : '❤️ Ging nicht – keine Verbindung?');
+    toast(/permission/i.test(err) ? '❤️ Ging nicht. Du hast heute schon eins dagelassen (oder die Datenbank-Regeln sind noch alt).' : '❤️ Ging nicht. Keine Verbindung?');
   }
 }
 function visitBook() {
@@ -182,7 +182,7 @@ function visitBook() {
     $('m-close').onclick = closeModal;
     $('bk-send').onclick = async () => {
       const n = frLS('book_' + dayKey()) || 0;
-      if (n >= BOOK_PER_DAY) { toast(`📖 Heute hast du schon ${BOOK_PER_DAY} Einträge geschrieben – morgen wieder`); return; }
+      if (n >= BOOK_PER_DAY) { toast(`📖 Heute hast du schon ${BOOK_PER_DAY} Einträge geschrieben. Morgen wieder!`); return; }
       // Block 141: g_<ich>_<Tag>_<0–2> – die Regeln lassen je Tag nur diese drei zu (nie überschreiben); belegt (anderes Gerät): nächster
       let ok = false, err = null;
       for (let i = n; i < BOOK_PER_DAY && !ok; i++) {
@@ -190,8 +190,8 @@ function visitBook() {
         catch (e) { err = e; if (!/permission/i.test(String((e && (e.code || e.message)) || ''))) break; }
       }
       if (ok) { bondAdd(visitUser.uid, visitOwner, BOND_PTS.book); closeModal(); toast('📖 Eingetragen!'); }
-      else if (err && /permission/i.test(String(err.code || err.message || ''))) { frLS('book_' + dayKey(), BOOK_PER_DAY); toast(`📖 Heute hast du hier schon ${BOOK_PER_DAY} Einträge geschrieben – morgen wieder`); }
-      else toast('📖 Ging nicht – keine Verbindung?');
+      else if (err && /permission/i.test(String(err.code || err.message || ''))) { frLS('book_' + dayKey(), BOOK_PER_DAY); toast(`📖 Heute hast du hier schon ${BOOK_PER_DAY} Einträge geschrieben. Morgen wieder!`); }
+      else toast('📖 Ging nicht. Keine Verbindung?');
     };
   };
   draw();
@@ -214,7 +214,7 @@ function friendsInboxWatch() {
   if (!statsOff) statsOff = cloudApi.watch(`users/${uid}/bookStats`, v => { statsAll = v || {}; });   // Zähler (Block 141)
   if (!mailOff) mailOff = cloudApi.watch(`mail/${uid}`, v => {
     const old = mailAll; mailAll = v || {};
-    for (const [id, m] of Object.entries(mailAll)) if (!old[id] && m) toast(`${m.sv ? '🎁 Souvenir' : '📬 Päckchen'} von ${m.n} – oben unter 🌐 Online → Freunde`);
+    for (const [id, m] of Object.entries(mailAll)) if (!old[id] && m) toast(`${m.sv ? '🎁 Souvenir' : '📬 Päckchen'} von ${m.n}, du findest es oben unter 🌐 Online → Freunde`);
     groundVersion++;                                                    // Briefkasten-Fähnchen am Rathaus neu zeichnen
     mailLoaded = true;
     friendsDot(); welcomeBack();
@@ -333,7 +333,7 @@ function friendsHallHtml(part) {
     <div class="label">👋 Wer war da</div>
     ${people.length ? people.map((p, i) => `<div class="fr-row fb-p"${i >= 8 ? ' hidden' : ''}><span>${(ANIMALS[p.a] || ANIMALS[0]).icon} ${escHtml(p.n)} <small class="fb-c">${counts(p)}</small></span><small class="muted">${ago(p.last)}</small></div>`).join('')
       + (people.length > 8 ? `<div class="row"><button class="btn ghost small" data-fbmore="p">Alle ${people.length} anzeigen</button></div>` : '')
-      : '<p class="muted">Noch niemand – teile deinen Freundescode.</p>'}
+      : '<p class="muted">Noch niemand. Teile deinen Freundescode.</p>'}
     <div class="label">📖 Gästebuch${tot('g') ? ` · ${fmt(tot('g'))}` : ''}</div>
     ${gs.map(([id, e], i) => `<div class="fr-row fb-g"${i >= 10 ? ' hidden' : ''}><span>${BOOK_STICKERS[e.s] || ''} <b>${escHtml(e.n)}</b> ${icon(e)}: ${escHtml(BOOK_LINES[e.t] || '')} <small class="muted">${when(e)}</small></span>
       <span class="fr-btns"><button class="btn ghost small" data-bdel="${escHtml(id)}" aria-label="Eintrag entfernen">✕</button></span></div>`).join('') || '<p class="muted">Noch leer.</p>'}
@@ -360,7 +360,7 @@ async function mailClaim(id) {
   try {
     const r = await cloudApi.tx(`mail/${uid}/${id}`, cur => { if (!cur) return undefined; got = cur; return null; });
     if (!r.ok || !got) { toast('📬 Das Päckchen wurde schon abgeholt'); openNet('freunde'); return; }
-  } catch (e) { toast('Hat nicht geklappt – später nochmal'); return; }
+  } catch (e) { toast('Hat nicht geklappt. Versuch es später nochmal.'); return; }
   const add = {};
   for (const [r, n] of Object.entries(got.items || {})) if (RES[r] && isFinite(n) && n > 0) { const v = Math.min(n, MAIL_MAX); state.res[r] = (state.res[r] || 0) + v; add[r] = v; }
   const sv = got.sv && typeof svReceive === 'function' ? svReceive(id, got) : null;   // Souvenir: ins Sammelregal (Block 129)
@@ -379,17 +379,17 @@ const wishSentKey = uid => 'wsent_' + (cloudUser ? cloudUser.uid : '') + '_' + u
 function wishSent(uid, w) { const v = frLS(wishSentKey(uid)); return v && w && v.at === w.at && v.r === w.r ? { n: +v.n || 0, base: +v.base || 0 } : { n: 0, base: w ? w.got : 0 }; }
 function wishSentAdd(uid, w, n) { const v = wishSent(uid, w); frLS(wishSentKey(uid), { at: w.at, r: w.r, n: v.n + n, base: v.n ? v.base : w.got }); }
 const wishCovered = (uid, w) => { const v = wishSent(uid, w); return Math.max(w.got, v.n ? v.base + v.n : 0); };   // abgeholt oder von mir unterwegs
-const mailFailText = uid => frList[uid] && frList[uid].st === 'freund' ? '🎁 Ging gerade nicht – keine Verbindung? Gleich nochmal versuchen' : '🎁 Ging nicht – ihr seid nicht mehr befreundet';
+const mailFailText = uid => frList[uid] && frList[uid].st === 'freund' ? '🎁 Ging gerade nicht. Keine Verbindung? Versuch es gleich nochmal.' : '🎁 Ging nicht, ihr seid nicht mehr befreundet';
 function mailCompose(friendUid, name, wish = null) {
   if (viewOnly()) { cloudBlocked(); return; }
   if (!wish) return;
   const sent = (frLS('mail_' + dayKey()) || {})[friendUid] || 0;
-  if (sent >= MAIL_PER_DAY) { toast(`🎁 Heute schon ${MAIL_PER_DAY} Päckchen an ${name} – morgen wieder`); return; }
+  if (sent >= MAIL_PER_DAY) { toast(`🎁 Heute schon ${MAIL_PER_DAY} Päckchen an ${name}. Morgen wieder!`); return; }
   const r = wish.r, need = Math.max(0, wish.n - wishCovered(friendUid, wish)), have = Math.floor(state.res[r] || 0), max = Math.min(need, have);
   const pick = { [r]: max };
   const draw = () => {
     openModal(`<h2>🎁 ${escHtml(name)} helfen</h2>
-      <p class="ok">📌 ${escHtml(name)} wünscht sich ${RES[r].icon} ${fmt(wish.n)} ${RES[r].name} – es fehlen noch ${fmt(need)}.</p>
+      <p class="ok">📌 ${escHtml(name)} wünscht sich ${RES[r].icon} ${fmt(wish.n)} ${RES[r].name}. Es fehlen noch ${fmt(need)}.</p>
       ${have ? `<div class="fr-row"><span>${RES[r].icon} ${RES[r].name} <small class="muted">(${fmt(have)} da)</small></span>
         <span class="fr-btns"><button class="btn ghost small" data-mm="-1" aria-label="weniger">−</button><b>${fmt(pick[r])}</b><button class="btn ghost small" data-mm="1" aria-label="mehr">+</button></span></div>`
         : '<p class="muted">Du hast gerade nichts davon.</p>'}
@@ -408,7 +408,7 @@ let mailBusy = false;
 async function mailSend(friendUid, name, pick, wish = null) {
   if (mailBusy) return;
   if (viewOnly()) { cloudBlocked(); return; }
-  if (((frLS('mail_' + dayKey()) || {})[friendUid] || 0) >= MAIL_PER_DAY) { toast(`🎁 Heute schon ${MAIL_PER_DAY} Päckchen an ${name} – morgen wieder`); return; }
+  if (((frLS('mail_' + dayKey()) || {})[friendUid] || 0) >= MAIL_PER_DAY) { toast(`🎁 Heute schon ${MAIL_PER_DAY} Päckchen an ${name}. Morgen wieder!`); return; }
   const items = {};
   for (const [r, n] of Object.entries(pick)) if (RES[r] && n > 0 && state.res[r] >= n) items[r] = Math.floor(n);
   if (!Object.keys(items).length) return;
@@ -519,13 +519,13 @@ function wishSuggest() {
 }
 const WISH_AMOUNTS = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 50000];
 function wishHtml() {
-  if (!cloudUser) return `<div class="label">📌 Wunschzettel</div><p class="muted">Mit ☁️ Online und Freunden kannst du hier einen Wunsch aushängen – Freunde helfen dir mit Päckchen.</p>`;
+  if (!cloudUser) return `<div class="label">📌 Wunschzettel</div><p class="muted">Mit ☁️ Online und Freunden kannst du hier einen Wunsch aushängen, und Freunde helfen dir mit Päckchen.</p>`;
   const w = myWish && !wishExpired(myWish) ? myWish : null;          // läuft auch ab, während das Fenster offen ist
   const inBox = w ? Object.values(mailAll).reduce((s, m) => s + ((m && m.items && +m.items[w.r]) || 0), 0) : 0;   // geschickt, noch nicht abgeholt
   return `<div class="label">📌 Wunschzettel</div>${w ? `<div class="hall-row"><span>${RES[w.r].icon} ${fmt(Math.min(w.got, w.n))} / ${fmt(w.n)} ${RES[w.r].name}${w.got >= w.n ? ' · <b class="ok">✓ erfüllt!</b>' : ` <small class="muted">· ${wishLeft(w)}</small>`}</span>
       <span><button class="btn ghost small" data-wishset="1">${w.got >= w.n ? 'Neuer Wunsch' : 'Ändern'}</button> <button class="btn ghost small" data-wishoff="1">Abnehmen</button></span></div><div class="wish-bar"><i style="width:${Math.min(100, w.got / w.n * 100)}%"></i></div>
-      ${inBox > 0 ? `<p class="ok">📬 ${RES[w.r].icon} ${fmt(inBox)} liegen schon in deinem Briefkasten – unter 🌐 → Freunde abholen, dann zählt es.</p>` : ''}`
-    : `<p class="muted">Häng einen Wunsch aus – deine Freunde sehen ihn 24 Stunden lang und können mit Päckchen helfen.</p><div class="row"><button class="btn small" data-wishset="1">📌 Wunsch aushängen</button></div>`}`;
+      ${inBox > 0 ? `<p class="ok">📬 ${RES[w.r].icon} ${fmt(inBox)} liegen schon in deinem Briefkasten. Hol sie unter 🌐 → Freunde ab, dann zählen sie.</p>` : ''}`
+    : `<p class="muted">Häng einen Wunsch aus. Deine Freunde sehen ihn 24 Stunden lang und können mit Päckchen helfen.</p><div class="row"><button class="btn small" data-wishset="1">📌 Wunsch aushängen</button></div>`}`;
 }
 function openWishPicker() {
   if (viewOnly()) { cloudBlocked(); return; }
@@ -556,7 +556,7 @@ async function mailThanks(uid, id, got, add) {
       const wid = await liveWorldId();
       const r = await cloudApi.tx(`worlds/${wid}/wish`, cur => { const w = wishClean(cur); if (!w || !add[w.r] || w.got >= w.n) return undefined; return { ...cur, got: Math.min(w.n, w.got + add[w.r]) }; });
       const w = r && r.ok && wishClean(r.val);
-      if (w) { myWish = w; wishWid = wid; if (w.got >= w.n) toast(`📌 Wunsch erfüllt: ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} – danke, ${got.n}!`); }
+      if (w) { myWish = w; wishWid = wid; if (w.got >= w.n) toast(`📌 Wunsch erfüllt: ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name}. Danke, ${got.n}!`); }
     } catch (e) { /* Wunsch inzwischen weg */ }
   }
   try { cloudApi.set(`book/${got.from}/d_${uid}_${id}`, { k: 'd', from: uid, n: myNick(), a: await friendAnimal(uid).catch(() => 0), at: cloudApi.TS() }).catch(() => {}); } catch (e) { /* egal */ }
@@ -585,10 +585,10 @@ async function togglePartner(id, e) {
   if (viewOnly()) { cloudBlocked(); return; }
   if (state.partner && state.partner.uid === id) { state.partner = null; cloudTouched(); save(); toast('🚩 Keine Partnerstadt mehr'); return; }
   const f = await friendFlag(id, e);
-  if (!f) { toast('🚩 Seine Flagge ist gerade nicht zu sehen – später nochmal'); return; }
+  if (!f) { toast('🚩 Die Flagge ist gerade nicht zu sehen. Versuch es später nochmal.'); return; }
   state.partner = { uid: id, name: String(e.name || 'Freund').slice(0, 40), c: String(f.c).slice(0, 20), s: String(f.s).slice(0, 8) };
   cloudTouched(); save();
-  toast(`🚩 ${state.partner.name} ist jetzt deine Partnerstadt – die Flagge weht am Rathaus`);
+  toast(`🚩 ${state.partner.name} ist jetzt deine Partnerstadt. Die Flagge weht am Rathaus.`);
 }
 // --- Freundesschiffe: ab und zu legt ein Boot mit der Flagge eines Freundes am Hafen an (nur Bild, keine Daten) ---
 function friendBoats() {

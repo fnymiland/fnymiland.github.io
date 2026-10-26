@@ -14,7 +14,7 @@ beforeEach(() => {
 const block = (x0, y0, x1, y1) => { const out = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) out.push([x, y]); return out; };
 const hills = cells => game(`for (const [x, y] of ${JSON.stringify(cells)}) build('anhoehe', x, y, true); recalc()`);
 const put = (x, y, t) => game(`state.tiles.set('${x},${y}', ${JSON.stringify({ lvl: 1, ...t })}); recalc()`);
-const STUCK_UP = 'Hier steht ein Gebäude – erst mit ✋ wegtragen, dann oben absetzen';
+const STUCK_UP = 'Hier steht ein Gebäude. Trag es erst mit ✋ weg und setz es dann oben ab.';
 const panel = () => game("document.getElementById('panel').textContent");
 const toastText = () => game("document.getElementById('toast').textContent");
 // Anhöhe 10–13 × 10–13 (oben), davor Ebene 0; die Ostwand liegt zwischen x = 13 und 14, die Südwand zwischen y = 13 und 14
@@ -35,8 +35,8 @@ describe('Was oben stehen darf (hillOk, hillError)', () => {
     const E = (b, cells) => game(`hillError('${b}', ${JSON.stringify(cells)})`);
     expect(E('haus', [[11, 11]])).toBe(null);
     expect(E('station', [[11, 11], [11, 12]])).toBe(null);
-    expect(E('tunneleinfahrt', [[11, 11], [11, 12]])).toBe('Die Tunneleinfahrt steht unten – der Tunnel darf unter der Anhöhe weiterführen');
-    expect(E('fischer', [[11, 11]])).toBe('Das gehört ans Wasser – oben auf der Anhöhe geht es nicht');
+    expect(E('tunneleinfahrt', [[11, 11], [11, 12]])).toBe('Die Tunneleinfahrt steht unten, der Tunnel darf unter der Anhöhe weiterführen');
+    expect(E('fischer', [[11, 11]])).toBe('Das gehört ans Wasser, oben auf der Anhöhe geht es nicht');
     expect(E('seilbahn', [[11, 11]])).toMatch(/Seilbahn-Station steht unten/);
     expect(E('pb_gleis', [[11, 11]])).toMatch(/Parkeisenbahn fährt unten/);
     expect(E('dachtreppe', [[11, 11], [11, 12]])).toBe('Auf einer Anhöhe geht keine Überdachung');
@@ -98,7 +98,7 @@ describe('Gelände unter und neben Gebäuden', () => {
     put(11, 11, { b: 'haus' }); put(12, 10, { b: 'reihenhaus', rot: 0 });          // Reihenhäuser auf 12,10 und 12,11
     expect(game('lowerHill(11, 11)')).toBe(false);
     expect([game('hillLevel(11, 11)'), game('bAt(11, 11)')]).toEqual([1, 'haus']);
-    expect(toastText()).toBe('Oben steht ein Gebäude – erst abreißen oder mit ✋ wegtragen');
+    expect(toastText()).toBe('Oben steht ein Gebäude. Reiß es erst ab oder trag es mit ✋ weg.');
     expect(game('demolishInfo(11, 11).label')).toMatch(/abreißen/);                 // 👆/Abriss trifft das Gebäude, nie die Anhöhe darunter
     expect(game('demolishInfo(11, 11).hill')).toBeUndefined();
     // Rechteck über ein Feld der Reihenhäuser: rot, die Anhöhe darunter bleibt; daneben wird abgetragen
@@ -122,7 +122,7 @@ describe('Gelände unter und neben Gebäuden', () => {
   it('Treppe einsetzen und Gleis-Rampe einsenken nie auf Feldern mit Gebäude; daneben schon', () => {
     HILL();
     put(13, 12, { b: 'haus' }); put(13, 13, { b: 'haus' });
-    expect(game('stairIntoError(13, 12)')).toBe('Hier steht: Haus – erst wegnehmen');
+    expect(game('stairIntoError(13, 12)')).toBe('Hier steht: Haus. Das musst du erst wegnehmen.');
     expect(game("placeError('huegeltreppe', 13, 12)")).toMatch(/Hier steht: Haus/);
     expect(game("placeError('huegeltreppe', 13, 11)")).toBe(null);                  // daneben: Randfeld ohne Gebäude
     game("rampNewForm = 'a'");
@@ -194,7 +194,7 @@ describe('Tragen, Gruppen, Kopien, ↶, Speichern', () => {
     game("state.tiles.get('10,10').look = 2");
     expect(game('undo()')).toBe(false);
     expect(game('undo()')).toBe(false);
-    expect(toastText()).toBe('Geht nicht mehr – oben steht inzwischen ein Gebäude');
+    expect(toastText()).toBe('Geht nicht mehr, oben steht inzwischen ein Gebäude');
     expect([game('hillLevel(10, 10)'), game('hillLevel(11, 10)'), game('bAt(10, 10)')]).toEqual([1, 1, 'haus']);
     // b) abgetragen, dann unten gebaut: das Abtragen kommt nicht mehr zurück
     game('resetUndo(); state.tiles.delete("10,10"); recalc()');
@@ -204,7 +204,7 @@ describe('Tragen, Gruppen, Kopien, ↶, Speichern', () => {
     game("state.tiles.get('11,10').look = 2");
     expect(game('undo()')).toBe(false);
     expect(game('undo()')).toBe(false);
-    expect(toastText()).toBe('Geht nicht mehr – dort steht inzwischen etwas');
+    expect(toastText()).toBe('Geht nicht mehr, dort steht inzwischen etwas');
     expect([game('hillLevel(11, 10)'), game('bAt(11, 10)')]).toEqual([0, 'haus']);
     // c) Reihenhäuser oben abgerissen, danach (ohne ↶-Schritt) ein Feld abgetragen: zurück kämen sie über die Kante
     game('resetUndo(); state.tiles.delete("11,10"); recalc()');
@@ -217,7 +217,7 @@ describe('Tragen, Gruppen, Kopien, ↶, Speichern', () => {
     expect(game('hillLevel(12, 11)')).toBe(0);
     const m1 = game('state.money');
     expect(game('undo()')).toBe(false);
-    expect(toastText()).toBe('Geht nicht mehr – das stünde jetzt über der Kante einer Anhöhe');
+    expect(toastText()).toBe('Geht nicht mehr, das stünde jetzt über der Kante einer Anhöhe');
     expect([game("state.tiles.has('12,10')"), game('state.money')]).toEqual([false, m1]);
     expect(m1).toBeGreaterThan(m0);                                                // Erstattung bleibt, nichts doppelt
     // d) normal: oben gebaut, ↶ nimmt es zurück
@@ -289,10 +289,10 @@ describe('Erreichbarkeit und Fenster', () => {
     expect(toastText()).toBe('Oben ohne Treppe: nur halbe Kraft. Eine Treppe hinauf hilft.');
     game('openInfo(12, 12)');
     expect(panel()).toContain('Eine Treppe hinauf oder ein Bahnhof oben bringt 100 %');
-    expect(panel()).toContain('Keine Treppe führt auf diese Anhöhe – zu Fuß kommt niemand hinauf');
+    expect(panel()).toContain('Keine Treppe führt auf diese Anhöhe, zu Fuß kommt niemand hinauf');
     game("build('haus', 10, 10)");
     game('openInfo(10, 10)');
-    expect(panel()).toContain('Keine Treppe führt auf diese Anhöhe – zu Fuß kommt niemand hinauf');
+    expect(panel()).toContain('Keine Treppe führt auf diese Anhöhe, zu Fuß kommt niemand hinauf');
     expect(panel()).not.toContain('Keine Tür');
     game("build('huegeltreppe', 14, 12); recalc(); openInfo(10, 10)");
     expect(panel()).not.toContain('Keine Treppe');

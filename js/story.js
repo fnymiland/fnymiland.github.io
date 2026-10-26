@@ -40,12 +40,12 @@ const nextIsle = () => ISLES.find(i => !isleOpen(i.id)) || FAR.find(i => !isleOp
 // – dann ist die nächste Insel entdeckt. Die Zeit läuft echt weiter, auch wenn das Spiel zu ist.
 const EXPEDITION_MIN = { wald: 1, obst: 2, wind: 3, ruine: 4, erz: 6, quelle: 8, kristall: 10 };
 const DISCOVERY = {
-  wald: 'Mit dem kleinen Holzboot hinaus aufs Meer. Nach einer Weile tauchte ein dunkelgrüner Streifen auf: Wald, so dicht, dass kaum Licht hindurchfällt – und mittendrin ein Baum, älter als alle Geschichten.',
+  wald: 'Mit dem kleinen Holzboot hinaus aufs Meer. Nach einer Weile tauchte ein dunkelgrüner Streifen auf: Wald, so dicht, dass kaum Licht hindurchfällt. Mittendrin ein Baum, älter als alle Geschichten.',
   obst: 'Diesmal trug der Wind den Duft von Äpfeln herüber. Eine Insel voller wilder Obstbäume, die seit Jahren niemand mehr geerntet hat.',
   wind: 'Die Wellen wurden höher, der Wind rauer. Hinter der Gischt: Felsen, Klippen und Wiesen, über die der Wind pfeift.',
-  ruine: 'Im Nebel zeichneten sich Mauern ab. Eine Insel voller alter Steine – hier muss einmal eine Schule gestanden haben, vielleicht sogar mehr.',
+  ruine: 'Im Nebel zeichneten sich Mauern ab. Eine Insel voller alter Steine. Hier muss einmal eine Schule gestanden haben, vielleicht sogar mehr.',
   erz: 'Ein Berg, der im Abendlicht rötlich glänzt. Die alten Seeleute erzählen, dass man hier früher Erz gegraben hat.',
-  quelle: 'Dampf stieg aus dem Meer auf – nein, von einer Insel! Zwischen den Felsen sprudeln warme Quellen.',
+  quelle: 'Dampf stieg aus dem Meer auf. Nein, von einer Insel! Zwischen den Felsen sprudeln warme Quellen.',
   kristall: 'Die längste Fahrt von allen. In der Nacht leuchtete der Horizont: eine Insel aus Kristall, in der das Mondlicht funkelt.',
 };
 // Wie lange das Boot unterwegs ist: Themen-Inseln fest, ferne Inseln jedes Mal etwas länger (höchstens 30 Min.)
@@ -55,7 +55,7 @@ function expeditionError(i = nextIsle()) {
   if (!i) return 'Alle Inseln sind entdeckt';
   if (state.expedition) return 'Das Boot ist schon unterwegs';
   if (!stegs().length) return 'Erst einen Steg ans Ufer bauen (🏘️ Stadt → 🚆 Verkehr → Steg)';
-  if (!stegs().some(k => expeditionRoute(k, i))) return 'Vom Steg aus gibt es keinen Seeweg dorthin – ist das Wasser zugeschüttet oder versperrt eine flache Brücke den Weg?';
+  if (!stegs().some(k => expeditionRoute(k, i))) return 'Vom Steg aus gibt es keinen Seeweg dorthin. Ist das Wasser zugeschüttet oder versperrt eine flache Brücke den Weg?';
   const miss = isleNeeds(i).filter(c => !c.ok);
   return miss.length ? 'Es fehlt noch: ' + miss.map(c => c.text).join(', ') : null;
 }
@@ -68,7 +68,7 @@ function sendExpedition(from) {
   const now = Date.now();
   state.expedition = { isle: i.id, from, t0: now, until: now + expMinutes(i) * 60e3 };
   sfx('star');
-  toast(`⛵ Das Boot sticht in See – es sucht die ${i.name} (zurück in ${expMinutes(i)} Min.)`);
+  toast(`⛵ Das Boot sticht in See und sucht die ${i.name} (zurück in ${expMinutes(i)} Min.)`);
   recalc(); save();
   return true;
 }
@@ -99,7 +99,7 @@ function discoverIsland(id) {
     <h2>⛵ Land in Sicht: ${i.icon} ${i.name}!</h2>
     <p>${DISCOVERY[id]}</p>
     <p>${i.text} In der Mitte wartet ${LANDMARKS[i.lm].icon} <b>${LANDMARKS[i.lm].name}</b> darauf, restauriert zu werden.</p>
-    <p class="muted">Bau dir hier ein kleines Dorf – oder verbinde die Insel per Zug. Betriebe weit weg von Häusern arbeiten nur halb so schnell.</p>
+    <p class="muted">Bau dir hier ein kleines Dorf oder verbinde die Insel per Zug. Betriebe weit weg von Häusern arbeiten nur halb so schnell.</p>
     <div class="row"><button class="btn" id="m-ok">Los geht's</button></div>`);
   $('m-ok').onclick = closeModal;
   checkStars();
@@ -113,14 +113,14 @@ function discoverIsland(id) {
 // Entdeckt wird per Boot wie bisher; jede weitere kostet mehr und dauert länger. Gespeichert in state.far.
 // ---------------------------------------------------------------------------
 const FAR_KINDS = {
-  wald:     { icon: '🌲', names: ['Kiefern', 'Farn', 'Moos', 'Eulen', 'Hirsch'], text: 'Dichter Wald bis ans Ufer – Holz für viele Jahre.' },
+  wald:     { icon: '🌲', names: ['Kiefern', 'Farn', 'Moos', 'Eulen', 'Hirsch'], text: 'Dichter Wald bis ans Ufer. Holz für viele Jahre.' },
   obst:     { icon: '🍒', names: ['Kirsch', 'Pflaumen', 'Birnen', 'Beeren', 'Quitten'], text: 'Wilde Obstbäume, schwer von Früchten.' },
-  fels:     { icon: '🪨', names: ['Möwen', 'Klippen', 'Sturm', 'Robben', 'Kiesel'], text: 'Felsen, Wind und kreischende Möwen – Stein für Pflaster.' },
+  fels:     { icon: '🪨', names: ['Möwen', 'Klippen', 'Sturm', 'Robben', 'Kiesel'], text: 'Felsen, Wind und kreischende Möwen. Hier gibt es Stein für Pflaster.' },
   erz:      { icon: '⛏️', names: ['Kupfer', 'Eisen', 'Zinn', 'Funken', 'Amboss'], text: 'Rötlicher Fels mit dicken Erzadern.' },
   quelle:   { icon: '♨️', names: ['Nebel', 'Seerosen', 'Dampf', 'Muschel', 'Libellen'], text: 'Warme Teiche zwischen weichen Wiesen.' },
   kristall: { icon: '💎', names: ['Mond', 'Sternen', 'Glitzer', 'Opal', 'Frost'], text: 'Zwischen den Felsen glitzert Kristall.' },
-  ruine:    { icon: '🏛️', names: ['Säulen', 'Tempel', 'Glocken', 'Laternen', 'Bogen'], text: 'Alte Mauern im Gras – wer hat hier wohl einmal gewohnt?' },
-  wiese:    { icon: '🌼', names: ['Sonnen', 'Blumen', 'Lavendel', 'Wolken', 'Schmetterlings'], text: 'Weite Wiesen voller Blumen – viel Platz zum Bauen.' },
+  ruine:    { icon: '🏛️', names: ['Säulen', 'Tempel', 'Glocken', 'Laternen', 'Bogen'], text: 'Alte Mauern im Gras. Wer hat hier wohl einmal gewohnt?' },
+  wiese:    { icon: '🌼', names: ['Sonnen', 'Blumen', 'Lavendel', 'Wolken', 'Schmetterlings'], text: 'Weite Wiesen voller Blumen und viel Platz zum Bauen.' },
 };
 // Was in der Truhe steckt: Taler (Einkommen), Ideen oder eine Ladung Waren – so viel, dass es sich lohnt
 const CHESTS = {
@@ -184,7 +184,7 @@ function discoverFar(i) {
   openModal(`
     <h2>⛵ Land in Sicht: ${i.icon} ${i.name}!</h2>
     <p>${FAR_KINDS[i.ter].text}</p>
-    <p>🎁 Mitten auf der Insel steht eine alte Truhe – tipp sie an!</p>
+    <p>🎁 Mitten auf der Insel steht eine alte Truhe. Tipp sie an!</p>
     ${nxt ? `<p class="muted">Draußen im Nebel zeichnet sich schon die nächste ab: ${nxt.icon} ${nxt.name} …</p>` : ''}
     <div class="row"><button class="btn" id="m-ok">Los geht's</button></div>`);
   $('m-ok').onclick = closeModal;
@@ -214,7 +214,7 @@ function bpCheckStars(silent) {
     const d = bpPick();
     if (!d) continue;
     bpGive(d);
-    toast(`📜 Bauplan für deine Erfolge: ${d.name} (${d.group}) – jetzt frei in der Kunstakademie`);
+    toast(`📜 Bauplan für deine Erfolge: ${d.name} (${d.group}), jetzt frei in der Kunstakademie`);
   }
 }
 // Fenster nach der Truhe: das Stück groß, „Ansehen“ öffnet es in der Kunstakademie
@@ -222,7 +222,7 @@ function bpShow(d, rest) {
   const url = typeof designThumb === 'function' ? designThumb(d, 2.5) : '';
   openModal(`<h2>📜 Bauplan gefunden!</h2>
     <div class="dcard">${url ? `<img src="${url}" alt="">` : `<i style="background:${escHtml(Array.isArray(d.col) ? d.col[0] : d.col || '#eee')}"></i>`}</div>
-    <p><b>${escHtml(d.name)}</b> · ${escHtml(d.group)} – jetzt frei in der Kunstakademie.</p>
+    <p><b>${escHtml(d.name)}</b> · ${escHtml(d.group)}, jetzt frei in der Kunstakademie.</p>
     ${rest ? `<p class="muted">Außerdem in der Truhe: ${rest}</p>` : ''}
     <div class="row"><button class="btn" id="m-bp-go" style="flex:1">🎨 Ansehen</button><button class="btn ghost" id="m-ok" style="flex:1">Schön!</button></div>`);
   $('m-bp-go').onclick = () => openDesignCard(d.id);
@@ -336,7 +336,7 @@ function festival() {
   openModal(`
     <h2>🎆 Das Laternenfest!</h2>
     <p>Der Leuchtturm brennt wieder, und alle ${LANTERN_TOTAL} Laternen leuchten. Ganz ${escHtml(state.town.name)} feiert bis tief in die Nacht.</p>
-    <p>${escHtml(state.town.name)} ist jetzt eine <b>Inselperle</b>. Die Insel gehört dir – bau und gestalte weiter, so lange du magst.</p>
+    <p>${escHtml(state.town.name)} ist jetzt eine <b>Inselperle</b>. Die Insel gehört dir. Bau und gestalte weiter, so lange du magst.</p>
     <p>🌫️ Und draußen im Nebel, weit hinter den Themen-Inseln, zeichnet sich eine neue Insel ab …</p>
     <div class="row"><button class="btn" id="m-diary">Letzte Tagebuchseite</button><button class="btn ghost" id="m-ok">Hurra!</button></div>`);
   $('m-diary').onclick = () => openDiary(state.diary.length - 1);
@@ -415,10 +415,10 @@ function openDiary(at) {
 // ---------------------------------------------------------------------------
 const TUTORIAL = [
   { text: 'Bau dein erstes Haus.', hint: '🏘️ Stadt → 🏠 Wohnen → Haus', done: () => hasBuilt('haus') },
-  { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ unten in der Leiste, zweiter Knopf (oder 🌸 Gestalten → Wege & Gelände) – ziehen',
+  { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ unten in der Leiste, zweiter Knopf (oder 🌸 Gestalten → Wege & Gelände), dann ziehen',
     done: () => [...state.tiles].some(([k, t]) => t.b === 'haus' && wishMet('weg', ...keyXY(k))) },
   { text: 'Stell einen Holzfäller in den Wald.', hint: '🏭 Herstellen → 📦 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
-  { text: 'Entdecke die Waldinsel.', hint: 'Steg ans Ufer bauen (🏘️ Stadt → 🚆 Verkehr), antippen, Boot losschicken – braucht 8 Einwohner und 🪙 150',
+  { text: 'Entdecke die Waldinsel.', hint: 'Steg ans Ufer bauen (🏘️ Stadt → 🚆 Verkehr), antippen, Boot losschicken. Braucht 8 Einwohner und 🪙 150',
     done: () => isleOpen('wald') },
   { text: 'Schneide den Uralten Baum frei.', hint: 'Baum antippen → Restaurieren (braucht 🪵 10)', done: () => lmStage('baum') >= 1 },
   { text: 'Bau ein Sägewerk.', hint: '🏭 Herstellen → 🔨 Veredeln → Sägewerk', done: () => hasBuilt('saege') },
@@ -467,7 +467,7 @@ function goalHtml() {
     return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4>${boosts}${card}${isleReq(nextIsle())}<div class="task-chips"><span class="chip" data-hall="erfolge">⭐ ${starCount()} Erfolge</span><span class="chip" data-album="1">📒 ${pct} % Album</span></div>`;
   }
   if (n >= ITEMS.leuchtturm.lanterns) {
-    return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4>${boosts}${taskCard({ icon: '🗼', title: 'Bau den Leuchtturm', sub: leuchtReady() || state.money < ITEMS.leuchtturm.cost ? 'am Wasser – dann beginnt das Laternenfest!' : 'Material fehlt noch: ' + matError(ITEMS.leuchtturm.mat).replace(/^Zu wenig /, ''), pct: Math.min(1, state.money / ITEMS.leuchtturm.cost), ready: leuchtReady(), attr: 'data-try="leuchtturm"' })}`;
+    return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4>${boosts}${taskCard({ icon: '🗼', title: 'Bau den Leuchtturm', sub: leuchtReady() || state.money < ITEMS.leuchtturm.cost ? 'am Wasser, dann beginnt das Laternenfest!' : 'Material fehlt noch: ' + matError(ITEMS.leuchtturm.mat).replace(/^Zu wenig /, ''), pct: Math.min(1, state.money / ITEMS.leuchtturm.cost), ready: leuchtReady(), attr: 'data-try="leuchtturm"' })}`;
   }
   // Laternen auf den schon erschlossenen Inseln, dazu immer die nächste Insel
   const opts = Object.keys(LM_STAGES).map(type => ({ type, info: restoreInfo(type) }))
@@ -478,7 +478,7 @@ function goalHtml() {
     if (info.money) parts.unshift(`🪙 ${fmt(Math.min(state.money, info.money))}/${fmt(info.money)}`);
     const fr = [...(info.money ? [state.money / info.money] : []), ...Object.entries(info.mat).map(([r, need]) => state.res[r] / need)];
     return taskCard({ icon: LANDMARKS[type].icon, title: `${LANDMARKS[type].name} → ${LM_STAGES[type][info.stage].name}`,
-      sub: info.err ? parts.join(' ') : '✨ bereit – antippen!', pct: fr.length ? Math.min(...fr) : null, ready: !info.err, attr: `data-lm="${type}"` });
+      sub: info.err ? parts.join(' ') : '✨ bereit, antippen!', pct: fr.length ? Math.min(...fr) : null, ready: !info.err, attr: `data-lm="${type}"` });
   }).join('');
   return html + isleReq(nextIsle());
 }
@@ -487,7 +487,7 @@ function isleReq(i) {
   if (!i) return '';
   const need = isleNeeds(i), ok = need.every(c => c.ok), away = state.expedition && state.expedition.isle === i.id;
   const detail = away ? `⛵ Boot unterwegs · zurück in ${fmtClock(expeditionLeft())}`
-    : ok ? (stegs().length ? '✨ bereit – Boot losschicken!' : '✨ bereit – erst einen Steg bauen')
+    : ok ? (stegs().length ? '✨ bereit, Boot losschicken!' : '✨ bereit, aber erst einen Steg bauen')
     : need.map(c => c.have != null ? `${c.ok ? '✓' : ''}${c.text.split(' ')[0]} ${fmt(Math.min(c.have, c.want))}/${fmt(c.want)}` : `${c.ok ? '✓' : ''}${c.text}`).join(' ');
   const fr = need.filter(c => c.have != null).map(c => c.have / c.want).concat(need.filter(c => c.have == null).map(c => c.ok ? 1 : 0));
   return taskCard({ icon: away ? '⛵' : '🏝️', title: `${i.far ? 'Ferne Insel' : 'Nächste Insel'}: ${i.icon} ${i.name}`, sub: detail, pct: away ? 1 - expeditionLeft() / (expMinutes(i) * 60e3) : fr.length ? Math.min(...fr) : null, ready: ok && !away, attr: `data-isle="${i.id}"` });
@@ -503,20 +503,20 @@ const GUIDE = [
   { id: 'ausbau', icon: '✨', title: 'Bereit zum Ausbauen', when: () => anyStatus(s => (s.wish && s.wish.ready) || (s.grow && s.grow.ready)),
     text: 'Wo es über einem Haus oder Betrieb funkelt, sind alle Bedingungen erfüllt: antippen und „Ausbauen“. Im Rathaus unter „Zu tun“ siehst du alles auf einmal und kannst direkt ausbauen.' },
   { id: 'lager', icon: '📦', title: 'Rohstoffe und Lager', when: () => Object.values(state.res).some(v => v >= 1),
-    text: 'Rohstoffe wie Holz und Stein sammeln sich im Lager (oben). Sägewerk, Steinmetz und Schmiede machen daraus Bretter, Pflastersteine und Metall – die brauchst du für Ausbauten und Laternen.' },
+    text: 'Rohstoffe wie Holz und Stein sammeln sich im Lager (oben). Sägewerk, Steinmetz und Schmiede machen daraus Bretter, Pflastersteine und Metall. Die brauchst du für Ausbauten und Laternen.' },
   { id: 'weit', icon: '🐌', title: 'Weit weg vom Dorf',
     when: () => [...state.tiles].some(([k, t]) => t.b !== 'lm' && needsReach(t.b) && (T.st.get(k) || {}).how === 'weit'),   // wie die 🐌
     text: 'Die Schnecke heißt: Hier arbeiten die Leute nur halb, weil es weit bis zum Dorf ist. Ein Weg zum Dorf, Häuser in der Nähe oder ein Bahnhof (auch Seilbahn, Fähre) bringen volle Kraft.' },
   { id: 'viertel', icon: '🏘️', title: 'Viertel', when: () => anyStatus(s => s.bonus > 0),
     text: 'Gebäude, die aneinandergrenzen oder über Wege verbunden sind, bilden ein Viertel. Ab 3, 8 und 15 Gebäuden arbeitet das ganze Viertel 10, 20 und 30 % besser.' },
   { id: 'stufen', icon: '⬆️', title: 'Auch Betriebe wachsen', when: () => [...state.tiles.values()].some(t => BUILD_STAGES[t.b]),
-    text: 'Auch Betriebe haben drei Stufen. Tipp einen an: Dort steht, was für die nächste Stufe fehlt – zum Beispiel eine Mühle mit Feldern daneben.' },
+    text: 'Auch Betriebe haben drei Stufen. Tipp einen an: Dort steht, was für die nächste Stufe fehlt, zum Beispiel eine Mühle mit Feldern daneben.' },
   { id: 'laterne', icon: '🏮', title: 'Laternen', when: () => lanternCount() >= 1,
     text: 'Jede Sehenswürdigkeit hat drei Laternen. Jede Laterne schaltet Neues frei und bringt eine Seite im Tagebuch 📖. Oben links steht immer, welche Laternen als Nächstes gehen.' },
   { id: 'insel', icon: '🏝️', title: 'Neue Inseln', when: () => { const i = nextIsle(); return !!i && isleNeeds(i).every(c => c.ok); },
-    text: 'Die nächste Insel wartet! Bau einen Steg ans Ufer (🏘️ Stadt → 🚆 Verkehr → Steg), tipp ihn an und schick das Boot los. Wenn es zurückkommt, ist die Insel entdeckt – mit eigenen Rohstoffen und einer Sehenswürdigkeit.' },
+    text: 'Die nächste Insel wartet! Bau einen Steg ans Ufer (🏘️ Stadt → 🚆 Verkehr → Steg), tipp ihn an und schick das Boot los. Wenn es zurückkommt, ist die Insel entdeckt, mit eigenen Rohstoffen und einer Sehenswürdigkeit.' },
   { id: 'deko', icon: '🌸', title: 'Kleine Deko', when: () => T.pop >= 12,
-    text: 'Kleine Deko – Baum, Busch, Bank, Blumentopf – passt zu viert auf ein Feld, auch vors Haus und an Wege. Häuser wünschen sich Deko in der Nähe.' },
+    text: 'Kleine Deko (Baum, Busch, Bank, Blumentopf) passt zu viert auf ein Feld, auch vors Haus und an Wege. Häuser wünschen sich Deko in der Nähe.' },
   { id: 'rathaus', icon: '🏛️', title: 'Das Rathaus', when: () => T.pop >= 20,
     text: 'Das Rathaus ist deine Zentrale: Übersicht, alles Bereite zum direkten Ausbauen, alle Inseln per Knopf, die Wünsche der Bewohner und dein Ort.' },
   { id: 'forschung', icon: '💡', title: 'Forschung', when: () => tierOpen(1),
@@ -526,15 +526,15 @@ const GUIDE = [
   { id: 'verschieben', icon: '✋', title: 'Alles lässt sich verschieben', when: () => state.tiles.size >= 25,
     text: 'Nichts ist für immer: Mit ✋ (unten links) verschiebst du alles kostenlos, auch das Rathaus. Mit ⟳ oder dem Mausrad drehst du Gebäude.' },
   { id: 'meer', icon: '🌊', title: 'Land gewinnen', when: () => state.islands.size >= 2,
-    text: 'Mit „Aufschütten“ (⛰️ Gelände) machst du Wasser zu Land – auch im Meer direkt neben deinem Land. So kannst du Inseln vergrößern oder verbinden.' },
+    text: 'Mit „Aufschütten“ (⛰️ Gelände) machst du Wasser zu Land, auch im Meer direkt neben deinem Land. So kannst du Inseln vergrößern oder verbinden.' },
   { id: 'bahn', icon: '🚆', title: 'Eisenbahn', when: () => hasTech('bahn'),
-    text: 'Zieh Schienen zwischen zwei Inseln (über Wasser als Brücke) und stell an beide Enden einen Bahnhof. Der Zug braucht Strom (1 ⚡ + 1 ⚡ je km). Er fährt Pendler (Leute, die auf der kleineren Insel wohnen) und Besucher (Sehenswürdigkeiten und Wunderwerke ziehen sie an) – das bringt Fahrkarten und Geld am Ziel, und alles nah am Bahnhof ist ans Dorf angebunden. Jeder Wagen hat 60 Plätze pro Minute: Ist der Zug überfüllt, Wagen anhängen oder als Rundkurs mehrere Züge fahren lassen.' },
+    text: 'Zieh Schienen zwischen zwei Inseln (über Wasser als Brücke) und stell an beide Enden einen Bahnhof. Der Zug braucht Strom (1 ⚡ + 1 ⚡ je km). Er fährt Pendler (Leute, die auf der kleineren Insel wohnen) und Besucher (Sehenswürdigkeiten und Wunderwerke ziehen sie an). Das bringt Fahrkarten und Geld am Ziel, und alles nah am Bahnhof ist ans Dorf angebunden. Jeder Wagen hat 60 Plätze pro Minute: Ist der Zug überfüllt, Wagen anhängen oder als Rundkurs mehrere Züge fahren lassen.' },
   { id: 'ziehen', icon: '🖐️', title: 'Linie und Fläche', when: () => tool !== 'look' && !!ITEMS[tool] && !!ITEMS[tool].paint,
-    text: 'Weg und Schiene: Anfang anklicken, Ende anklicken – du siehst jedes Feld und den Preis, der zweite Klick baut (iPad: Ende zweimal antippen). Gelände und Weg-Flächen: gedrückt halten und ein Rechteck aufziehen, dann hineinklicken. Esc oder ein kurzer Rechtsklick bricht ab. Karte bewegen: rechte Maustaste gedrückt halten (oder Leertaste/Ctrl), auf dem iPad zwei Finger.' },
+    text: 'Weg und Schiene: Anfang anklicken, Ende anklicken. Du siehst jedes Feld und den Preis, der zweite Klick baut (iPad: Ende zweimal antippen). Gelände und Weg-Flächen: gedrückt halten und ein Rechteck aufziehen, dann hineinklicken. Esc oder ein kurzer Rechtsklick bricht ab. Karte bewegen: rechte Maustaste gedrückt halten (oder Leertaste/Ctrl), auf dem iPad zwei Finger.' },
   { id: 'strom', icon: '⚡', title: 'Strom', when: () => T.rail.power.city && T.rail.power.demand > T.rail.power.supply,
-    text: 'Laternen, Werkstätten, Hafen, Sägewerk, Universität, Züge und die Wunderwerke brauchen Strom. Kraftwerke findest du unter 🏭 Herstellen → ⚡ Strom: Windrad (ausbaubar), Wasserkraft, Solarfeld, Geothermie, Wellenkraft – egal wo sie stehen. Ohne Strom laufen Gebäude nur halb (⚡ darüber), Laternen bleiben nachts dunkel und Züge stehen. Die Bilanz steht im 📦 Lager.' },
+    text: 'Laternen, Werkstätten, Hafen, Sägewerk, Universität, Züge und die Wunderwerke brauchen Strom. Kraftwerke findest du unter 🏭 Herstellen → ⚡ Strom: Windrad (ausbaubar), Wasserkraft, Solarfeld, Geothermie und Wellenkraft, egal wo sie stehen. Ohne Strom laufen Gebäude nur halb (⚡ darüber), Laternen bleiben nachts dunkel und Züge stehen. Die Bilanz steht im 📦 Lager.' },
   { id: 'kristall', icon: '💎', title: 'Kristall', when: () => isleOpen('kristall'),
-    text: 'Auf der Kristallinsel wächst Kristall im Fels. Eine Kristallmine holt ihn heraus – für Glas-Deko und die Glasvilla.' },
+    text: 'Auf der Kristallinsel wächst Kristall im Fels. Eine Kristallmine holt ihn heraus, für Glas-Deko und die Glasvilla.' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -660,21 +660,21 @@ const LATE_ALBUM = new Set(['b:zaun', 'b:mauer', 'b:reihenhaus', 'b:baumhaus', '
 // mindestens money, dazu viel Material. So bleibt ein Wunderwerk ein Langzeitziel (etwa eine Stunde, das Schloss
 // mehrere Stunden), egal wie reich man schon ist.
 const WONDERS = {
-  riesenrad: { ref: 1000, the: 'Das Riesenrad', h: 215, text: '+25 % Einnahmen – und alle 15 Minuten Jahrmarkt: 3 Minuten lang dreifache Einnahmen', effect: { incMul: 0.25 },
+  riesenrad: { ref: 1000, the: 'Das Riesenrad', h: 215, text: '+25 % Einnahmen, dazu alle 15 Minuten Jahrmarkt: 3 Minuten lang dreifache Einnahmen', effect: { incMul: 0.25 },
     names: ['Fundament', 'Stahlgerüst', 'Rad und Gondeln', 'Lichter'],
     phases: [{ min: 12, money: 30000, quader: 150 }, { min: 15, money: 40000, metall: 150 },
              { min: 15, money: 50000, metall: 200, bretter: 200 }, { min: 18, money: 1e6, bretter: 150, metall: 100 }] },
-  sternwarte: { ref: 2000, the: 'Die Sternwarte', h: 95, text: '+50 % Ideen – nachts fallen Sternschnuppen (antippen: Ideen), und das Boot findet Inseln doppelt so schnell', effect: { sciMul: 0.5 },
+  sternwarte: { ref: 2000, the: 'Die Sternwarte', h: 95, text: '+50 % Ideen. Nachts fallen Sternschnuppen (antippen: Ideen), und das Boot findet Inseln doppelt so schnell', effect: { sciMul: 0.5 },
     names: ['Fundament', 'Turm', 'Kuppel und Fernrohr'],
     phases: [{ min: 15, money: 30000, quader: 200 }, { min: 20, money: 45000, metall: 150, bretter: 150 }, { min: 25, money: 1e6, metall: 150, quader: 150 }] },
-  seebruecke: { ref: 1250, the: 'Die Seebrücke', h: 40, text: '+20 % Einwohner (Kurgäste) – und die Hafenstadt: Aufträge zahlen +50 %, ein Auftragsplatz mehr, Schiffe fahren schneller', effect: { popMul: 0.2 },
+  seebruecke: { ref: 1250, the: 'Die Seebrücke', h: 40, text: '+20 % Einwohner (Kurgäste), dazu die Hafenstadt: Aufträge zahlen +50 %, ein Auftragsplatz mehr, Schiffe fahren schneller', effect: { popMul: 0.2 },
     names: ['Pfähle', 'Steg', 'Pavillon und Laternen'],
     phases: [{ min: 10, money: 20000, bretter: 250 }, { min: 15, money: 30000, bretter: 200, metall: 80 }, { min: 20, money: 1e6, quader: 150, metall: 100 }] },
-  botgarten: { ref: 2000, the: 'Der Botanische Garten', h: 80, text: '+50 % Schönheit – und der grüne Daumen: „Park“ und „schöne Umgebung“ überall erfüllt, Obst und Felder doppelt, exotische Deko', effect: { beautyMul: 0.5 },
+  botgarten: { ref: 2000, the: 'Der Botanische Garten', h: 80, text: '+50 % Schönheit, dazu der grüne Daumen: „Park“ und „schöne Umgebung“ überall erfüllt, Obst und Felder doppelt, exotische Deko', effect: { beautyMul: 0.5 },
     names: ['Gärten', 'Glasgerüst', 'Palmenhaus', 'Bepflanzung'],
     phases: [{ min: 12, money: 40000, quader: 200 }, { min: 15, money: 50000, metall: 150, kristall: 60 },
              { min: 18, money: 60000, kristall: 100, bretter: 200 }, { min: 20, money: 1e6, obst: 600, kristall: 80 }] },
-  schloss: { ref: 2300, the: 'Das Schloss', h: 270, text: '+50 % auf alles, deine Insel ist jetzt eine Königliche Inselperle – und alle 10 Minuten ein königlicher Erlass nach Wahl', effect: { allMul: 0.5 },
+  schloss: { ref: 2300, the: 'Das Schloss', h: 270, text: '+50 % auf alles, deine Insel ist jetzt eine Königliche Inselperle. Alle 10 Minuten gibt es einen königlichen Erlass nach Wahl', effect: { allMul: 0.5 },
     names: ['Fundament', 'Mauern', 'Türme', 'Dächer', 'Säle', 'Einweihung'],
     phases: [{ min: 20, money: 150000, quader: 500 }, { min: 25, money: 200000, quader: 500, bretter: 300 }, { min: 30, money: 250000, metall: 400 },
              { min: 35, money: 300000, quader: 300, metall: 300 }, { min: 40, money: 400000, kristall: 200, bretter: 300 },
@@ -706,7 +706,7 @@ function chooseDecree(id) {
   state.decreeNext = now + DECREE_EVERY;
   if (D.kind === 'orders') { let o; while (state.orders.length < orderSlots() && (o = makeOrder(now))) state.orders.push(o); state.orderNext = now + ORDER_EVERY; }
   sfx('star'); confettiBurst();
-  toast(`👑 Erlass: ${D.icon} ${D.name} – ${D.text}${D.mul ? ' für 5 Minuten' : ''}`);
+  toast(`👑 Erlass: ${D.icon} ${D.name}: ${D.text}${D.mul ? ' für 5 Minuten' : ''}`);
   save();
   return true;
 }
@@ -845,7 +845,7 @@ function decreeHtml(now = Date.now()) {
   const d = decreeActive(now);
   if (d) return `<div class="label">👑 Erlass</div><div class="status"><div class="ok">${DECREES[d.id].icon} ${DECREES[d.id].name}: ${DECREES[d.id].text} · noch ${fmtClock(d.until - now)}</div></div>`;
   if (!decreeReady(now)) return `<div class="label">👑 Erlass</div><p class="muted">Der nächste Erlass in ${fmtClock((state.decreeNext || 0) - now)}.</p>`;
-  return `<div class="label">👑 Ein Erlass wartet – was soll gelten?</div>
+  return `<div class="label">👑 Ein Erlass wartet. Was soll gelten?</div>
     <div class="decrees">${Object.entries(DECREES).map(([id, D]) => `<button class="btn ghost" data-decree-pick="${id}">${D.icon} ${D.name}<small>${D.text}${D.mul ? ' · 5 Min.' : ''}</small></button>`).join('')}</div>`;
 }
 // Zeile für die Ziel-Karte: Jahrmarkt, Erlass

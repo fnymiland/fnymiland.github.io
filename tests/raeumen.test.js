@@ -36,7 +36,7 @@ describe('Natur wird beim Bauen weggeräumt', () => {
 
   it('ohne Forschung bleibt „Nur im Wald“ – Wegräumen macht keinen Wald', () => {
     T(6, 6, 'obst');
-    expect(game("placeError('holz', 6, 6)")).toBe('Nur im Wald – überall mit „Forstwirtschaft“');
+    expect(game("placeError('holz', 6, 6)")).toBe('Nur im Wald (überall mit „Forstwirtschaft“)');
   });
 
   it('kleine Deko im Wald räumt auch', () => {

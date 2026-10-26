@@ -15,7 +15,7 @@ const OPER_STAGES = [
 ITEMS.oper = { cat: 'deko', name: 'Opernhaus', size: [3, 3], cost: 500e6, needs: 'grass', h: 82, beauty: 100, festival: true, unique: true, the: 'Das Opernhaus',
   prachtStages: OPER_STAGES, desc: 'Rundbau mit Bögen und grüner Kuppel. Antippen: Das Opernhaus spielt deine Insel als Lied.' };
 FX.oper = '🎶 spielt deine Insel · 🌸 je Stufe';
-ITEM_TIPS.oper = 'Einmal im Spiel, braucht 3×3 Felder Wiese. Antippen und ▶ – das Opernhaus spielt deine Insel als Lied, und Bauen klingt nach deiner Insel.';
+ITEM_TIPS.oper = 'Einmal im Spiel, braucht 3×3 Felder Wiese. Tipp es an und drück ▶, dann spielt das Opernhaus deine Insel als Lied, und Bauen klingt nach deiner Insel.';
 { const fz = MENU.find(m => m.id === 'freizeit'), kultur = fz && fz.groups.find(gr => gr.id === 'kultur'); if (kultur) kultur.items.push('oper'); }
 
 const OPER_ART = (() => {
@@ -117,7 +117,7 @@ function operInfoHtml(t) {
       <p class="muted">${nx.look[0].toUpperCase() + nx.look.slice(1)} · 🌸 +${ITEMS.oper.beauty}.</p>
       <div class="stats">${costSpans(nx.cost.money, {})}</div>
       <div class="row"><button class="btn" id="p-pracht-up" ${canPay(nx.cost) ? '' : 'disabled'}>✨ Ausbauen</button></div>`
-    : '<p class="ok">Höchste Stufe – prächtiger geht es nicht!</p>'}`;
+    : '<p class="ok">Höchste Stufe, prächtiger geht es nicht!</p>'}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -272,7 +272,7 @@ function operStop() {
 function operPlay(region) {
   operStop();
   const ctx = audio();
-  if (!ctx) { fail('🔇 Der Ton ist aus – in den Einstellungen einschalten'); return false; }
+  if (!ctx) { fail('🔇 Der Ton ist aus. Du kannst ihn in den Einstellungen einschalten.'); return false; }
   const bus = ctx.createGain(); bus.gain.value = 1; bus.connect(ctx.destination);
   const t0 = ctx.currentTime + 0.3, plan = OPER_LIED.arrange(ctx, bus, t0, region);
   if (!plan) { bus.disconnect(); return false; }

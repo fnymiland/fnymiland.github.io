@@ -35,7 +35,7 @@ describe('↶ nach dem Umstellen der Wandart', () => {
     put(16, 16, { b: 'haus', animal: 2 });
     game("state.tiles.get('16,16').look = 2");
     expect(game('undo()')).toBe(false);
-    expect(toastText()).toBe('Geht nicht mehr – oben steht inzwischen ein Gebäude');
+    expect(toastText()).toBe('Geht nicht mehr, oben steht inzwischen ein Gebäude');
     expect([game('hillLevel(16, 16)'), game('bAt(16, 16)')]).toEqual([1, 'haus']);
   });
 });
@@ -72,17 +72,17 @@ describe('Treppe zugestellt', () => {
     expect([game('hillRegions()'), game("statusOf(11, 11).how")]).toEqual([null, 'nah']);
     expect([game("previewDelta('kiosk', 13, 12).blocks"), game("previewDelta('kiosk', 12, 12).blocks")]).toEqual([true, false]);   // Bau-Vorschau sagt es vorher
     expect(game("build('kiosk', 13, 12)")).toBe(true);                       // oben direkt auf dem oberen Feld der Treppe
-    expect(toastText()).toBe('Versperrt die Treppe – zu Fuß kommt sonst niemand mehr auf die Anhöhe');
+    expect(toastText()).toBe('Versperrt die Treppe. Zu Fuß kommt sonst niemand mehr auf die Anhöhe.');
     expect(game('walkPath(15, 12, doorsOf("11,11"))')).toBe(null);           // zur Schmiede kommt von unten wirklich keiner
     expect(game('walkPath(15, 12, doorsOf("13,12"))')).toEqual([[14, 12]]);   // zum Kiosk über die Treppe (seine Tür)
     expect([game('hillNoStair(11, 11)'), game('hillNoStair(13, 12)')]).toEqual([true, false]);
     expect(game("(s => [s.how, s.eff])(statusOf(11, 11))")).toEqual(['weit', 0.5]);
     expect(game("statusOf(13, 12).how")).toBe('nah');
     game('openInfo(11, 11)');
-    expect(panel()).toContain('Die Treppe hinauf ist zugestellt – von unten kommt zu Fuß niemand hierher');
+    expect(panel()).toContain('Die Treppe hinauf ist zugestellt. Von unten kommt zu Fuß niemand hierher.');
     expect(panel()).not.toContain('Keine Treppe führt');
     game('openInfo(13, 12)');
-    expect(panel()).toContain('Versperrt die Treppe – zu Fuß kommt sonst niemand auf die Anhöhe');
+    expect(panel()).toContain('Versperrt die Treppe. Zu Fuß kommt sonst niemand auf die Anhöhe.');
     expect(panel()).not.toContain('zugestellt');
     // Ziele: von unten nie die Schmiede, der Kiosk schon; von oben (Tür des Kiosks oben) beide
     const below = new Set(), above = new Set();

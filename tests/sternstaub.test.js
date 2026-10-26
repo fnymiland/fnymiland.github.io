@@ -1,6 +1,6 @@
 const { loadGame, game } = require('./helpers/load-game');
 
-// Block 161 (PLAN-161.md): ✨ Sternstaub – Quellen (Erfolge, Album, Fest, Sternschnuppe, Truhe, Feste), Nachzahlung beim Laden,
+// Block 161 (PLAN-161.md): ✨ Sternstaub: Quellen (Erfolge, Album, Fest, Sternschnuppe, Truhe, Feste), Nachzahlung beim Laden,
 // Schatzkammer zum Tageskurs, Speichern, Anzeige
 beforeAll(() => loadGame());
 beforeEach(() => {

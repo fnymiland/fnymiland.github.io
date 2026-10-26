@@ -68,7 +68,7 @@ const miniTo = (ix, iy) => [(ix + mini.u0) * TW / 2, (iy + mini.v0) * TH];
 function miniBuild() {
   const box = document.createElement('div');
   box.id = 'minimap';
-  box.innerHTML = `<canvas role="button" tabindex="0" aria-label="Übersichtskarte – antippen springt hin"></canvas>`;
+  box.innerHTML = `<canvas role="button" tabindex="0" aria-label="Übersichtskarte, antippen springt hin"></canvas>`;
   document.body.appendChild(box);
   mini = { box, cv: box.querySelector('canvas'), base: null, u0: 0, v0: 0, sig: '', at: -1e9, view: '' };
   const jump = e => {

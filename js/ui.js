@@ -37,7 +37,7 @@ function reportError(e) {
   errorShown = true;
   const bar = document.createElement('div');
   bar.id = 'err-bar';
-  bar.textContent = `Hoppla, da ist etwas schiefgegangen: ${e && e.message || e}. Bitte Bescheid sagen – dein Spielstand ist sicher.`;
+  bar.textContent = `Hoppla, da ist etwas schiefgegangen: ${e && e.message || e}. Bitte sag Bescheid. Dein Spielstand ist sicher.`;
   bar.onclick = () => bar.remove();
   document.body.appendChild(bar);
 }
@@ -258,7 +258,7 @@ function syncDragGroup() {
     const [, name, icon] = katById(k), pick = katPick(k), b = document.createElement('button');
     b.className = 'quick drag-ball' + (pick ? '' : ' locked'); b.dataset.ball = k;
     b.append(katPic(icon, innerWidth <= 600 ? 22 : 26));
-    b.title = pick ? `${name}: ${ITEMS[pick].name}` : `${name} – ${unlockText(ITEMS[katById(k)[3][0]], true)}`; b.setAttribute('aria-label', b.title);
+    b.title = pick ? `${name}: ${ITEMS[pick].name}` : `${name}: ${unlockText(ITEMS[katById(k)[3][0]], true)}`; b.setAttribute('aria-label', b.title);
     b.onclick = () => { audio(); const p = katPick(k); if (!p) { toast(`🔒 ${name}: ${unlockText(ITEMS[katById(k)[3][0]], true)}`); return; } setSheet(false); setTool(p); };
     if (n < i) big.before(b); else { at.after(b); at = b; }             // die Reihe bleibt, wie sie aufging: das Große an seinem Platz
   });
@@ -290,7 +290,7 @@ function katChips(bar, t) {
   for (const id of [...kat[3]].reverse()) {
     const ok = available(id), b = document.createElement('button');
     b.className = 'kat-item' + (id === t ? ' on' : '') + (ok ? '' : ' locked'); b.dataset.katItem = id;
-    b.title = ok ? ITEMS[id].name : `${ITEMS[id].name} – ${unlockText(ITEMS[id], true)}`; b.setAttribute('aria-label', b.title);
+    b.title = ok ? ITEMS[id].name : `${ITEMS[id].name}: ${unlockText(ITEMS[id], true)}`; b.setAttribute('aria-label', b.title);
     b.append(katPic(id, 30));
     b.onclick = () => { if (!available(id)) { toast(`🔒 ${ITEMS[id].name}: ${unlockText(ITEMS[id], true)}`); return; } sfx('deco'); setTool(id); };
     bar.prepend(b);
@@ -405,7 +405,7 @@ function buildToolbar() {
   cats.append(un); updateUndoBtn();
   const see = document.createElement('button');                         // 👁 Durchsicht (Nutzer, 09.10.2026): Dächer, Gebäude, Bäume, Figuren blass
   see.className = 'quick see' + (seeThrough ? ' active' : '');
-  wiFace(see, 'glaskugel', 'Durchsicht'); see.title = 'Durchsicht: Dächer, Gebäude, Bäume und Figuren blass – tippen geht hindurch (D)';
+  wiFace(see, 'glaskugel', 'Durchsicht'); see.title = 'Durchsicht: Dächer, Gebäude, Bäume und Figuren blass, Tippen geht hindurch (D)';
   see.setAttribute('aria-label', 'Durchsicht'); see.setAttribute('aria-pressed', String(seeThrough));
   see.onclick = () => { audio(); setSeeThrough(!seeThrough); };
   cats.append(see);
@@ -474,10 +474,10 @@ function renderTools() {
   if (recentOpen) {                                                       // ⭐: Favoriten, darunter zuletzt gebaut
     const favs = favList(), rec = recentList().filter(id => !favs.includes(id));
     { const h = head('⭐ Favoriten'); h.dataset.group = 'fav'; menuIcon(h, 'fav'); }
-    if (!favs.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch keine – tippe im Menü auf ☆ oben rechts an einer Kachel'; box.append(p); }
+    if (!favs.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch keine. Tippe im Menü auf ☆ oben rechts an einer Kachel.'; box.append(p); }
     for (const id of favs) box.append(card(id));
     { const h = head('🕘 Zuletzt gebaut'); h.dataset.group = 'recent'; menuIcon(h, 'recent'); }
-    if (!rec.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch nichts – was du baust, steht dann hier'; box.append(p); }
+    if (!rec.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch nichts. Was du baust, steht dann hier.'; box.append(p); }
     for (const id of rec) box.append(card(id));
     return;
   }
@@ -501,7 +501,7 @@ function renderTools() {
 // Anordnen (Entwurf B): Gruppen als Liste mit ↑/↓, dazu „Standard“ und „Fertig“
 function renderArrange(box, top, grs) {
   const head = document.createElement('div'); head.className = 'sheet-h arrange-head';
-  head.textContent = 'Reihenfolge – was du oft brauchst, nach oben';
+  head.textContent = 'Reihenfolge: Was du oft brauchst, kommt nach oben';
   box.append(head);
   grs.forEach((gr, i) => {
     const r = document.createElement('div'); r.className = 'arrange-row'; r.dataset.group = gr.id;
@@ -626,8 +626,8 @@ function syncSelBar() {
   const copyLabel = !items.length ? '⧉ Kopieren' : pip ? `🖌️ Pipette: ${ITEMS[pip.tool].name}` : `⧉ Kopieren · 🪙 ${fmt(cost.money)}${matText(Object.fromEntries(Object.entries(cost).filter(([r]) => r !== 'money'))) ? ' ' + matText(Object.fromEntries(Object.entries(cost).filter(([r]) => r !== 'money'))) : ''}`;
   const di = planInfo(selDemolishPlan(plan)), delLabel = di.err || !di.gain ? '🗑️ Abreißen' : `🗑️ Abreißen · +🪙 ${fmt(di.gain)}`;
   const turn = selWegTurns(box).length;                                  // Wegrichtung (Block 158): Muster aller Wege darin drehen, ohne zu verschieben
-  const html = `<button class="btn" id="sel-move">↔ Verschieben</button>${turn ? `<button class="btn" id="sel-turn" title="Das Muster der ${turn} Wegfelder drehen – nichts wird verschoben">⟳ Wegmuster</button>` : ''}<button class="btn" id="sel-copy" ${items.length ? '' : 'disabled'} title="${stays ? 'Rathaus, Sehenswürdigkeiten, Wunderwerke und Brücken zwischen Anhöhen werden nicht mitkopiert' : ''}">${copyLabel}</button>`
-    + `<button class="btn danger" id="sel-del" ${di.err ? 'disabled' : ''} title="${escHtml(di.err || (di.bad ? 'Rotes bleibt stehen' : 'Alles in der Auswahl abreißen – Wald und Fels bleiben (Entf)'))}">${delLabel}</button>`
+  const html = `<button class="btn" id="sel-move">↔ Verschieben</button>${turn ? `<button class="btn" id="sel-turn" title="Das Muster der ${turn} Wegfelder drehen, verschoben wird nichts">⟳ Wegmuster</button>` : ''}<button class="btn" id="sel-copy" ${items.length ? '' : 'disabled'} title="${stays ? 'Rathaus, Sehenswürdigkeiten, Wunderwerke und Brücken zwischen Anhöhen werden nicht mitkopiert' : ''}">${copyLabel}</button>`
+    + `<button class="btn danger" id="sel-del" ${di.err ? 'disabled' : ''} title="${escHtml(di.err || (di.bad ? 'Rotes bleibt stehen' : 'Alles in der Auswahl abreißen, Wald und Fels bleiben (Entf)'))}">${delLabel}</button>`
     + '<button class="btn ghost" id="sel-x" aria-label="Auswahl aufheben">✕</button>';
   bar.hidden = false;
   if (bar.dataset.html === html) return;                                  // gleich geblieben: Knöpfe nicht austauschen (ein Klick ginge sonst ins Leere)
@@ -692,7 +692,7 @@ function openBuildInfo(id) {
     ${matLock ? `<div class="status"><div class="bad">🔒 ${escHtml(matLock)}</div></div>` : ''}
     ${fx ? `<p class="big">${fx}</p>` : ''}
     <div class="stats">${cost.join('')}</div>
-    ${WONDERS[id] ? `<p class="muted">Das ist nur die Baustelle. Dann ${WONDERS[id].phases.length} Bauabschnitte – zusammen ca. 🪙 ${fmt(wonderTotal(id))} und Material – bei deinem Einkommen etwa ${fmtDuration(wonderTotal(id) / Math.max(1, wonderRate()))}. Mehr Einkommen macht es schneller.</p>` : ''}
+    ${WONDERS[id] ? `<p class="muted">Das ist nur die Baustelle. Dann kommen ${WONDERS[id].phases.length} Bauabschnitte für zusammen ca. 🪙 ${fmt(wonderTotal(id))} und Material. Bei deinem Einkommen dauert das etwa ${fmtDuration(wonderTotal(id) / Math.max(1, wonderRate()))}. Mehr Einkommen macht es schneller.</p>` : ''}
     <p class="muted">${d.desc}</p>
     ${tip && tip !== d.desc ? `<p class="muted">💡 ${tip}</p>` : ''}
     ${facts.length ? `<div class="stats">${facts.map(f => `<span>${f}</span>`).join('')}</div>` : ''}
@@ -787,8 +787,8 @@ let wegPop = null;
 const WEG_SHAPES = [['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']];   // Wegform (Block 77)
 // Breite neuer Treppen (hills.js stairWideNew): ein Knopf wie die Wegform
 const stairWideChip = () => { const w = stairWideNew(), n = w ? 'breit' : 'schmal';
-  return `<button class="style-chip size-chip shape-chip${w ? ' on' : ''}" data-stairw="1" aria-pressed="${w}" title="${w ? 'breit' : 'schmal wie ein Weg'} – tippen zum Wechseln" aria-label="Treppe ${w ? 'breit' : 'schmal wie ein Weg'}"><i>${w ? '▬' : '▭'}</i><span>${n}</span></button>`; };
-const shapeChip = ([k, i0, i1, n0, n1]) => `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`;
+  return `<button class="style-chip size-chip shape-chip${w ? ' on' : ''}" data-stairw="1" aria-pressed="${w}" title="${w ? 'breit' : 'schmal wie ein Weg'}, tippen zum Wechseln" aria-label="Treppe ${w ? 'breit' : 'schmal wie ein Weg'}"><i>${w ? '▬' : '▭'}</i><span>${n}</span></button>`; };
+const shapeChip = ([k, i0, i1, n0, n1]) => `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0}, tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`;
 // Treppe in die Anhöhe (Block 157d, stair): dieselbe Leiste für den Belag der Stufen – ohne Trittsteine (keine Fläche); gewählt wird
 // chosenStyle.huegeltreppe (ohne Wahl: der Stil des Wegs, stairStyleNew), statt der Wegform die Breite (schmal wie ein Weg / breit,
 // stairNewWide – ohne Wahl wie die Wegform)
@@ -805,8 +805,8 @@ function wegStyleBar(bar, stair = false) {
     : wegPop === 'farbe' && M && !M.fixed ? `<div class="wpop wpop-cols" role="listbox" aria-label="Farbe">${WEG_FARBEN.filter(f => wegFarbeOk(f.id)).map(f =>
         `<button class="wopt${f.id === cf ? ' on' : ''}" data-wf="${f.id}" role="option" aria-selected="${f.id === cf}"><i style="background:${f.c}"></i><small>${f.name}</small></button>`).join('')}</div>` : '';
   bar.innerHTML = pop
-    + `<button class="style-chip on wsel${wegPop === 'muster' ? ' open' : ''}" data-wpop="muster" aria-expanded="${wegPop === 'muster'}" aria-label="Muster: ${M ? M.name : ''} – ändern"><i style="background:${sw(cur)}"></i><span>${M ? M.name : ''} ▾</span></button>`
-    + `<button class="style-chip on wsel${wegPop === 'farbe' ? ' open' : ''}" data-wpop="farbe" ${M && M.fixed ? 'disabled title="Dieses Muster hat eigene Farben"' : ''} aria-expanded="${wegPop === 'farbe'}" aria-label="Farbe: ${M && M.fixed ? 'eigene' : F ? F.name : ''} – ändern"><i style="background:${M && M.fixed ? sw(cur) : F ? F.c : '#ccc'}"></i><span>${M && M.fixed ? 'eigene Farben' : F ? F.name + ' ▾' : ''}</span></button>`
+    + `<button class="style-chip on wsel${wegPop === 'muster' ? ' open' : ''}" data-wpop="muster" aria-expanded="${wegPop === 'muster'}" aria-label="Muster: ${M ? M.name : ''}, ändern"><i style="background:${sw(cur)}"></i><span>${M ? M.name : ''} ▾</span></button>`
+    + `<button class="style-chip on wsel${wegPop === 'farbe' ? ' open' : ''}" data-wpop="farbe" ${M && M.fixed ? 'disabled title="Dieses Muster hat eigene Farben"' : ''} aria-expanded="${wegPop === 'farbe'}" aria-label="Farbe: ${M && M.fixed ? 'eigene' : F ? F.name : ''}, ändern"><i style="background:${M && M.fixed ? sw(cur) : F ? F.c : '#ccc'}"></i><span>${M && M.fixed ? 'eigene Farben' : F ? F.name + ' ▾' : ''}</span></button>`
     + (stair ? `<span class="style-sep"></span>${stairWideChip()}` : `<span class="style-sep"></span>${WEG_SHAPES.map(shapeChip).join('')}`);
   for (const b of bar.querySelectorAll('[data-wpop]')) b.onclick = () => { wegPop = wegPop === b.dataset.wpop ? null : b.dataset.wpop; sfx('deco'); renderStyleBar(kind); };
   for (const b of bar.querySelectorAll('[data-wm]')) b.onclick = () => { const m = WEG_MUSTER_BY[b.dataset.wm]; pick(wegStyleOf(m.id, colFor(m))); wegPop = null; sfx('deco'); renderStyleBar(kind); };
@@ -849,9 +849,9 @@ function edgeStyleBar(bar, t) {
     : edgePop === 'col' && hecke ? `<div class="wpop wpop-cols" role="listbox" aria-label="Farbe">${cols.map(([c, i]) => `<button class="wopt${i === col ? ' on' : ''}" data-bchip="${i}" role="option" aria-selected="${i === col}"><i style="background:${c.c[0]}"></i><small>${c.name}</small></button>`).join('')}${artBtn(moreC, 'col')}</div>` : '';
   const C0 = BUSH_COLS[col] || BUSH_COLS[0];
   bar.innerHTML = pop
-    + `<button class="style-chip on wsel${edgePop === 'form' ? ' open' : ''}" data-epop="form" aria-expanded="${edgePop === 'form'}" aria-label="Form: ${st.name} – ändern"><i style="background:${edgeStyleBg(t, st)}"></i><span>${st.name} ▾</span></button>`
-    + (hecke ? `<button class="style-chip on wsel${edgePop === 'col' ? ' open' : ''}" data-epop="col" aria-expanded="${edgePop === 'col'}" aria-label="Farbe: ${C0.name} – ändern"><i style="background:${C0.c[0]}"></i><span>${C0.name} ▾</span></button>` : '')
-    + `<span class="style-sep"></span><button class="style-chip size-chip shape-chip${edgeShape.sq ? ' on' : ''}" data-esq="1" aria-pressed="${edgeShape.sq}" title="${edgeShape.sq ? 'Ecke eckig' : 'Ecke rund'} – tippen zum Wechseln" aria-label="${edgeShape.sq ? 'Ecke eckig' : 'Ecke rund'}"><i>${edgeShape.sq ? '⌐' : '⌒'}</i><span>${edgeShape.sq ? 'Ecke eckig' : 'Ecke rund'}</span></button>`;
+    + `<button class="style-chip on wsel${edgePop === 'form' ? ' open' : ''}" data-epop="form" aria-expanded="${edgePop === 'form'}" aria-label="Form: ${st.name}, ändern"><i style="background:${edgeStyleBg(t, st)}"></i><span>${st.name} ▾</span></button>`
+    + (hecke ? `<button class="style-chip on wsel${edgePop === 'col' ? ' open' : ''}" data-epop="col" aria-expanded="${edgePop === 'col'}" aria-label="Farbe: ${C0.name}, ändern"><i style="background:${C0.c[0]}"></i><span>${C0.name} ▾</span></button>` : '')
+    + `<span class="style-sep"></span><button class="style-chip size-chip shape-chip${edgeShape.sq ? ' on' : ''}" data-esq="1" aria-pressed="${edgeShape.sq}" title="${edgeShape.sq ? 'Ecke eckig' : 'Ecke rund'}, tippen zum Wechseln" aria-label="${edgeShape.sq ? 'Ecke eckig' : 'Ecke rund'}"><i>${edgeShape.sq ? '⌐' : '⌒'}</i><span>${edgeShape.sq ? 'Ecke eckig' : 'Ecke rund'}</span></button>`;
   for (const b of bar.querySelectorAll('[data-epop]')) b.onclick = () => { edgePop = edgePop === b.dataset.epop ? null : b.dataset.epop; sfx('deco'); renderStyleBar(t); };
   for (const b of bar.querySelectorAll('[data-esq]')) b.onclick = () => { edgeShape.sq = !edgeShape.sq; edgePop = null; previewCache = null; sfx('deco'); renderStyleBar(t); };
   for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; edgePop = null; previewCache = null; sfx('deco'); renderStyleBar(t); };
@@ -946,7 +946,7 @@ function renderOwnStyleBar(t) {
       <i style="background:${EDGE_TOOLS.has(t) ? edgeStyleBg(t, st) : styleSwatch(st)}"></i><span>${st.name}</span></button>`).join('')
     + (more ? `<button class="style-chip more" data-more="1" title="${more} weitere Wege in der Kunstakademie" aria-label="${more} weitere Wege freischalten">🎨<span>+${more}</span></button>` : '')
     + (t === 'weg' ? `<span class="style-sep"></span>${[['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']].map(([k, i0, i1, n0, n1]) =>   // Wegform (Block 77)
-      `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`).join('')}` : '');
+      `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0}, tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`).join('')}` : '');
   if (t === 'hecke') { bar.innerHTML += bushChips('hecke'); wireBushChips(bar, 'hecke', t); }   // Farbe der Hecke (Block 89, alle Formen: Block 126)
   for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; sfx('deco'); renderStyleBar(t); };
   for (const b of bar.querySelectorAll('[data-wegopt]')) b.onclick = () => { wegShape[b.dataset.wegopt] = !wegShape[b.dataset.wegopt]; previewCache = null; sfx('deco'); renderStyleBar(t); };
@@ -988,7 +988,7 @@ function updateHud() {
   if (typeof uiNightSync === 'function') uiNightSync();                  // nachts dunklerer Rand an Fenstern und Leisten (ui-look.js)
   const tod = timeOfDay();                                              // Spieluhr (Block 101): Sonne/Mond und Uhrzeit
   setWiText($('tod-i'), tod.icon); setText($('tod-t'), ' ' + tod.text);   // Handy: nur Sonne/Mond (CSS)
-  const todLabel = `Rathaus – ${tod.text} Uhr, ${tod.name}`;
+  const todLabel = `Rathaus, ${tod.text} Uhr, ${tod.name}`;
   if ($('town-btn').getAttribute('aria-label') !== todLabel) $('town-btn').setAttribute('aria-label', todLabel);   // nur bei Änderung (Safari, hudtap.test)
   const fl = $('hud-flag');
   if (fl.dataset.col !== state.town.color) { fl.dataset.col = state.town.color; fl.style.background = state.town.color; }
@@ -1026,7 +1026,7 @@ function costMarks() {
   for (const b of document.querySelectorAll('[data-sci]')) b.disabled = state.science < +b.dataset.sci;
 }
 $('goal').onclick = e => {
-  if (e.target.dataset.skip) { state.tutorial = -1; save(); toast('Einführung übersprungen – viel Spaß!'); updateHud(); return; }
+  if (e.target.dataset.skip) { state.tutorial = -1; save(); toast('Einführung übersprungen. Viel Spaß!'); updateHud(); return; }
   const req = e.target.closest('[data-lm]'), pos = req && lmTile(req.dataset.lm);
   if (pos) { jumpTo(pos[0], pos[1], 3, 3); sparkle(pos[0] + 1, pos[1] + 1); return; }
   if (e.target.closest('[data-decree]')) {                       // Erlass wartet: zum Schloss
@@ -1055,7 +1055,7 @@ function storeHtml() {
   const made = r => (T.prod[r] || 0) + T.conv.filter(c => c.to === r).reduce((s, c) => s + c.rate, 0) - T.conv.filter(c => c.from === r).reduce((s, c) => s + c.rate * CONV_RATIO, 0)
     - (soldRate[r] || 0);                                                                                          // Läden verkaufen (wirklich)
   const sold = new Set((T.sales || []).map(sl => sl.res));
-  const keepBtn = r => { const k = keepOf(r); return sold.has(r) ? `<button class="keep" data-keep="${r}" title="Läden verkaufen nur, was darüber liegt – antippen zum Ändern">🔒 ${k >= KEEP_ALL ? 'alles' : fmt(k)}</button>` : '<span></span>'; };
+  const keepBtn = r => { const k = keepOf(r); return sold.has(r) ? `<button class="keep" data-keep="${r}" title="Läden verkaufen nur, was darüber liegt. Antippen zum Ändern">🔒 ${k >= KEEP_ALL ? 'alles' : fmt(k)}</button>` : '<span></span>'; };
   const rows = shown.map(r => { const m = made(r) * 60; return `<div class="store-row"><span ${helpAttr('res:' + r)}>${RES[r].icon} ${RES[r].name}</span><b>${fmt(state.res[r])}</b><small${m < 0 ? ' class="minus"' : ''}>${Math.abs(m) >= 0.5 ? (m > 0 ? '+' : '−') + fmtWhole(Math.abs(m)) + '/min' : ''}</small>${keepBtn(r)}</div>`; });
   const P = T.rail.power, power = P.city || P.supply
     ? `<div class="store-row${P.demand > P.supply + 1e-9 ? ' bad' : ''}"><span>⚡ Strom</span><b>${fmtPow(P.supply)}</b><small${P.demand > P.supply + 1e-9 ? ' class="minus"' : ''}>${P.demand} gebraucht</small></div>` : '';
@@ -1063,7 +1063,7 @@ function storeHtml() {
   const run = T.rail.lines.filter(l => l.traffic), want = run.reduce((s, l) => s + l.traffic.demand, 0), got = run.reduce((s, l) => s + l.traffic.carried, 0);
   const full = want > got + 0.5, money = (T.traffic.fare + T.traffic.spend);
   const traffic = run.length ? `<div class="store-row${full ? ' bad' : ''}"><span>🚆 Fahrgäste</span><b>${fmt(got)}/min</b><small${full ? ' class="minus"' : ''}>${full ? `${fmt(want)} wollen mit` : money >= 0.05 ? '+' + fmtRate(money) + '/s' : ''}</small></div>` : '';
-  return `<div class="store-title">📦 Lager</div>${rows.join('') || '<p class="muted">Noch leer – Holzfäller, Steinbruch & Co. füllen es.</p>'}
+  return `<div class="store-title">📦 Lager</div>${rows.join('') || '<p class="muted">Noch leer. Holzfäller, Steinbruch & Co. füllen es.</p>'}
     ${sold.size ? '<p class="muted store-note">🔒 Vorrat: Läden verkaufen nur, was darüber liegt.</p>' : ''}
     <div class="store-row sep"><span>🌸 Schönheit</span><b>${fmt(T.beauty)}</b><small></small></div>${power}${traffic}
     ${state.sdSeen || state.stardust > 0 ? `<div class="store-row sd-row" data-sd="1" role="button" tabindex="0"><span>✨ Sternstaub</span><b>${fmt(state.stardust || 0)}</b><small>öffnen ›</small></div>` : ''}`;   // ✨ (Block 161): auf dem Handy statt der Pille
@@ -1118,7 +1118,7 @@ function unlockCard(k) {
   if (k.startsWith('weg:')) {
     const st = styleDef('weg', k.slice(4));
     return `<div class="unlock-card"><div class="uc-pic"><i class="uc-sw" style="background:${styleSwatch(st)}"></i></div>
-      <div class="uc-txt"><b>Neuer Wegstil: ${st.name}</b><p class="tip">💡 Ein Geschenk – beim Weg in der Stil-Leiste auswählen.</p>
+      <div class="uc-txt"><b>Neuer Wegstil: ${st.name}</b><p class="tip">💡 Ein Geschenk. Du wählst ihn beim Weg in der Stil-Leiste aus.</p>
       <button class="btn small" data-try="${k}">Ausprobieren</button></div></div>`;
   }
   if (k.startsWith('brmat:')) {                                          // neues Brückenmaterial (160c G1)
@@ -1129,7 +1129,7 @@ function unlockCard(k) {
   }
   if (k.startsWith('stufe:')) {
     return `<div class="unlock-card"><div class="uc-pic"><span class="emoji">🏡</span></div>
-      <div class="uc-txt"><b>Neue Hausstufe: ${k.slice(6)}</b><p>Villen können jetzt weiterwachsen – mit Kristall 💎.</p>
+      <div class="uc-txt"><b>Neue Hausstufe: ${k.slice(6)}</b><p>Villen können jetzt weiterwachsen, mit Kristall 💎.</p>
       <p class="tip">💡 Tipp eine Villa an, dort stehen ihre neuen Wünsche.</p></div></div>`;
   }
   const d = ITEMS[k];
@@ -1161,8 +1161,8 @@ function showNextAchv() {
   if (!el.hidden || !achvQueue.length) return;
   const e = achvQueue.shift();
   el.innerHTML = e.rank
-    ? `🎖️ <b>${e.rank.name}</b>${e.rank.item ? ` – ${ITEMS[e.rank.item].name} freigeschaltet!` : '!'}`
-    : `🏆 Erfolg: <b>${e.a.icon} ${e.a.name} – ${tierText(e.a, e.a.tiers[e.tier - 1])}</b> ⭐`;
+    ? `🎖️ <b>${e.rank.name}</b>${e.rank.item ? `! ${ITEMS[e.rank.item].name} ist freigeschaltet.` : '!'}`
+    : `🏆 Erfolg: <b>${e.a.icon} ${e.a.name}: ${tierText(e.a, e.a.tiers[e.tier - 1])}</b> ⭐`;
   el.hidden = false;
   sfx('star');
   clearTimeout(achvTimer);
@@ -1190,7 +1190,7 @@ function watchTips() {
   $('modal-card').classList.add('tipcard');
   $('m-ok').onclick = closeModal;
   $('m-tipbook').onclick = openTipBook;
-  $('m-notips').onclick = () => { state.tipsOff = true; save(); closeModal(); toast('Keine Tipps mehr – unter ☰ → Hilfe → Tipps wieder einschaltbar'); };
+  $('m-notips').onclick = () => { state.tipsOff = true; save(); closeModal(); toast('Keine Tipps mehr. Unter ☰ → Hilfe → Tipps kannst du sie wieder einschalten.'); };
 }
 // Sammelalbum: Seiten mit Fortschritt; Fehlendes grau, damit man sieht, was noch fehlt
 function openAlbum() {
@@ -1219,7 +1219,7 @@ function openAlbum() {
       return `<div class="album-page${done ? ' done' : ''}" data-apage="${p.id}"><div class="label">${p.icon} ${p.name} · ${n}/${ks.length}</div>
         <div class="al-grid">${ks.map(entry).join('')}</div>
         ${p.tiers ? `<p class="al-reward">🎁 ${p.tiers.map(b => `${n >= ITEMS[b].albumN ? '✓' : ITEMS[b].albumN + ':'} <b>${ITEMS[b].name}</b>`).join(' · ')}</p>`
-          : `<p class="al-reward">${done ? '✓' : '🎁'} Belohnung: <b>${rewardName(p.reward)}</b>${done ? ' – freigeschaltet!' : ''}</p>`}
+          : `<p class="al-reward">${done ? '✓' : '🎁'} Belohnung: <b>${rewardName(p.reward)}</b>${done ? ', freigeschaltet!' : ''}</p>`}
         ${p.id === 'natur' ? '<p class="muted">Tipp Tiere an, die du auf deiner Insel entdeckst.</p>' : ''}</div>`;
     }).join('')}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
@@ -1420,7 +1420,7 @@ function castleHtml(t) {
   const pick = (key, names = CS_NAMES[key]) => `<div class="looks">${names.map((n, i) => `<button class="look${i === c[key] ? ' on' : ''}" data-cs="${key}:${i}">${n}</button>`).join('')}</div>`;
   const tabs = `<div class="looks cs-tabs">${[['form', '🏰 Form'], ['tuerme', '🗼 Türme'], ['zierde', '✨ Zierde'], ['farben', '🎨 Farben']].map(([id, n]) => `<button class="look${castleTab === id ? ' on' : ''}" data-cstab="${id}">${n}</button>`).join('')}</div>`;
   const paid = t.price != null ? t.price : castlePrice(c), now = castlePrice(c);
-  const worth = `<p class="muted">Bezahlt: ${fmt(paid)} Taler${paid > now ? ` – davon ${fmt(paid - now)} als Guthaben` : ''}. Umbauen bis zu diesem Wert kostet nichts, nur was darüber geht, kostet den Unterschied. Kleiner gibt kein Geld zurück – das Guthaben bleibt im Schloss.</p>`;
+  const worth = `<p class="muted">Bezahlt: ${fmt(paid)} Taler${paid > now ? `, davon ${fmt(paid - now)} als Guthaben` : ''}. Umbauen bis zu diesem Wert kostet nichts, nur was darüber geht, kostet den Unterschied. Kleiner gibt kein Geld zurück, das Guthaben bleibt im Schloss.</p>`;
   if (castleTab === 'farben') return tabs;
   const toggle = (key, label) => `<button class="look${c[key] ? ' on' : ''}" data-cs="${key}:t" aria-pressed="${c[key] ? 'true' : 'false'}">${label}</button>`;
   if (castleTab === 'zierde') return `${tabs}
@@ -1495,7 +1495,7 @@ function wireDel(x, y, under = false) {                                 // under
 // Standortbonus (Block 53): wie gut der Platz ist und was noch mehr brächte
 function siteStatus(si) {
   const less = si.bad > 0.004 ? ` <small>(${si.bTxt} −${pctTxt(si.bad)})</small>` : '';
-  if (si.f >= SITE_MAX - 0.004) return `<div class="ok">${si.gTxt}: +${pctTxt(si.f)} – bester Platz</div>`;
+  if (si.f >= SITE_MAX - 0.004) return `<div class="ok">${si.gTxt}: +${pctTxt(si.f)}, bester Platz</div>`;
   return `<div${si.f > 0.004 ? ' class="ok"' : ''}>${si.f > 0.004 ? `${si.gTxt}: +${pctTxt(si.f)}` : '📍 Normaler Platz'}${less}<br><small class="muted">${si.tip} (bis +${pctTxt(SITE_MAX)}).</small></div>`;
 }
 // Bewohner angetippt (Block 55): wer, wo zu Hause, was gerade los ist; eine Sprechblase; Knopf zum Haus
@@ -1539,7 +1539,7 @@ function wegBelagHtml(t, x, y) {
   return `<div class="label">Belag</div>
     ${n > 1 ? `<div class="looks"><button class="look${all ? '' : ' on'}" data-wscope="one">Nur dieses Feld</button><button class="look${all ? ' on' : ''}" data-wscope="all">Alle verbundenen (${n} Felder)</button></div>` : ''}
     ${wegPickHtml(t.style || 'sand', 'wbel')}
-    <p class="muted">${all ? `Färbt alle ${n} verbundenen Wegfelder um` : 'Färbt dieses Feld um'} – je Feld 🪙 ${fmt(ITEMS.weg.cost)}, ↶ macht es rückgängig.</p>`;
+    <p class="muted">${all ? `Färbt alle ${n} verbundenen Wegfelder um` : 'Färbt dieses Feld um'}, je Feld 🪙 ${fmt(ITEMS.weg.cost)}. ↶ macht es rückgängig.</p>`;
 }
 function wegFormHtml(t, x, y) {
   const arms = pathArms(x, y), curve = !t.wide && !!roadCurve(arms), end = arms.length <= 1;
@@ -1562,7 +1562,7 @@ function rampFormHtml(x, y, t) {
   return `<div class="label">Form</div><div class="looks">${Object.entries(RAMP_FORMS).map(([f, F]) => {
     const p = f === cur ? null : rampFormPlan(x, y, f), bad = typeof p === 'string', dm = p && !bad ? p.money : 0;
     return `<button class="look${f === cur ? ' on' : ''}${bad ? ' locked' : ''}" data-rform="${f}"${bad ? ` title="${escHtml(p)}"` : ''}>${F.name} · ${F.short}${dm > 0 ? ` · −${fmt(dm)}` : dm < 0 ? ` · +${fmt(-dm)}` : ''}</button>`;
-  }).join('')}</div><p class="muted">Oben bleibt sie, wo sie ist – A und C liegen in der Anhöhe, B und D stehen davor.</p>`;
+  }).join('')}</div><p class="muted">Oben bleibt sie, wo sie ist. A und C liegen in der Anhöhe, B und D stehen davor.</p>`;
 }
 function stairWidthHtml(t, x, y) {
   if (t.ecke) return '';
@@ -1573,7 +1573,7 @@ function stairWidthHtml(t, x, y) {
 function setStairWidth(x, y, wide) {
   const row = stairRow(x, y, true).filter(([sx, sy]) => !stairAt(sx, sy).ecke);
   if (!row.some(([sx, sy]) => stairSchmal(stairAt(sx, sy)) === wide)) return false;
-  if (!wide && row.some(([sx, sy]) => cornerOn(sx, sy))) { fail('Hier hängt eine Ecktreppe dran – um die Ecke geht nur die breite Treppe'); return false; }
+  if (!wide && row.some(([sx, sy]) => cornerOn(sx, sy))) { fail('Hier hängt eine Ecktreppe dran. Um die Ecke geht nur die breite Treppe.'); return false; }
   undoable(() => { for (const [sx, sy] of row) { const s = stairAt(sx, sy); if (wide) delete s.schmal; else s.schmal = true; } groundVersion++; sfx('deco'); recalc(); save(); });
   return true;
 }
@@ -1773,8 +1773,8 @@ function lookChips(b) {
   const pop = lookPop === 'form' ? `<div class="wpop" role="listbox" aria-label="${fLab}">${lookFree(b, 'form').map(([f, i]) => `<button class="wopt${i === form ? ' on' : ''}${lockOf(i) ? ' locked' : ''}" data-lform="${i}" role="option" aria-selected="${i === form}"${lockOf(i) ? ` title="${escHtml(lockOf(i))}"` : ''}><i style="background:#f6efe2 url(${lookThumb(b, i, col)}) center / contain no-repeat"></i><small>${lockOf(i) ? '🔒 ' : ''}${f.name}</small></button>`).join('')}${more(moreF)}</div>`
     : lookPop === 'col' && L.cols ? `<div class="wpop wpop-cols" role="listbox" aria-label="${lab}">${lookFree(b, 'col').map(([c, i]) => `<button class="wopt${i === col ? ' on' : ''}" data-lcol="${i}" role="option" aria-selected="${i === col}"><i style="background:${c.c}"></i><small>${c.name}</small></button>`).join('')}${more(moreC)}</div>` : '';
   return '<span class="style-sep"></span>' + pop
-    + `<button class="style-chip on wsel look-chip${lookPop === 'form' ? ' open' : ''}" data-lpop="form" aria-expanded="${lookPop === 'form'}" aria-label="${fLab}: ${F.name} – ändern"${lockOf(form) ? ` title="${escHtml(lockOf(form))}"` : ''}><i style="background:#f6efe2 url(${lookThumb(b, form, col)}) center / contain no-repeat"></i><span>${lockOf(form) ? '🔒 ' : ''}${F.name} ▾</span></button>`
-    + (Cc ? `<button class="style-chip on wsel${lookPop === 'col' ? ' open' : ''}" data-lpop="col" aria-expanded="${lookPop === 'col'}" aria-label="${lab}: ${Cc.name} – ändern"><i style="background:${Cc.c}"></i><span>${Cc.name} ▾</span></button>` : '');
+    + `<button class="style-chip on wsel look-chip${lookPop === 'form' ? ' open' : ''}" data-lpop="form" aria-expanded="${lookPop === 'form'}" aria-label="${fLab}: ${F.name}, ändern"${lockOf(form) ? ` title="${escHtml(lockOf(form))}"` : ''}><i style="background:#f6efe2 url(${lookThumb(b, form, col)}) center / contain no-repeat"></i><span>${lockOf(form) ? '🔒 ' : ''}${F.name} ▾</span></button>`
+    + (Cc ? `<button class="style-chip on wsel${lookPop === 'col' ? ' open' : ''}" data-lpop="col" aria-expanded="${lookPop === 'col'}" aria-label="${lab}: ${Cc.name}, ändern"><i style="background:${Cc.c}"></i><span>${Cc.name} ▾</span></button>` : '');
 }
 function wireLookChips(bar, b, t) {
   const set = (k, v) => { state.paintNew[b] = { ...(state.paintNew[b] || {}), [k]: v }; previewCache = null; lookPop = null; sfx('deco'); save(); renderStyleBar(t); };
@@ -1818,7 +1818,7 @@ function pbTrainsHtml(x, y) {
   return `<div class="label">Züge auf dieser Strecke (${forms.length})</div>
     ${forms.map((f, j) => `<div class="looks pb-zug"><span class="pb-nr">${j + 1}</span>${F.map(([m, i]) => `<button class="look${i === f ? ' on' : ''}" data-pbm="${j},${i}" title="${m.name}">${m.short || m.name}</button>`).join('')}${forms.length > 1 ? `<button class="look" data-pbdel="${j}" aria-label="Zug ${j + 1} entfernen" title="Entfernen (gibt 🪙 ${fmt(PB_ZUG_COST)} zurück)">✕</button>` : ''}</div>`).join('')}
     <div class="row"><button class="btn" data-pbadd="1" ${room && state.money >= PB_ZUG_COST ? '' : 'disabled'}>+ Zug · 🪙 ${fmt(PB_ZUG_COST)}</button></div>
-    ${room ? '' : '<p class="muted">Für noch einen Zug ist die Strecke zu kurz – länger bauen.</p>'}
+    ${room ? '' : '<p class="muted">Für noch einen Zug ist die Strecke zu kurz. Bau sie länger.</p>'}
     ${more ? `<div class="looks"><button class="look art-more" data-pbmore="1">🎨 ${more} weitere Züge freischalten ›</button></div>` : ''}`;
 }
 function wirePbTrains(el, x, y) {
@@ -1853,12 +1853,12 @@ function artJump(group) {
 function hillInfoStatus(t, x, y) {
   if (!hillsOn() || hillCarryOk(t.b)) return [];
   const out = [], fp = footprint(t.b, x, y, t.rot || 0, t);
-  if (hillNoStair(x, y)) out.push(hillStairShut(x, y) ? '<div class="bad">⛰️ Die Treppe hinauf ist zugestellt – von unten kommt zu Fuß niemand hierher</div>'   // 157j: oben/am Fuß steht etwas
-    : '<div class="bad">⛰️ Keine Treppe führt auf diese Anhöhe – zu Fuß kommt niemand hinauf</div>');
-  if (hillStairBlock(x + ',' + y)) out.push('<div class="bad">🪜 Versperrt die Treppe – zu Fuß kommt sonst niemand auf die Anhöhe</div>');   // steht auf ihrem Fuß bzw. oberen Feld
+  if (hillNoStair(x, y)) out.push(hillStairShut(x, y) ? '<div class="bad">⛰️ Die Treppe hinauf ist zugestellt. Von unten kommt zu Fuß niemand hierher.</div>'   // 157j: oben/am Fuß steht etwas
+    : '<div class="bad">⛰️ Keine Treppe führt auf diese Anhöhe, zu Fuß kommt niemand hinauf</div>');
+  if (hillStairBlock(x + ',' + y)) out.push('<div class="bad">🪜 Versperrt die Treppe. Zu Fuß kommt sonst niemand auf die Anhöhe.</div>');   // steht auf ihrem Fuß bzw. oberen Feld
   const visited = isHome(t.b) || !!ITEMS[t.b].workers || !!SHOPS[t.b];
   if (visited && fp.some(([fx, fy]) => DIRS.some(([dx, dy]) => hillLevel(fx + dx, fy + dy) !== hillLevel(fx, fy))) && !doorsOf(x + ',' + y).length)
-    out.push('<div class="bad">🚪 Keine Tür führt auf ebenen Boden – zu Fuß kommt hier niemand hinein</div>');
+    out.push('<div class="bad">🚪 Keine Tür führt auf ebenen Boden, zu Fuß kommt hier niemand hinein</div>');
   return out;
 }
 function openInfo(x, y) {
@@ -1883,42 +1883,42 @@ function openInfo(x, y) {
   status.push(...hillInfoStatus(t, x, y));                                // Gebäude oben (157j): ohne Treppe, ohne Tür
   if (s.bonus) status.push(`<div class="ok" ${helpAttr('term:viertel')}>🏘️ Viertel mit ${s.n} Gebäuden: +${Math.round(s.bonus * 100)} %</div>`);
   else if (s.n > 1) status.push(`<div ${helpAttr('term:viertel')}>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
-  else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
+  else if (s.n) status.push('<div>🏘️ Steht noch allein. Ab 3 Gebäuden im Viertel gibt es +10 %</div>');
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
   if (d.shop) status.push(...shopStatus(t, s, x + ',' + y));
   if (STANDS[t.b]) status.push(...marktStatus(x + ',' + y));
   if (terraLook(x, y) === 'park') status.push(...parkStatus(x + ',' + y));
   if (isTrack(t.b)) {                                                     // Achterbahn (Block 60c)
     const ca = COASTER_AT.get(x + ',' + y), c = ca && ca.c >= 0 && COASTERS[ca.c];
-    status.push(c ? `<div class="ok">🎢 Rundkurs fertig – der Zug fährt (${c.n} Stücke, bis ${Math.round(c.Hmax)} hoch)${t.loop ? ' · mit Looping' : ''}</div>`
+    status.push(c ? `<div class="ok">🎢 Rundkurs fertig, der Zug fährt (${c.n} Stücke, bis ${Math.round(c.Hmax)} hoch)${t.loop ? ' · mit Looping' : ''}</div>`
       : '<div class="bad">✗ Noch kein Rundkurs: Strecke ganz schließen (jedes Stück genau zwei Nachbarn) und eine Station hineinsetzen</div>');
   }
   if (ITEMS[t.b].cat === 'fz') status.push(...fzStatus(x + ',' + y));
-  if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
+  if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)}: Fahrgäste zählen je Ortsteil</div>`);
   if (t.b === 'station' || t.b === 'ubahn') status.push(...stationStatus(x + ',' + y));
-  if (t.b === 'schiene' && railAtTunnel(x, y)) status.push(`<div class="bad">✗ Hier endet ein Tunnel – ohne Einfahrt fährt der Zug nicht hinein. ${TUNNEL_EIN_HINT}</div>`);
+  if (t.b === 'schiene' && railAtTunnel(x, y)) status.push(`<div class="bad">✗ Hier endet ein Tunnel. Ohne Einfahrt fährt der Zug nicht hinein. ${TUNNEL_EIN_HINT}</div>`);
   if (t.b === 'tunneleinfahrt') { const E = einOf(x, y), inT = tunnelAt(E.B[0] + E.d[0], E.B[1] + E.d[1]), outR = bAt(E.A[0] - E.d[0], E.A[1] - E.d[1]) === 'schiene';
-    status.push(inT ? '<div class="ok">✓ Hinten am Tunnel</div>' : '<div class="bad">✗ Hinten noch kein Tunnel – ans Tunnelende setzen oder den Tunnel bis hierher ziehen</div>',
-      outR ? '<div class="ok">✓ Vorn an der Schiene</div>' : '<div class="bad">✗ Vorn noch keine Schiene – Schiene an das offene Ende legen</div>'); }
+    status.push(inT ? '<div class="ok">✓ Hinten am Tunnel</div>' : '<div class="bad">✗ Hinten noch kein Tunnel. Ans Tunnelende setzen oder den Tunnel bis hierher ziehen.</div>',
+      outR ? '<div class="ok">✓ Vorn an der Schiene</div>' : '<div class="bad">✗ Vorn noch keine Schiene. Leg eine Schiene an das offene Ende.</div>'); }
   if (t.b === 'bergportal') {                                           // Bergportal (157m, hills.js): wie die Tunneleinfahrt
     const [dx, dy] = bpDir(t), inT = tunnelAt(x + dx, y + dy), outR = railTileAt(x - dx, y - dy);
-    status.push(outR ? '<div class="ok">✓ Vorn an der Schiene</div>' : '<div class="bad">✗ Vorn noch keine Schiene – an den Fuß der Wand legen</div>',
-      inT ? '<div class="ok">✓ Hinten am Tunnel</div>' : '<div class="bad">✗ Hinten noch kein Tunnel – den Tunnel unter der Anhöhe bis hierher ziehen</div>');
-    if (!bpShown(t)) status.push('<div class="muted">Die Öffnung liegt in der hinteren Wand – von hier aus sieht man sie nicht</div>');
+    status.push(outR ? '<div class="ok">✓ Vorn an der Schiene</div>' : '<div class="bad">✗ Vorn noch keine Schiene. Leg sie an den Fuß der Wand.</div>',
+      inT ? '<div class="ok">✓ Hinten am Tunnel</div>' : '<div class="bad">✗ Hinten noch kein Tunnel. Zieh den Tunnel unter der Anhöhe bis hierher.</div>');
+    if (!bpShown(t)) status.push('<div class="muted">Die Öffnung liegt in der hinteren Wand, von hier aus sieht man sie nicht</div>');
   }
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
   if (t.b === 'huegeltreppe') status.push(hillStairs().some(s => s.x === x && s.y === y) ? '<div class="ok">✓ Führt hinauf auf die Anhöhe</div>'   // Block 157d
-    : '<div class="bad">✗ Oben ist keine Anhöhe mehr – die Treppe führt ins Leere</div>');
+    : '<div class="bad">✗ Oben ist keine Anhöhe mehr, die Treppe führt ins Leere</div>');
   if (t.b === 'huegelrampe') {                                         // Gleis-Rampe (hills.js): führt hinauf, Gleis unten und oben
     const R = hillRamps().find(r => r.k === x + ',' + y), rail = (px, py) => { const o = state.tiles.get(px + ',' + py); return !!o && o.b === 'schiene'; };
-    status.push(!R ? '<div class="bad">✗ Oben ist keine Anhöhe mehr – die Gleis-Rampe führt ins Leere</div>' : '<div class="ok">✓ Führt hinauf auf die Anhöhe</div>');
-    if (R) status.push(rail(R.foot[0] - R.dx, R.foot[1] - R.dy) ? '<div class="ok">✓ Unten schließt die Schiene an</div>' : '<div class="bad">✗ Unten noch keine Schiene – an den Fuß legen</div>',
-      rail(R.top[0] + R.dx, R.top[1] + R.dy) ? '<div class="ok">✓ Oben geht die Schiene weiter</div>' : '<div class="bad">✗ Oben noch keine Schiene – auf der Anhöhe weiterlegen</div>');
+    status.push(!R ? '<div class="bad">✗ Oben ist keine Anhöhe mehr, die Gleis-Rampe führt ins Leere</div>' : '<div class="ok">✓ Führt hinauf auf die Anhöhe</div>');
+    if (R) status.push(rail(R.foot[0] - R.dx, R.foot[1] - R.dy) ? '<div class="ok">✓ Unten schließt die Schiene an</div>' : '<div class="bad">✗ Unten noch keine Schiene. Leg sie an den Fuß.</div>',
+      rail(R.top[0] + R.dx, R.top[1] + R.dy) ? '<div class="ok">✓ Oben geht die Schiene weiter</div>' : '<div class="bad">✗ Oben noch keine Schiene. Leg sie auf der Anhöhe weiter.</div>');
   }
   if (SITE_TIP[t.b]) status.push(siteStatus(siteOf(t.b, x + ',' + y, t.rot, t)));
   if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t, x + ',' + y))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
   else if (CONSUMERS[t.b] && T.rail.power.city && !s.noPower && (!WONDERS[t.b] || wonderDone(t))) status.push(`<div class="ok">⚡ Hat Strom (braucht ${CONSUMERS[t.b]} ⚡)</div>`);
-  if (s.noPower) status.push(`<div class="bad" ${helpAttr('term:strom')}>⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡ – mehr Kraftwerke bauen (🏭 Herstellen → ⚡ Strom).</div>`);
+  if (s.noPower) status.push(`<div class="bad" ${helpAttr('term:strom')}>⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡. Bau mehr Kraftwerke (🏭 Herstellen → ⚡ Strom).</div>`);
   const why = [];
   const beete = beetBonus(x, y);
   if (t.b === 'haus') why.push(`👥 ${HOUSE_STAGES[t.lvl - 1].pop} Einwohner`);
@@ -1951,7 +1951,7 @@ function openInfo(x, y) {
         <div class="stats">${costs}</div>
         <div class="row"><button class="btn" id="p-stage" ${info.ready && canPay(info.next.cost) ? '' : 'disabled'}>
           ${info.ready ? (canPay(info.next.cost) ? '✨ Ausbauen' : 'Material fehlt noch') : `Noch ${missing} ${missing > 1 ? 'Bedingungen' : 'Bedingung'}`}</button></div>`;
-    } else grow = '<p class="ok">Höchste Stufe – prächtiger geht es nicht!</p>';
+    } else grow = '<p class="ok">Höchste Stufe, prächtiger geht es nicht!</p>';
   }
   let colors = '';
   if (t.b === 'haus' || repaintOf(t.b) || (PAINTABLE.has(t.b) && !(t.b === 'schloss' && !wonderDone(t)))) {   // Wunder-Schloss: erst nach der Einweihung
@@ -1994,7 +1994,7 @@ function openInfo(x, y) {
       ${w.next ? `<div class="label">Wünsche für: ${w.next.name}</div>
         <div class="status">${w.list.map(v => `<div class="${v.ok ? 'ok' : 'bad'}" ${helpAttr('wish:' + v.id)}>${v.ok ? '✓' : '✗'} ${v.text}${reachHow(v)}</div>`).join('')}</div>`
         : w.later ? `<p class="muted">✨ Mit Kristall 💎 von der Kristallinsel kann daraus eine ${w.later.name} werden.</p>`
-        : '<p class="ok">Alle Wünsche erfüllt – das schönste Haus der Insel!</p>'}`;
+        : '<p class="ok">Alle Wünsche erfüllt, das schönste Haus der Insel!</p>'}`;
     const hc = w.next && houseCost(w.next), hcText = hc ? [hc.money ? `🪙 ${fmt(hc.money)}` : '', matText(w.next.mat)].filter(Boolean).join(' ') : '';
     house += w.next ? `<div class="row"><button class="btn" id="p-grow" ${w.ready && canPay(hc) ? '' : 'disabled'}>
       ${w.ready ? `Ausbauen · ${hcText}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>
@@ -2013,7 +2013,7 @@ function openInfo(x, y) {
         <p class="muted">Wenn fertig: ${W.text}. Preise nach deinem besten Einkommen (🪙 ${fmt(wonderBase(t))}/s).</p>
         <div class="row"><button class="btn" id="p-wonder" ${canPay(wonderCost(t)) ? '' : 'disabled'}>🏗️ Abschnitt bauen</button></div>`;
     } else {
-      wonder = '<p class="ok">✓ Fertig – wirkt jetzt.</p>';
+      wonder = '<p class="ok">✓ Fertig, wirkt jetzt.</p>';
       if (t.b === 'riesenrad') wonder += `<div class="status"><div class="${fairLeft() ? 'ok' : ''}">🎡 ${fairLeft() ? `Jahrmarkt! Einnahmen ×${FAIR_MUL} · noch ${fmtClock(fairLeft())}` : `Nächster Jahrmarkt in ${fmtClock(fairNext())}`}</div></div>`;
       if (t.b === 'schloss') wonder += decreeHtml();
     }
@@ -2030,7 +2030,7 @@ function openInfo(x, y) {
     : t.b === 'weg' && !isCrossing(t) ? wegFormHtml(t, x, y)
     : t.b === 'fz_schloss' ? castleHtml(t)
     : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>`   // Wunder-Schloss (Block 60j)
-    : t.b === 'leuchtturm' && t.mini ? `<div class="label">🗼 Leuchtturm-Kap</div><p class="muted">Der Leuchtturm ist jetzt ein ganzes Kap (3×3) mit Wärterhaus, großem Leuchtfeuer und den 21 Laternen. ${lighthouseSpot(x + ',' + y, t) ? 'Rundherum ist Platz – er kann wachsen (kostenlos, Wege und Dekos dort gibt es zurück).' : 'Rundherum fehlt Platz: 3×3 Felder an der Küste, darauf nur Gras, Wege oder Dekos. Platz schaffen, dann wächst er.'}</p>
+    : t.b === 'leuchtturm' && t.mini ? `<div class="label">🗼 Leuchtturm-Kap</div><p class="muted">Der Leuchtturm ist jetzt ein ganzes Kap (3×3) mit Wärterhaus, großem Leuchtfeuer und den 21 Laternen. ${lighthouseSpot(x + ',' + y, t) ? 'Rundherum ist Platz, er kann wachsen (kostenlos, Wege und Dekos dort gibt es zurück).' : 'Rundherum fehlt Platz: 3×3 Felder an der Küste, darauf nur Gras, Wege oder Dekos. Platz schaffen, dann wächst er.'}</p>
       <div class="row"><button class="btn" data-lgrow="1" ${lighthouseSpot(x + ',' + y, t) ? '' : 'disabled'}>🗼 Zum Kap ausbauen</button></div>`   // Block 83
     : t.b === 'huegeltreppe' ? `<div class="label">Stufen${stairRow(x, y).length > 1 ? ` <small class="muted">(ganze breite Treppe, ${stairRow(x, y).length} Felder)</small>` : ''}</div>${wegPickHtml(stairStyleOf(t), 'stairbel', true)}${stairWidthHtml(t, x, y)}`   // Block 157d: Belag wie die Wege, Breite
     : t.b === 'huegelrampe' ? rampFormHtml(x, y, t)                                                                              // Gleis-Rampe: Form
@@ -2189,8 +2189,8 @@ function stopLevelHint(k) {
     if (rampTrackAt(fx + dx, fy + dy)) ramp = true;
     else if (railTileAt(fx + dx, fy + dy) && hillLevel(fx + dx, fy + dy) !== hillLevel(fx, fy)) other = true;
   }
-  return other ? `Die Schiene ${GLEIS.has(k) ? 'vor dem Gleis' : 'daneben'} liegt ${hillLevel(...keyXY(k)) > 0 ? 'unten' : 'oben auf der Anhöhe'} – Zug und Bahnhof brauchen dieselbe Höhe (hinauf über die Gleis-Rampe)`
-    : ramp ? 'Auf der Gleis-Rampe hält kein Zug – den Bahnhof oben oder unten an die Schiene setzen' : null;
+  return other ? `Die Schiene ${GLEIS.has(k) ? 'vor dem Gleis' : 'daneben'} liegt ${hillLevel(...keyXY(k)) > 0 ? 'unten' : 'oben auf der Anhöhe'}. Zug und Bahnhof brauchen dieselbe Höhe (hinauf über die Gleis-Rampe).`
+    : ramp ? 'Auf der Gleis-Rampe hält kein Zug. Setz den Bahnhof oben oder unten an die Schiene.' : null;
 }
 // Bahnhof: wohin fährt der Zug, hat er Strom?
 const kmText = l => `${nf1.format(l.km)} km`;
@@ -2200,12 +2200,12 @@ function stationStatus(k) {
   if (!line) return ['<div class="bad">✗ Noch kein Ziel: Schienen oder Tunnel bis zu einem Bahnhof bzw. einer U-Bahn-Station auf einer anderen Insel legen</div>'];
   const nV = line.traffic && line.traffic.viertel || 0;
   const out = [line.inner
-    ? `<div class="${nV > 1 ? 'ok' : 'bad'}">🚇 Linie auf ${regionName(line.regions[0])} · ${nV > 1 ? `verbindet ${nV} Viertel (Wünsche und Läden auch drüben)` : 'alle Halte im selben Viertel – bringt nichts, Halte in verschiedene Viertel setzen'} · ${line.loop ? '🔁 Rundkurs' : 'hin und zurück'}, ${kmText(line)}</div>`
+    ? `<div class="${nV > 1 ? 'ok' : 'bad'}">🚇 Linie auf ${regionName(line.regions[0])} · ${nV > 1 ? `verbindet ${nV} Viertel (Wünsche und Läden auch drüben)` : 'alle Halte im selben Viertel, das bringt nichts. Setz Halte in verschiedene Viertel'} · ${line.loop ? '🔁 Rundkurs' : 'hin und zurück'}, ${kmText(line)}</div>`
     : `<div class="ok">🚆 Linie ${names(line).join(' ↔ ')} · ${line.loop ? '🔁 Rundkurs' : 'hin und zurück'}, ${kmText(line)}</div>`];
   const tr = line.traffic;
   if (tr) out.push(...trafficStatus(line, tr));
-  if (line.running < line.count || !line.powered) out.push(`<div class="bad">⚡ Zu wenig Strom: Ein Zug hier braucht ${fmtPow(line.needs[line.running] || line.need)} ⚡ – ${fmtPow(T.rail.power.supply)} ⚡ erzeugt, ${fmtPow(T.rail.power.demand)} ⚡ gebraucht</div>`);
-  if (!line.loop) out.push('<div class="muted">🔁 Als geschlossener Kreis fährt der Zug im Kreis – und ab 4 km passen mehrere Züge drauf.</div>');
+  if (line.running < line.count || !line.powered) out.push(`<div class="bad">⚡ Zu wenig Strom: Ein Zug hier braucht ${fmtPow(line.needs[line.running] || line.need)} ⚡ (${fmtPow(T.rail.power.supply)} ⚡ erzeugt, ${fmtPow(T.rail.power.demand)} ⚡ gebraucht)</div>`);
+  if (!line.loop) out.push('<div class="muted">🔁 Als geschlossener Kreis fährt der Zug im Kreis, und ab 4 km passen mehrere Züge drauf.</div>');
   return out;
 }
 // Hafen: Schiffe (Liegeplätze je Stufe), je Ziel was sie befördern, ein neues kaufen (Modell + Ziel)
@@ -2218,10 +2218,10 @@ function shipsHtml(k, t) {
     return `<div class="hall-row"><span>${m.icon} <b>${m.name}</b><br><small class="muted">→ ${state.tiles.get(s.to) ? landingName(s.to) : 'Ziel fehlt'} · ${shipSeats(s)}/min</small></span>
       <button class="btn ghost small" data-shipsell="${i}" title="Verkaufen: ${costText(m.buy)} zurück">Verkaufen · +🪙 ${fmt(m.buy.money)}</button></div>`; }).join('')}</div>`;
   for (const f of ferriesAt(k)) html += f.noSea
-    ? `<div class="status"><div class="bad">⚠ Kein Seeweg ${f.regions.map(regionName).join(' ↔ ')} – ist das Wasser dazwischen zugeschüttet oder versperrt eine flache Brücke den Weg? Die Schiffe bleiben am Pier.</div></div>`
+    ? `<div class="status"><div class="bad">⚠ Kein Seeweg ${f.regions.map(regionName).join(' ↔ ')}. Ist das Wasser dazwischen zugeschüttet oder versperrt eine flache Brücke den Weg? Die Schiffe bleiben am Pier.</div></div>`
     : `<div class="status"><div class="ok">⛴️ ${f.regions.map(regionName).join(' ↔ ')} · ${f.ships.length} ${f.ships.length === 1 ? 'Schiff' : 'Schiffe'} · ${nf1.format(f.km)} km Seeweg</div>${trafficStatus(f, f.traffic).join('')}</div>`;
-  if (!targets.length) return html + '<p class="muted">Bau einen Steg (oder Hafen) auf einer anderen Insel – dort legen deine Schiffe an und bringen Pendler und Besucher.</p>';
-  if (ships.length >= berths) return html + `<p class="muted">Alle Liegeplätze belegt${(t.lvl || 1) < 3 ? ' – ausbauen bringt mehr' : ''}. Mehr Fahrgäste schafft auch ein schnelleres Modell (Forschung → 🚢 Verkehr).</p>`;
+  if (!targets.length) return html + '<p class="muted">Bau einen Steg (oder Hafen) auf einer anderen Insel. Dort legen deine Schiffe an und bringen Pendler und Besucher.</p>';
+  if (ships.length >= berths) return html + `<p class="muted">Alle Liegeplätze belegt${(t.lvl || 1) < 3 ? ', ausbauen bringt mehr' : ''}. Mehr Fahrgäste schafft auch ein schnelleres Modell (Forschung → 🚢 Verkehr).</p>`;
   if (!shipPick.model || !vehicleOk('schiff', shipPick.model)) shipPick.model = bestVehicle('schiff').id;
   if (!targets.includes(shipPick.to)) shipPick.to = targets[0];
   const m = SHIP_BY_ID[shipPick.model];
@@ -2234,7 +2234,7 @@ function shipsHtml(k, t) {
 }
 // Aufträge (ab Handelshafen): was die Frachter kaufen oder anbieten, wie lange noch
 function ordersHtml(t) {
-  if ((t.lvl || 1) < 2) return '<div class="label">🚢 Aufträge</div><p class="muted">Ab Stufe 2 (Handelshafen) legen Frachter mit Aufträgen an: Sie kaufen dir ab, was sich im Lager stapelt – oft für deutlich mehr, als es wert ist.</p>';
+  if ((t.lvl || 1) < 2) return '<div class="label">🚢 Aufträge</div><p class="muted">Ab Stufe 2 (Handelshafen) legen Frachter mit Aufträgen an: Sie kaufen dir ab, was sich im Lager stapelt, oft für deutlich mehr, als es wert ist.</p>';
   const now = Date.now(), slots = orderSlots(), next = Math.max(0, (state.orderNext || now) - now);
   const card = o => {
     const r = RES[o.res], left = fmtClock(o.until - now), have = state.res[o.res];
@@ -2245,16 +2245,16 @@ function ordersHtml(t) {
       <button class="btn ghost" data-order="${o.id}" data-cost="${o.pay}">Kaufen · 🪙 ${fmt(o.pay)}</button></div>`;
   };
   return `<div class="label">🚢 Aufträge · ${state.orders.length} von ${slots}${state.orders.length < slots ? ` · nächster in ${fmtClock(next)}` : ''}</div>
-    ${state.orders.length ? `<div class="orders">${state.orders.map(card).join('')}</div>` : '<p class="muted">Gerade liegt kein Frachter da – der nächste kommt bald.</p>'}
+    ${state.orders.length ? `<div class="orders">${state.orders.map(card).join('')}</div>` : '<p class="muted">Gerade liegt kein Frachter da. Der nächste kommt bald.</p>'}
     ${(t.lvl || 1) < 3 ? '<p class="muted">Großer Hafen (Stufe 3): 4 Aufträge gleichzeitig und Großaufträge (fast das ganze Lager, bis 300 % des Werts).</p>' : ''}`;
 }
 // Seilbahn: mit welcher Station verbunden, was sie befördert
 function cableStatus(k) {
   const c = T.cables.find(l => l.stations.includes(k));
   if (!c) return [`<div class="bad">✗ Noch keine Gegenstation: eine zweite Seilbahn-Station bis ${SEIL_MAX} Felder entfernt aufstellen</div>`];
-  const out = [`<div class="ok">🚡 Seil zur Station ${c.regions.length > 1 ? `auf der ${regionName(c.regions.find(r => r !== regionAt(...keyXY(k))))}` : 'gegenüber'} · ${nf1.format(c.km)} km – was nah an beiden Stationen steht, ist angebunden</div>`];
+  const out = [`<div class="ok">🚡 Seil zur Station ${c.regions.length > 1 ? `auf der ${regionName(c.regions.find(r => r !== regionAt(...keyXY(k))))}` : 'gegenüber'} · ${nf1.format(c.km)} km. Was nah an beiden Stationen steht, ist angebunden.</div>`];
   if (c.regions.length > 1) out.push(...trafficStatus(c, c.traffic));
-  else out.push('<div class="muted">👥 Fahrgäste gibt es zwischen zwei Inseln – hier bindet sie die Gegend ans Dorf an.</div>');
+  else out.push('<div class="muted">👥 Fahrgäste gibt es zwischen zwei Inseln. Hier bindet sie die Gegend ans Dorf an.</div>');
   return out;
 }
 // Laden: Kundschaft, Innenstadt, was er aus dem Lager verkauft
@@ -2271,9 +2271,9 @@ function openGateInfo(k) {
       .map(([v, name, on]) => `<button class="look${on ? ' on' : ''}" data-shut="${v}">${name}</button>`).join('')}</div>` : ''}
     ${byPath || across ? '' : `<div class="looks">${[['0', `${ITEMS[e.b].name} geschlossen`, !e.gate], ['1', '🚪 Gartentor', e.gate === true], ['offen', '⬜ Durchgang', e.gate === 'offen']]
       .map(([v, name, on]) => `<button class="look${on ? ' on' : ''}" data-gate="${v}">${name}</button>`).join('')}</div>`}
-    ${gate ? `<p class="muted">${byPath ? `Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang.` : gardenGate(k) ? 'Ein Gartentürchen – es geht auf, wenn jemand hindurchgeht.' : 'Eine offene Lücke ohne Türchen.'} Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
+    ${gate ? `<p class="muted">${byPath ? `Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang.` : gardenGate(k) ? 'Ein Gartentürchen, es geht auf, wenn jemand hindurchgeht.' : 'Eine offene Lücke ohne Türchen.'} Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
     <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>`
-    : '<p class="muted">Ein Stück zwischen zwei Feldern. Wo ein Weg auf beiden Seiten liegt, wird es ein Durchgang – oder du setzt hier ein Tor.</p>'}
+    : '<p class="muted">Ein Stück zwischen zwei Feldern. Wo ein Weg auf beiden Seiten liegt, wird es ein Durchgang. Du kannst hier auch ein Tor setzen.</p>'}
     ${edgeLookHtml(k, e)}
     <div class="label">Ecken</div>
     <div class="looks"><button class="look${e.sq ? '' : ' on'}" data-esqp="0">⌒ Rund</button><button class="look${e.sq ? ' on' : ''}" data-esqp="1">⌐ Eckig</button></div>
@@ -2347,7 +2347,7 @@ function parkStatus(k) {
     out.push(`<div class="muted">Für „${next.name}“ fehlt noch: ${miss.join(', ')}</div>`);
   }
   if (p.stage) out.push(`<div class="ok">🏡 Erfüllt den Park-Wunsch: Häuser bis ${PARK_REACH} Felder und im selben Viertel</div>`,
-    `<div class="ok">🌸 +${PARK_BEAUTY[p.stage]} Schönheit – auch für Häuser bis ${PARK_NEAR[p.stage]} Felder drumherum</div>`,
+    `<div class="ok">🌸 +${PARK_BEAUTY[p.stage]} Schönheit, auch für Häuser bis ${PARK_NEAR[p.stage]} Felder drumherum</div>`,
     `<div class="ok">👥 Zieht ${PARK_ATTR[p.stage]} Besucher auf die Insel (per Bahn und Schiff)</div>`);
   return out;
 }
@@ -2357,7 +2357,7 @@ function openTunnelInfo(x, y) {
   const c = costOf('tunnel', x, y), atRail = DIRS.some(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene');
   showPanel(`
     <h3>🚇 Tunnel</h3>
-    <p class="muted">Liegt unter der Erde – zu sehen mit 👁 Durchsicht oder mit Tunnel, Einfahrt, U-Bahn-Station oder Schiene in der Hand.${terrainAt(x, y) === 'water' ? ' Hier unter Wasser.' : ''}</p>
+    <p class="muted">Liegt unter der Erde. Zu sehen ist es mit 👁 Durchsicht oder mit Tunnel, Einfahrt, U-Bahn-Station oder Schiene in der Hand.${terrainAt(x, y) === 'water' ? ' Hier unter Wasser.' : ''}</p>
     ${atRail ? `<div class="status"><div class="bad">✗ Schiene direkt am Tunnel fährt nicht hinein. ${TUNNEL_EIN_HINT}</div></div>` : ''}
     <div class="row"><button class="btn danger" id="p-del" aria-label="Tunnel hier entfernen">🗑️ +${fmt(c.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => tunnelAt(x, y) && !COVER.has(x + ',' + y) ? openTunnelInfo(x, y) : closePanel());
@@ -2369,7 +2369,7 @@ function openLandInfo(x, y) {
   const ter = terrainAt(x, y), info = demolishInfo(x, y), rock = info.label === 'Sprengen';
   showPanel(`
     <h3>${rock ? '🪨' : '🌲'} ${escHtml(TERRAIN_NAMES[ter] || '')}</h3>
-    <p class="muted">${rock ? 'Sprengen' : 'Roden'} macht daraus Wiese – dann kannst du hier bauen.</p>
+    <p class="muted">${rock ? 'Sprengen' : 'Roden'} macht daraus Wiese, dann kannst du hier bauen.</p>
     <div class="row"><button class="btn danger" id="p-del">${rock ? '🧨 Sprengen' : '🪓 Roden'} · 🪙 ${fmt(info.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => terrainAt(x, y) === ter && !COVER.has(x + ',' + y) ? openLandInfo(x, y) : closePanel());
   $('p-del').onclick = () => { closePanel(); undoable(() => demolish(x, y)); };
@@ -2385,7 +2385,7 @@ function openHillInfo(x, y) {
   const di = demolishInfo(x, y);                                         // Abtragen wie 🗑️ überall: Linien/Eckpunkt-Deko am Rand sperren (rules.js)
   const el = showPanel(`
     <h3>⛰️ Anhöhe · ${escHtml((L.forms[w] || L.forms[0]).name)}</h3>
-    <p class="muted">Eine Ebene höher. Oben gehen Wege, Gleise, Plätze mit Ständen, Bäume, Bänke, Laternen, Brunnen, Beete und Gelände – Gebäude und Bahnhöfe kommen später. Zu Fuß führt die Treppe hinauf (Gestalten → Anhöhen), über sie hängt der Weg oben mit dem unten zusammen; Züge fahren über die Gleis-Rampe (Stadt → Verkehr).</p>
+    <p class="muted">Eine Ebene höher. Oben gehen Wege, Gleise, Plätze mit Ständen, Bäume, Bänke, Laternen, Brunnen, Beete und Gelände. Gebäude und Bahnhöfe kommen später. Zu Fuß führt die Treppe hinauf (Gestalten → Anhöhen), über sie hängt der Weg oben mit dem unten zusammen; Züge fahren über die Gleis-Rampe (Stadt → Verkehr).</p>
     <div class="label">Wand</div>
     <div class="looks look-forms">${lookFree('anhoehe', 'form').map(([f, i]) => `<button class="look look-form${i === w ? ' on' : ''}" data-hwall="${i}" aria-label="Wand: ${f.name}"><img alt="" src="${lookThumb('anhoehe', i, 0) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
     <p class="muted">Gilt für die ganze zusammenhängende Anhöhe${n > 1 ? ` (${n} Felder)` : ''}.</p>
@@ -2463,10 +2463,10 @@ const wares0 = S => S.raw ? ['holz', 'stein', 'erz', 'obst'] : S.all ? Object.ke
 function shopStatus(t, s, k) {
   const S = SHOPS[t.b], out = [], kd = s.kunden || 0, name = ITEMS[t.b].name, cap = shopCap(t.b), staff = S.workers || 1;
   const shared = [s.same > 1 ? `die Einwohner mit ${s.same - 1} weiteren im Viertel` : '', s.sameIsle > 1 ? `die Besucher mit ${s.sameIsle - 1} weiteren auf der Insel` : ''].filter(Boolean);
-  out.push(kd >= 1 ? `<div>🛒 Kundschaft: ${fmt(kd)} von höchstens ${fmt(cap)}${shared.length ? ` – teilt sich ${shared.join(' und ')}` : ' (Einwohner im Viertel + Besucher der Insel)'}</div>`
-    : '<div class="bad">✗ Noch keine Kundschaft: Häuser ins selbe Viertel (über Wege verbunden) – oder Besucher per Bahn und Schiff</div>');
+  out.push(kd >= 1 ? `<div>🛒 Kundschaft: ${fmt(kd)} von höchstens ${fmt(cap)}${shared.length ? `, teilt sich ${shared.join(' und ')}` : ' (Einwohner im Viertel + Besucher der Insel)'}</div>`
+    : '<div class="bad">✗ Noch keine Kundschaft: Häuser ins selbe Viertel (über Wege verbunden) oder Besucher per Bahn und Schiff</div>');
   if (s.markt) out.push(`<div class="ok">🧺 Marktviertel: +${Math.round(MARKT_BONUS * 100)} %${marktLeft() ? ' · Markttag: doppelt!' : ''}</div>`);
-  if (s.buy < 0.995) out.push(`<div>💰 Kaufkraft: Die Leute im Viertel kaufen schon in vielen Läden ein – dieser Laden verdient hier ${Math.round(s.buy * 100)} %. Weitere Läden bringen nur noch wenig dazu, mehr Einwohner und Besucher dagegen voll.</div>`);
+  if (s.buy < 0.995) out.push(`<div>💰 Kaufkraft: Die Leute im Viertel kaufen schon in vielen Läden ein, dieser Laden verdient hier ${Math.round(s.buy * 100)} %. Weitere Läden bringen nur noch wenig dazu, mehr Einwohner und Besucher dagegen voll.</div>`);
   if (s.full) out.push(`<div class="bad">👷 Voll: ${staff === 1 ? 'Ein Mitarbeiter bedient' : `${staff} Mitarbeiter bedienen`} ${fmt(cap)} Kunden, ${fmt(s.want - kd)} gehen leer aus. Ein zweiter Laden dieser Art (${name}) hätte Kundschaft.</div>`);
   const next = [...INNER_STEPS].reverse().find(([min]) => (s.types || 0) < min);
   out.push(`<div class="${s.inner ? 'ok' : ''}">🛍️ Innenstadt: ${s.types || 0} verschiedene Läden im Viertel${s.inner ? ` · +${Math.round(s.inner * 100)} %` : ''}${next ? ` <small class="muted">(ab ${next[0]}: +${Math.round(next[1] * 100)} %)</small>` : ''}</div>`);
@@ -2474,14 +2474,14 @@ function shopStatus(t, s, k) {
   const sold = sl => soldRate[k + '|' + sl.res] ?? (saleable(sl.res) > 0 ? sl.rate : 0);     // noch nie gerechnet: was der Laden will
   const sales = (s.sales || []).filter(sl => sold(sl) > 1e-3);
   if (S.all || S.raw) out.push(sales.length ? `<div class="ok">📦 Verkauft ${sales.map(sl => RES[sl.res].icon).join('')} aus dem Lager → +${fmtRate(sales.reduce((a, sl) => a + sold(sl) * sl.pay, 0))}/s</div>`
-    : wares0(S).some(r => state.res[r] >= 1) ? `<div>📦 Im Lager liegt nur der Vorrat (🔒) – den verkauft der Laden nicht. Im 📦 Lager einstellbar.</div>`
-    : '<div class="bad">📦 Das Lager ist leer – nichts zu verkaufen</div>');
+    : wares0(S).some(r => state.res[r] >= 1) ? `<div>📦 Im Lager liegt nur der Vorrat (🔒), und den verkauft der Laden nicht. Im 📦 Lager einstellbar.</div>`
+    : '<div class="bad">📦 Das Lager ist leer, nichts zu verkaufen</div>');
   else if (S.ware) {
     const sl = (s.sales || [])[0], r = RES[S.ware];
     const kp = keepOf(S.ware), keepTxt = kp ? ` <small class="muted">(🔒 ${kp >= KEEP_ALL ? 'alles' : fmt(kp)} bleiben im Lager)</small>` : '';
     out.push(sl && sold(sl) > 1e-3 ? `<div class="ok">${r.icon} Verkauft ${fmtRate(sold(sl) * 60)} ${r.name}/min → +${fmtRate(sold(sl) * sl.pay)}/s${keepTxt}</div>`
-      : saleable(S.ware) > 0 ? '' : state.res[S.ware] > 0 ? `<div>${r.icon} ${r.name}: nur der Vorrat ist da (🔒 ${kp >= KEEP_ALL ? 'alles' : fmt(kp)}) – den verkauft der Laden nicht. Im 📦 Lager einstellbar.</div>`
-      : `<div class="bad">${r.icon} Kein ${r.name} im Lager${WARE_FROM[S.ware] ? ` – wächst auf fernen Inseln (${WARE_FROM[S.ware]})` : ''}. Mit ${r.name} verdient der Laden viel mehr.</div>`);
+      : saleable(S.ware) > 0 ? '' : state.res[S.ware] > 0 ? `<div>${r.icon} ${r.name}: nur der Vorrat ist da (🔒 ${kp >= KEEP_ALL ? 'alles' : fmt(kp)}), und den verkauft der Laden nicht. Im 📦 Lager einstellbar.</div>`
+      : `<div class="bad">${r.icon} Kein ${r.name} im Lager${WARE_FROM[S.ware] ? ` (wächst auf fernen Inseln: ${WARE_FROM[S.ware]})` : ''}. Mit ${r.name} verdient der Laden viel mehr.</div>`);
   }
   if (S.attr) out.push(`<div class="ok">👥 Zieht ${S.attr} Besucher auf die Insel (per Bahn und Schiff)</div>`);
   if (S.hotel) out.push(`<div class="ok">🏨 Die Insel zieht ${Math.round(S.hotel * 100)} % mehr Besucher an</div>`);
@@ -2492,7 +2492,7 @@ function stationLenHtml(x, y, t) {
   const n = stationLen(t), other = n === 3 ? 2 : 3, p = stationLenPlan(x + ',' + y, other), { money, ...mat } = STATION_LEN_COST;
   return `<div class="label">Länge</div>
     <div class="looks">${[2, 3].map(v => `<button class="look${v === n ? ' on' : ''}" data-slen="${v}" ${v !== n && typeof p === 'string' && !/Taler|Material/.test(p) ? 'disabled' : ''}>${v} Felder${v === 3 ? ' · Tür mittig' : ''}${v === 3 && n === 2 && stationLenPaid(t) < 3 ? ` · 🪙 ${fmt(money)} ${matText(mat)}` : v === 3 && n === 2 ? ' · bezahlt' : ''}</button>`).join('')}</div>
-    ${typeof p === 'string' && n === 2 && !/Taler|Material/.test(p) ? `<p class="muted">${p}.</p>` : '<p class="muted">Mit 3 Feldern steht die Tür genau auf einem Feld – passend zu einem 1er-Weg.</p>'}`;
+    ${typeof p === 'string' && n === 2 && !/Taler|Material/.test(p) ? `<p class="muted">${p}.</p>` : '<p class="muted">Mit 3 Feldern steht die Tür genau auf einem Feld, passend zu einem 1er-Weg.</p>'}`;
 }
 // Hauptbahnhof: Gleise mit ihrem Ziel, Umsteigen, + Gleis / − Gleis, Aussehen
 const HBF_LOOKS = { glas: '🏛️ Glashalle', backstein: '🧱 Backstein', land: '🌾 Landbahnhof' };
@@ -2509,11 +2509,11 @@ function hbfHtml(x, y, t) {
   hubRegions.delete(home);
   const k = x + ',' + y, wing = hbfWing(t), L = hbfLeft(t), { money: gm, ...gmat } = GLEIS_COST;
   const atDoor = hbfEntrance(t, x, y).some(([ex, ey]) => wegAt(ex, ey) != null && (!hillsOn() || hillLevel(ex, ey) === hillLevel(x, y))), v = NET && NET.vOf(x + ',' + y), village = v && NET.vHome.has(v);   // Anhöhe (157j): Weg auf gleicher Höhe
-  const door = atDoor ? `<div class="status"><div class="ok">🛤️ Weg am Eingang${village ? ' – mit dem Dorf verbunden' : ''}</div></div>`   // Block 85
-    : '<p class="muted">🛤️ Leg einen Weg vor das Portal (die Seite gegenüber den Gleisen) – dann führt er bis an die Tür und verbindet den Bahnhof mit dem Dorf.</p>';
+  const door = atDoor ? `<div class="status"><div class="ok">🛤️ Weg am Eingang${village ? ', mit dem Dorf verbunden' : ''}</div></div>`   // Block 85
+    : '<p class="muted">🛤️ Leg einen Weg vor das Portal (die Seite gegenüber den Gleisen). Dann führt er bis an die Tür und verbindet den Bahnhof mit dem Dorf.</p>';
   // + / − Gleis je Seite der Halle (Block 123); alter Bahnhof ohne Halle: nur rechts, dazu „Halle bauen“
   const hard = e => e && !/Taler|Material/.test(e), sides = wing ? [[-1, 'links', L], [1, 'rechts', n - L]] : [[1, '', n]];
-  const errs = sides.map(([sd, nm]) => [nm, hbfResizeError(k, 1, sd)]).filter(([, e]) => hard(e)).map(([nm, e]) => `${nm ? '+ ' + nm + ': ' : ''}${e}.`);
+  const errs = sides.map(([sd, nm]) => [nm, hbfResizeError(k, 1, sd)]).filter(([, e]) => hard(e)).map(([nm, e]) => `${nm ? '+ ' + nm + ': ' : ''}${String(e).replace(/\.$/, '')}.`);
   const resize = sides.map(([sd, nm, cnt]) => {
     const add = hbfResizeError(k, 1, sd), minus = wing ? cnt > 1 : n > HBF_MIN;
     return `<button class="btn" data-gres="1,${sd}" data-cost="${gm}" data-mat='${JSON.stringify(gmat)}' ${hard(add) ? 'disabled' : ''}>+ Gleis${nm ? ' ' + nm : ''}</button>${minus ? `<button class="btn ghost" data-gres="-1,${sd}">− ${nm || 'Gleis'}</button>` : ''}`;
@@ -2523,9 +2523,9 @@ function hbfHtml(x, y, t) {
     <div class="ships">${rows.join('')}</div>
     ${hubRegions.size > 1 ? `<div class="status"><div class="ok">🔀 Umsteigen: ${[...hubRegions].map(r => `${regionIcon(r)} ${regionName(r)}`).join(', ')} sind hier miteinander verbunden</div></div>` : ''}
     <div class="row">${resize.join('')}</div>
-    <p class="muted">Ein Gleis: ${costText(GLEIS_COST)}${gleisePaid(t) > n ? ` (${gleisePaid(t) - n} schon bezahlt – kostenlos wieder dazu)` : ''}. ${errs.length ? errs.join(' ') + ' ' : ''}Vor jedes Gleis eine eigene Strecke legen – mit einem Feld Abstand, sonst hängen sie zusammen und sind eine Linie.</p>
+    <p class="muted">Ein Gleis: ${costText(GLEIS_COST)}${gleisePaid(t) > n ? ` (${gleisePaid(t) - n} schon bezahlt, kostenlos wieder dazu)` : ''}. ${errs.length ? errs.join(' ') + ' ' : ''}Vor jedes Gleis eine eigene Strecke legen, mit einem Feld Abstand. Sonst hängen sie zusammen und sind eine Linie.</p>
     ${wing ? '' : `<div class="label">Halle</div>
-    <p class="muted">Neue Hauptbahnhöfe haben die Eingangshalle in der Mitte: Gleis – Steig – Halle – Steig – Gleis. ${typeof up === 'string' ? up + '.' : 'Gleise können dabei ein Feld rücken – die Strecken davor dann anpassen.'}</p>
+    <p class="muted">Neue Hauptbahnhöfe haben die Eingangshalle in der Mitte: Gleis, Steig, Halle, Steig, Gleis. ${typeof up === 'string' ? up + '.' : 'Gleise können dabei ein Feld rücken. Pass die Strecken davor dann an.'}</p>
     <div class="row"><button class="btn" id="p-hup" ${typeof up === 'string' ? 'disabled' : ''}>▣ Halle in die Mitte bauen</button></div>`}
     <div class="label">Aussehen</div>
     <div class="looks">${Object.entries(HBF_LOOKS).map(([id, nm]) => `<button class="look${(t.look || 'glas') === id ? ' on' : ''}" data-hlook="${id}">${nm}</button>`).join('')}</div>`;
@@ -2562,17 +2562,17 @@ function trafficStatus(line, tr) {
     out.push('<div class="muted">👥 Noch will niemand mitfahren: Häuser auf der anderen Insel, eine restaurierte Sehenswürdigkeit oder ein Wunderwerk bringen Fahrgäste.</div>');
     return out;
   }
-  out.push(`<div>👥 Fahrgäste: ${fmt(tr.demand)}/min – ${[tr.commute >= 1 ? `Pendler ${fmt(tr.commute)}` : '', tr.visitors >= 1 ? `Besucher ${fmt(tr.visitors)}${visits ? ` (${visits})` : ''}` : ''].filter(Boolean).join(', ')}</div>`);
+  out.push(`<div>👥 Fahrgäste: ${fmt(tr.demand)}/min (${[tr.commute >= 1 ? `Pendler ${fmt(tr.commute)}` : '', tr.visitors >= 1 ? `Besucher ${fmt(tr.visitors)}${visits ? ` (${visits})` : ''}` : ''].filter(Boolean).join(', ')})</div>`);
   out.push(`<div>💺 Plätze: ${fmt(tr.seats)}/min · ${vehicles}</div>`);
   if (tr.transfer && tr.transfer.length) out.push(`<div class="ok">🔀 Umsteigen am Hauptbahnhof: auch ${tr.transfer.map(r => `${regionIcon(r)} ${regionName(r)}`).join(', ')}</div>`);
-  if (tr.shared) out.push(`<div class="muted">🔀 Teilt sich die Fahrgäste mit ${tr.shared === 1 ? 'einer weiteren Verbindung' : `${tr.shared} weiteren Verbindungen`} zu denselben Inseln – nach Plätzen.</div>`);
+  if (tr.shared) out.push(`<div class="muted">🔀 Teilt sich die Fahrgäste mit ${tr.shared === 1 ? 'einer weiteren Verbindung' : `${tr.shared} weiteren Verbindungen`} zu denselben Inseln, nach Plätzen.</div>`);
   out.push(`<div class="load"><i style="width:${Math.min(100, pct)}%" class="${tr.served < 1 ? 'full' : ''}"></i></div>`);
   out.push(tr.served < 1 ? `<div class="bad">😣 Überfüllt (${pct} %): nur ${Math.round(tr.served * 100)} % kommen mit</div>`
     : `<div class="ok">✓ Alle kommen mit · Auslastung ${pct} %</div>`);
   out.push(`<div class="ok">🪙 +${fmtRate(tr.fare * masteryMul('taler'))}/s Fahrkarten · +${fmtRate(tr.spend * masteryMul('taler'))}/s von Besuchern</div>`);
   if (tr.served < 1) out.push(line.kind === 'seil' ? '<div class="muted">Mehr Plätze: eine zweite Verbindung dorthin (Zug, weitere Seilbahn).</div>'
     : line.kind === 'faehre' ? '<div class="muted">Mehr Plätze: ein weiteres Schiff, ein schnelleres Modell (Forschung → 🚢 Verkehr) oder eine zweite Verbindung (Zug, Seilbahn).</div>'
-    : `<div class="muted">Mehr Plätze: Wagen anhängen${line.loop ? ' oder einen weiteren Zug' : ' – als Rundkurs passen auch mehrere Züge'}.</div>`);
+    : `<div class="muted">Mehr Plätze: Wagen anhängen${line.loop ? ' oder einen weiteren Zug' : ', als Rundkurs passen auch mehrere Züge'}.</div>`);
   return out;
 }
 // Züge der Linie: Modell und Farbe wählt der Spieler für jeden Zug; gespeichert an allen Bahnhöfen der Linie
@@ -2586,7 +2586,7 @@ function trainChooser(line) {
     <div class="looks">${TRAIN_MODELS.map(m => vehicleOk('zug', m.id) || m.id === lk.model
       ? `<button class="look${m.id === lk.model ? ' on' : ''}" data-train="${i}:${m.id}">${m.icon} ${m.name}</button>`
       : `<button class="look locked" data-vlock="1" title="Forschung → 🚢 Verkehr">🔒 ${m.name}</button>`).join('')}</div>
-    ${i === 0 && TRAIN_MODELS.some(m => !vehicleOk('zug', m.id)) ? `<p class="muted">🔒 Weitere Zugarten (mehr Wagen, schneller) gibt es in der Forschung → 🚢 Verkehr – antippen bringt dich hin.</p>` : ''}
+    ${i === 0 && TRAIN_MODELS.some(m => !vehicleOk('zug', m.id)) ? `<p class="muted">🔒 Weitere Zugarten (mehr Wagen, schneller) gibt es in der Forschung → 🚢 Verkehr. Antippen bringt dich hin.</p>` : ''}
     <div class="swatches">${TRAIN_COLS.map((c, j) => `<button class="sw${j === lk.col ? ' on' : ''}" data-tcol="${i}:${j}" style="background:${c}" aria-label="Zugfarbe ${j + 1}"></button>`).join('')}</div>
     <div class="row cars"><span>🚃 ${carsOf(lk)} Wagen · ${trainSeats(lk)} Fahrgäste/min · ${fmtPow(carNeed(line.tiles, carsOf(lk)))} ⚡</span>
       ${(lk.plus || 0) < MAX_PLUS_CARS ? `<button class="btn small" data-carplus="${i}" data-cost="${cm}" data-mat='${JSON.stringify(cmat)}'>+ Wagen · 🪙 ${fmt(cm)} ${matText(cmat)}</button>` : ''}
@@ -2707,7 +2707,7 @@ function openLandmark(x, y) {
       ${unl.length ? `<p class="muted">Schaltet frei: ${unl.join(', ')}</p>` : ''}
       ${info.err ? `<div class="status"><div class="bad">${info.err}</div></div>` : ''}
       <div class="row"><button class="btn" id="p-restore" ${info.err ? 'disabled' : ''}>🏮 Restaurieren</button></div>`;
-  } else body = '<p class="ok">Vollständig restauriert – alle drei Laternen brennen.</p>';
+  } else body = '<p class="ok">Vollständig restauriert, alle drei Laternen brennen.</p>';
   panelHeroNext = { ...t, lmStage: info.stage };                         // Bild der Sehenswürdigkeit in ihrer Stufe oben rechts (Aussehen)
   showPanel(`
     <h3>${L.name}</h3>
@@ -2729,7 +2729,7 @@ function openChestInfo(x, y, t) {
   if (!c) { closePanel(); return; }
   showPanel(`
     <h3>🎁 ${c.name}</h3>
-    <p>Auf der ${i.icon} ${i.name} gefunden – ${c.text}.</p>
+    <p>Auf der ${i.icon} ${i.name} gefunden: ${c.text}.</p>
     <div class="row"><button class="btn" id="p-chest">🎁 Öffnen</button><button class="btn ghost" id="p-close">Schließen</button></div>`);
   $('p-chest').onclick = () => { closePanel(); openChest(x + ',' + y); };
   $('p-close').onclick = closePanel;
@@ -2754,7 +2754,7 @@ function expeditionHtml(atIsle) {
   const i = nextIsle(), e = state.expedition;
   if (e) {
     const to = ISLE_BY_ID[e.isle];
-    return `<div class="label">⛵ Expedition</div><div class="status"><div class="ok">⛵ Das Boot ist unterwegs zur ${to.icon} ${to.name} – zurück in ${fmtClock(expeditionLeft())}</div></div>`;
+    return `<div class="label">⛵ Expedition</div><div class="status"><div class="ok">⛵ Das Boot ist unterwegs zur ${to.icon} ${to.name}, zurück in ${fmtClock(expeditionLeft())}</div></div>`;
   }
   if (!i) return '<p class="ok">⛵ Alle Inseln sind entdeckt.</p>';
   const need = isleNeeds(i), ok = need.every(c => c.ok), steg = stegs().length > 0;
@@ -2769,10 +2769,10 @@ function expeditionHtml(atIsle) {
 function announceIslands(m) {
   openModal(`
     <h2>🏝️ Neu: Themen-Inseln!</h2>
-    <p>Die Sehenswürdigkeiten sind auf eigene Inseln im Meer umgezogen – mit allen Laternen, die schon brennen.</p>
+    <p>Die Sehenswürdigkeiten sind auf eigene Inseln im Meer umgezogen, mit allen Laternen, die schon brennen.</p>
     ${m.isles.length ? `<p>Schon erschlossen: <b>${m.isles.map(id => ISLE_BY_ID[id].icon + ' ' + ISLE_BY_ID[id].name).join(', ')}</b></p>` : ''}
     <p>Deine Heimatinsel gehört dir jetzt ganz.${m.refund ? ` Für gekaufte Grundstücke bekommst du <b>🪙 ${fmt(m.refund)}</b> zurück.` : ''}</p>
-    <p class="muted">Weitere Inseln erschließt du nacheinander – oben links steht immer, welche als Nächstes dran ist.</p>
+    <p class="muted">Weitere Inseln erschließt du nacheinander. Oben links steht immer, welche als Nächstes dran ist.</p>
     <div class="row"><button class="btn" id="m-ok">Schön!</button></div>`);
   $('m-ok').onclick = closeModal;
 }
@@ -2812,7 +2812,7 @@ function openDesignCard(id) {
   const c0 = $('modal-card');
   if (!$('modal').hidden && c0.querySelector('[data-rtab="design"].on')) designScroll = (c0.querySelector(':scope > .tab-scroll') || c0).scrollTop;   // aus der Liste geöffnet
   const have = !d.price || state.design.has(d.id) || (d.muster && wegMusterOk(d.muster)), err = have ? null : designError(d), url = designThumb(d, 2.5);
-  const extra = d.muster ? 'Ein Muster gibt es in allen Wegfarben – die wählst du beim Bauen.' : (d.group === 'Wandfarben' || d.group === 'Dachfarben') ? 'Gilt für alle Häuser und Gebäude, die du umfärbst.' : '';
+  const extra = d.muster ? 'Ein Muster gibt es in allen Wegfarben, die wählst du beim Bauen.' : (d.group === 'Wandfarben' || d.group === 'Dachfarben') ? 'Gilt für alle Häuser und Gebäude, die du umfärbst.' : '';
   openModal(`
     <h2>${d.master ? '✦ ' : ''}${escHtml(d.name)}${d.col && (d.group === 'Wandfarben' || d.group === 'Dachfarben') ? ` <i class="dcol" style="background:${d.col}"></i>` : ''}</h2>
     <div class="dcard">${url ? `<img src="${url}" alt="">` : `<i style="background:${d.col || '#eee'}"></i>`}</div>
@@ -2845,7 +2845,7 @@ function openResearch(tab = researchTab) {
   let body;
   if (tab === 'wissen') {
     body = `
-      <p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ' – Ideen kommen aus Schulen (Ruineninsel)'}.</p>
+      <p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : '. Ideen kommen aus Schulen (Ruineninsel)'}.</p>
       <div class="tech-cats">${[1, 2, 3].map(tier => {
         const open = tierOpen(tier);
         return `<div class="tech-cat${open ? '' : ' closed'}"><h4>Stufe ${tier} · ${TECH_TIERS[tier].name}${open ? '' : ' 🔒'}</h4>
@@ -2861,13 +2861,13 @@ function openResearch(tab = researchTab) {
           }).join('')}</div>`;
       }).join('')}</div>`;
   } else if (tab === 'stufen') {
-    const have = `<p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ''}. Jede Stufe bringt +${Math.round(MASTERY_STEP * 100)} % und geht endlos weiter – die nächste kostet jeweils das 1,5-Fache.</p>`;
+    const have = `<p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ''}. Jede Stufe bringt +${Math.round(MASTERY_STEP * 100)} % und geht endlos weiter. Die nächste kostet jeweils das 1,5-Fache.</p>`;
     body = have + (masteryOpen() ? `<div class="mastery">${MASTERY.map(m => {
       const lvl = masteryLvl(m.id), cost = masteryCost(m.id);
       return `<div class="tech${lvl ? ' done' : ''}"><b>${m.icon} ${m.name}${lvl ? ' ' + roman(lvl) : ''}</b>
         <span>${lvl ? `Jetzt +${Math.round(MASTERY_STEP * 100 * lvl)} % ${m.text}` : `+${Math.round(MASTERY_STEP * 100)} % ${m.text} je Stufe`}</span>
         <button class="btn" data-mastery="${m.id}" data-sci="${cost}" ${state.science < cost ? 'disabled' : ''}>Stufe ${roman(lvl + 1)} · 💡 ${fmt(cost)}</button></div>`;
-    }).join('')}</div>` : '<p class="muted">🔒 Baue eine Bibliothek – dann gibt es die Stufen-Forschung.</p>');
+    }).join('')}</div>` : '<p class="muted">🔒 Baue eine Bibliothek, dann gibt es die Stufen-Forschung.</p>');
   } else if (tab === 'verkehr') {
     const card = (kind, m) => {
       const have = vehicleOk(kind, m.id), open = vehicleOpen(kind, m), perMin = kind === 'zug' ? trainSeats({ model: m.id }) : Math.round(m.seats * m.speed);
@@ -2878,21 +2878,21 @@ function openResearch(tab = researchTab) {
         ${need && !have ? `<span class="muted">${need}</span>` : ''}
         ${!have && open && m.cost ? `<button class="btn" data-vehicle="${kind}:${m.id}" data-sci="${m.cost}" ${state.science < m.cost ? 'disabled' : ''}>Erforschen · 💡 ${fmt(m.cost)}</button>` : ''}</div>`;
     };
-    body = `<p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen. Jedes Verkehrsmittel sieht anders aus, hat mehr Plätze und ist schneller – so schaffen Züge und Schiffe mehr Fahrgäste.</p>
+    body = `<p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen. Jedes Verkehrsmittel sieht anders aus, hat mehr Plätze und ist schneller. So schaffen Züge und Schiffe mehr Fahrgäste.</p>
       <div class="label">🚢 Schiffe (Fähren am Hafen)</div><div class="mastery">${SHIP_MODELS.map(m => card('schiff', m)).join('')}</div>
       <div class="label">🚆 Züge</div><div class="mastery">${TRAIN_MODELS.map(m => card('zug', m)).join('')}</div>`;
   } else if (tab === 'erfindung') {
-    body = `<p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen. Erfindungen gibt es nur für Ideen – besondere Dinge für deine Insel.</p>`
+    body = `<p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen. Erfindungen gibt es nur für Ideen, besondere Dinge für deine Insel.</p>`
       + (inventionsOpen() ? `<div class="mastery">${INVENTIONS.map(inv => {
         const have = hasInvention(inv.id);
         return `<div class="tech${have ? ' done' : ''}"><b>${have ? '✓ ' : ''}${inv.icon} ${inv.name}</b><span>${inv.text}</span>
           ${have ? (inv.id === 'feuerwerk' ? '<button class="btn" data-fire="1">🎆 Feuerwerk zünden</button>' : '')
             : `<button class="btn" data-invent="${inv.id}" data-sci="${inv.cost}" ${state.science < inv.cost ? 'disabled' : ''}>Erfinden · 💡 ${fmt(inv.cost)}</button>`}</div>`;
-      }).join('')}</div>` : '<p class="muted">🔒 Baue eine Universität – dann kannst du erfinden.</p>');
+      }).join('')}</div>` : '<p class="muted">🔒 Baue eine Universität, dann kannst du erfinden.</p>');
   } else {
     const groups = [...new Set(DESIGN.map(d => d.group))], master = hasBuilt('kunst');
     body = `
-      <p>Such dir aus, was dir gefällt – jedes Stück einzeln, für Taler und Ideen. Du hast <b>🪙 ${fmt(state.money)}</b> und <b>💡 ${fmt(state.science)}</b>.
+      <p>Such dir aus, was dir gefällt. Jedes Stück gibt es einzeln, für Taler und Ideen. Du hast <b>🪙 ${fmt(state.money)}</b> und <b>💡 ${fmt(state.science)}</b>.
         ${master ? '' : '<span class="muted">Meisterstücke (✦) braucht eine Kunstakademie.</span>'}</p>
       ${groups.map(gr => `<div class="label">${gr}</div><div class="design-grid">${DESIGN.filter(d => d.group === gr).map(d => {
         const have = !d.price || state.design.has(d.id) || (d.muster && wegMusterOk(d.muster)), err = have ? null : designError(d);
@@ -2904,7 +2904,7 @@ function openResearch(tab = researchTab) {
         return `<button class="design${have ? ' have' : ''}${err ? ' cant' : ''}" data-design="${d.id}" title="${d.name}">
           ${look}<span class="dn">${d.group === 'Wandfarben' || d.group === 'Dachfarben' ? '' : d.name.replace(/^Farbe /, '')}</span>
           <small>${have ? '✓' : d.master ? `✦ ✨ ${fmt(designStardust(d))}` : `🪙 ${fmt(designPrice(d))}<br>💡 ${fmt(designIdeas(d))}`}</small></button>`;
-      }).join('')}${gr === 'Wegmuster' ? giftStyles() : ''}</div>${gr === 'Wegmuster' ? '<p class="muted">Ein Muster gibt es dann in allen Wegfarben – die wählst du beim Bauen.</p>' : ''}`).join('')}`;
+      }).join('')}${gr === 'Wegmuster' ? giftStyles() : ''}</div>${gr === 'Wegmuster' ? '<p class="muted">Ein Muster gibt es dann in allen Wegfarben, die wählst du beim Bauen.</p>' : ''}`).join('')}`;
   }
   openModal(`
     <h2>🔬 Forschung</h2>
@@ -2968,11 +2968,11 @@ function readyList() {
     if (t.b === 'haus' && s.wish && s.wish.next) {
       const who = `${animalOf(t).icon} ${escHtml(t.name || '')}: ${HOUSE_STAGES[t.lvl - 1].name}`;
       if (s.wish.ready) ready.push({ ...where, kind: 'haus', cost: houseCost(s.wish.next), text: `${who} → ${s.wish.next.name}` });
-      else if (s.wish.met === s.wish.total - 1) almost.push({ ...where, text: `${who} – fehlt: ${s.wish.list.find(w => !w.ok).text}` });
+      else if (s.wish.met === s.wish.total - 1) almost.push({ ...where, text: `${who}: fehlt ${s.wish.list.find(w => !w.ok).text}` });
     } else if (s.grow && s.grow.next) {
       const miss = s.grow.conds.filter(c => !c.ok);
       if (s.grow.ready) ready.push({ ...where, kind: 'stage', cost: s.grow.next.cost, text: `${stageName(t)} → ${s.grow.next.name}` });
-      else if (miss.length === 1) almost.push({ ...where, text: `${stageName(t)} – fehlt: ${miss[0].text}` });
+      else if (miss.length === 1) almost.push({ ...where, text: `${stageName(t)}: fehlt ${miss[0].text}` });
     } else if (WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) {          // Wunderwerk: nächster Abschnitt bezahlbar
       ready.push({ ...where, kind: 'wonder', cost: wonderCost(t), text: `🏗️ ${ITEMS[t.b].name}: ${WONDERS[t.b].names[t.phase || 0]}` });
     }
@@ -3018,7 +3018,7 @@ function residentsHtml() {
 // Tageszeit im Rathaus (Block 101): wie spät, wann es umschlägt, was es nachts zu sehen gibt
 function todHtml() {
   const t = timeOfDay(), mins = n => `${n} ${n === 1 ? 'Minute' : 'Minuten'}`;
-  const night = ['🏮 Laternen und Fenster leuchten', '✨ Glühwürmchen in Parks und an Blumen', ...(wonderOn('sternwarte') ? ['🌠 Sternschnuppen über der Sternwarte – antippen!'] : [])];
+  const night = ['🏮 Laternen und Fenster leuchten', '✨ Glühwürmchen in Parks und an Blumen', ...(wonderOn('sternwarte') ? ['🌠 Sternschnuppen über der Sternwarte. Antippen!'] : [])];
   return `<div class="tod-box"><b>${t.icon} ${t.text} Uhr · ${t.name}</b> <small class="muted">${t.dark ? `in ${mins(t.left)} wird es hell` : t.dawn ? `in ${mins(t.left)} ist es Tag` : `in ${mins(t.left)} ist es Nacht`}</small>
     <div class="muted">${t.dark ? 'Jetzt' : 'Nachts'}: ${night.join(' · ')}. Ein Tag dauert 24 Minuten, auf allen Geräten gleich.</div></div>`;
 }
@@ -3027,7 +3027,7 @@ function erfolgeHtml() {
   const stars = starCount(), rank = rankOf(stars), next = RANKS.find(r => r.stars > stars);
   return `
     <p class="big" style="font-size:18px">⭐ ${stars} · ${rank.name}</p>
-    ${next ? `<p class="muted">Nächste: ${next.name} ab ${next.stars} ⭐${next.item ? ` – schaltet den ${ITEMS[next.item].name} frei` : ''}</p>` : ''}
+    ${next ? `<p class="muted">Nächste: ${next.name} ab ${next.stars} ⭐${next.item ? `, schaltet den ${ITEMS[next.item].name} frei` : ''}</p>` : ''}
     ${ACHIEVEMENTS.map(a => {
       const n = state.achieved[a.id] || 0, v = a.value(), done = n >= a.tiers.length, goal = a.tiers[Math.min(n, a.tiers.length - 1)];
       return `<div class="achv-row${done ? ' done' : ''}"><span class="ai">${a.icon}</span><div class="at">
@@ -3048,7 +3048,7 @@ function wishesHtml() {
   return `
     <div class="label">Das wünschen sich die Bewohner noch</div>
     ${list.length ? list.map(([text, cnt]) => `<div class="hall-row"><span>${text}</span><b>${cnt} ${cnt > 1 ? 'Häuser' : 'Haus'}</b></div>`).join('')
-      : '<p class="ok">Alle Wünsche erfüllt – alle Häuser können wachsen oder sind schon Villen!</p>'}`;
+      : '<p class="ok">Alle Wünsche erfüllt. Alle Häuser können wachsen oder sind schon Villen!</p>'}`;
 }
 // Rathaus = deine Stadt (Block 98). Was zu dir gehört (Figur, Erfolge, Freunde …), steht im Fenster „Du“ (openYou) –
 // alte Sprungziele leiten dorthin weiter.
@@ -3075,7 +3075,7 @@ function openTownHall(tab = hallTab) {
         ${hasInvention('feuerwerk') ? '<button class="btn ghost small" data-quick-go="fire">🎆 Feuerwerk</button>' : ''}
         ${nx ? `<button class="btn ghost small" data-isle-go="${nx.id}">${nx.icon} Nächste Insel</button>` : ''}
       </div>` : ''}
-      ${typeof mailWaiting === 'function' && mailWaiting() ? '<div class="row"><button class="btn" data-mailgo="1" style="flex:1">📬 Post im Briefkasten – abholen</button></div>' : ''}
+      ${typeof mailWaiting === 'function' && mailWaiting() ? '<div class="row"><button class="btn" data-mailgo="1" style="flex:1">📬 Post im Briefkasten abholen</button></div>' : ''}
       <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
       ${todHtml()}
       ${typeof wishHtml === 'function' ? wishHtml() : ''}
@@ -3109,7 +3109,7 @@ function openTownHall(tab = hallTab) {
       ${ready.length ? groups.map(g => `<div class="label hall-group"><span>${g.label} (${g.items.length})</span>
           ${g.bulk && g.items.length > 1 ? allBtn(g.items, g.id, 'Alle ausbauen') : ''}</div>
           ${g.items.map(e => row(e, ready.indexOf(e), '✨', true)).join('')}`).join('')
-        : '<div class="label">Bereit zum Ausbauen</div><p class="muted">Gerade nichts – unten steht, was sich die Bewohner noch wünschen.</p>'}
+        : '<div class="label">Bereit zum Ausbauen</div><p class="muted">Gerade nichts. Unten steht, was sich die Bewohner noch wünschen.</p>'}
       ${almost.length ? `<div class="label">Fast geschafft</div>${almost.map((e, i) => row(e, ready.length + i, '💭', false)).join('')}` : ''}
       ${wishesHtml()}`;
   } else if (tab === 'isles') {
@@ -3144,7 +3144,7 @@ function openTownHall(tab = hallTab) {
       <div class="label">🚩 Partnerstadt</div>
       ${P ? `<div class="hall-row"><span><span class="pflag" style="background:${escHtml(P.c)}">${escHtml(P.s)}</span> ${escHtml(P.name)}</span><span class="hall-btns"><button class="btn ghost small" data-partnergo="1">👥 Freunde</button><button class="btn ghost small" data-partneroff="1" aria-label="Partnerstadt entfernen">✕</button></span></div>
         <p class="muted">Ihre Flagge weht neben deinem Rathaus.</p>`
-        : '<p class="muted">Wähle unter 👥 Freunde bei einem Freund 🚩 – dann weht seine Flagge neben deinem Rathaus, und seine Schiffe legen an deinem Hafen an.</p>'}
+        : '<p class="muted">Wähle unter 👥 Freunde bei einem Freund 🚩. Dann weht die Flagge der Partnerstadt neben deinem Rathaus, und ihre Schiffe legen an deinem Hafen an.</p>'}
       ${t ? `
         <div class="label">Rathaus: Wand</div>
         <div class="swatches">${colorsOf('wall').map(([c, i]) => `<button class="sw${i === t.wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
@@ -3269,11 +3269,11 @@ function showIntro(first) {
     <h2>Willkommen auf deiner Insel!</h2>
     <p>Eine kleine Welt zum Verwalten und Gestalten:</p>
     <ul>
-      <li>🏠 <b>Häuser</b> bringen Einwohner. Betriebe bis 4 Felder vom nächsten Haus laufen voll, weiter weg nur halb – außer ein <b>Weg</b> verbindet sie mit dem Dorf.</li>
+      <li>🏠 <b>Häuser</b> bringen Einwohner. Betriebe bis 4 Felder vom nächsten Haus laufen voll, weiter weg nur halb, außer ein <b>Weg</b> verbindet sie mit dem Dorf.</li>
       <li>🏘️ Was aneinandergrenzt oder über <b>Wege</b> verbunden ist, ist ein <b>Viertel</b>: ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.</li>
-      <li>✨ <b>Alles wächst:</b> Häuser und Betriebe haben Stufen. Sind die Bedingungen erfüllt, funkelt es – antippen und selbst ausbauen.</li>
-      <li>🎓 <b>Schulen</b> erzeugen Ideen 💡 – damit erforschst du neue Gebäude, Wege-Stile und Deko.</li>
-      <li>🏮 <b>Das Ziel:</b> Restauriere die verfallenen Sehenswürdigkeiten – jede Stufe entzündet eine Laterne. Brennen alle, bringt der Leuchtturm das Laternenfest zurück. Das 📖 Tagebuch erzählt, wie es früher war.</li>
+      <li>✨ <b>Alles wächst:</b> Häuser und Betriebe haben Stufen. Sind die Bedingungen erfüllt, funkelt es. Tipp es an und bau selbst aus.</li>
+      <li>🎓 <b>Schulen</b> erzeugen Ideen 💡. Damit erforschst du neue Gebäude, Wege-Stile und Deko.</li>
+      <li>🏮 <b>Das Ziel:</b> Restauriere die verfallenen Sehenswürdigkeiten. Jede Stufe entzündet eine Laterne. Brennen alle, bringt der Leuchtturm das Laternenfest zurück. Das 📖 Tagebuch erzählt, wie es früher war.</li>
     </ul>
     ${first ? townEditor(state.town) : ''}
     <p class="muted" style="font-size:13px">Ziehen = Karte bewegen · Mausrad / zwei Finger = zoomen · Mehr, auch alle Tasten: ☰ → Hilfe</p>
@@ -3288,48 +3288,48 @@ function helpBody(tab) {
   const li = items => `<ul class="help">${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
   if (tab === 'bauen') return li([
     '🧭 <b>Die Leiste unten</b> hat vier Bereiche: 🏘️ Stadt, 🏭 Herstellen, 🎡 Freizeit, 🌸 Gestalten. Antippen klappt alles aus dem Bereich auf, nach Gruppen sortiert. Karte antippen = auswählen, dann auf die Karte tippen = bauen. ✕ legt es wieder weg.',
-    'ℹ️ <b>Tippst du eine Karte an</b>, erscheint rechts ihr Info-Fenster. Gesperrt? Dort steht, wie du es freischaltest – mit Knopf, der dich direkt hinbringt.',
+    'ℹ️ <b>Tippst du eine Karte an</b>, erscheint rechts ihr Info-Fenster. Gesperrt? Dort steht, wie du es freischaltest, mit einem Knopf, der dich direkt hinbringt.',
     '🛤️ <b>Wege, Parkrasen, Gelände</b> ziehst du als Linie oder Rechteck auf: erst die Vorschau, dann hineintippen zum Bauen.',
-    '⛰️ <b>Anhöhen</b> (Gestalten → Anhöhen) ziehst du genauso als Rechteck auf – die Felder liegen dann eine Ebene höher, mit Felswand, Erde oder Trockenmauer, und oben stehen Bäume, Bänke, Brunnen, Beete und Gelände. Hinauf führt eine <b>Treppe</b>: unten direkt vor die Wand stellen oder auf den Rand der Anhöhe, sie dreht sich von selbst – schmal wie ein Weg oder breit, und oben gehen dann Leute spazieren.',
-    '🧱 <b>Hecken, Zäune, Mauern</b> liegen zwischen den Feldern. Wo ein Weg hindurchgeht, entsteht ein Tor – antippen für Torbogen, Rosenbogen oder Torpfeiler.',
+    '⛰️ <b>Anhöhen</b> (Gestalten → Anhöhen) ziehst du genauso als Rechteck auf. Die Felder liegen dann eine Ebene höher, mit Felswand, Erde oder Trockenmauer, und oben stehen Bäume, Bänke, Brunnen, Beete und Gelände. Hinauf führt eine <b>Treppe</b>: unten direkt vor die Wand stellen oder auf den Rand der Anhöhe, sie dreht sich von selbst. Schmal wie ein Weg oder breit, und oben gehen dann Leute spazieren.',
+    '🧱 <b>Hecken, Zäune, Mauern</b> liegen zwischen den Feldern. Wo ein Weg hindurchgeht, entsteht ein Tor. Tipp es an für Torbogen, Rosenbogen oder Torpfeiler.',
     '🪑 <b>Kleinkram</b> (Bänke, Laternen, Bäume, Blumentöpfe) passt zu acht auf ein Feld: in die Ecke oder an die Seite tippen, wo er stehen soll.',
-    '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder neben Fels, Offshore-Anlagen weit draußen, Geothermie nah an der heißen Quelle, Solarfelder auf Sand, Holzfäller im Wald, Steinbrüche am Fels und Obstplantagen zwischen Obstbäumen bringen bis +50 %. Die Vorschau beim Bauen zeigt, wie gut ein Platz ist – schlechter als vorher wird nichts.',
-  '🐾 <b>Bewohner:</b> Tipp eine Figur an – sie erzählt, wer sie ist, wo sie wohnt und wohin sie gerade geht. Morgens geht es zur Arbeit, mittags ins Café, abends in den Park. Mit jeder Insel zieht eine neue Art ein: Eichhörnchen, Igel, Fuchs, Giraffe, Elefant und Ente. Alle Familien stehen im Rathaus unter „Bewohner“.',
-  '🦋 <b>Tiere in der Natur</b> zeigen dir, wo es schön ist: Schmetterlinge bei Blumen, Vögel im Wald, Fische und Frösche im Teich, Möwen und Robben an der Küste. Antippen trägt sie ins Album „Naturbeobachtungen“ ein – dort steht auch, wo man die fehlenden findet. Für 4, 8 und alle 12 gibt es besondere Deko.',
-  '📏 <b>Größen:</b> Brunnen, Bäume, Beete & Co. gibt es klein bis riesig – die Größe wählst du über der Leiste.',
-    '🧺 <b>Marktplatz:</b> ein Platz aus Wegen mit mindestens 3 Marktständen. 🌳 <b>Park:</b> Parkrasen mit Deko darauf – ab 4 Feldern und 3 Deko eine Grünanlage.',
+    '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder neben Fels, Offshore-Anlagen weit draußen, Geothermie nah an der heißen Quelle, Solarfelder auf Sand, Holzfäller im Wald, Steinbrüche am Fels und Obstplantagen zwischen Obstbäumen bringen bis +50 %. Die Vorschau beim Bauen zeigt, wie gut ein Platz ist. Schlechter als vorher wird nichts.',
+  '🐾 <b>Bewohner:</b> Tipp eine Figur an. Sie erzählt, wer sie ist, wo sie wohnt und wohin sie gerade geht. Morgens geht es zur Arbeit, mittags ins Café, abends in den Park. Mit jeder Insel zieht eine neue Art ein: Eichhörnchen, Igel, Fuchs, Giraffe, Elefant und Ente. Alle Familien stehen im Rathaus unter „Bewohner“.',
+  '🦋 <b>Tiere in der Natur</b> zeigen dir, wo es schön ist: Schmetterlinge bei Blumen, Vögel im Wald, Fische und Frösche im Teich, Möwen und Robben an der Küste. Antippen trägt sie ins Album „Naturbeobachtungen“ ein. Dort steht auch, wo man die fehlenden findet. Für 4, 8 und alle 12 gibt es besondere Deko.',
+  '📏 <b>Größen:</b> Brunnen, Bäume, Beete & Co. gibt es klein bis riesig. Die Größe wählst du über der Leiste.',
+    '🧺 <b>Marktplatz:</b> ein Platz aus Wegen mit mindestens 3 Marktständen. 🌳 <b>Park:</b> Parkrasen mit Deko darauf, ab 4 Feldern und 3 Deko eine Grünanlage.',
     '✋ <b>Auswählen:</b> ein Ding antippen hebt es auf (Verschieben kostet nichts, 🗑️ Wegwerfen reißt es ab); ein Rechteck aufziehen, dann unten Verschieben, Kopieren oder 🗑️ Abreißen. Einzeln geht es auch im Fenster (👆 antippen → 🗑️). Deko und Wege gibt es voll zurück, Gebäude zur Hälfte.',
     '🌲 <b>Wald roden, Fels sprengen:</b> antippen → 🪓 Roden bzw. 🧨 Sprengen. Wer darauf baut, räumt ihn gleich mit weg.',
-    '↶ <b>Verbaut?</b> Rückgängig nimmt die letzten 20 Schritte zurück – mit allen Talern.']);
+    '↶ <b>Verbaut?</b> Rückgängig nimmt die letzten 20 Schritte zurück, mit allen Talern.']);
   if (tab === 'wachsen') return li([
-    '💡 <b>Forschung:</b> Schulen, Bibliotheken und die Universität bringen Ideen. Damit erforschst du neue Gebäude und Boni – oben auf 💡 tippen.',
-    '🎨 <b>Kunstakademie</b> (in der Forschung): Farben, Wege-Muster, Hecken- und Zaunstile, besondere Deko – ✦ Meisterstücke sind die begehrtesten.',
+    '💡 <b>Forschung:</b> Schulen, Bibliotheken und die Universität bringen Ideen. Damit erforschst du neue Gebäude und Boni. Tipp dafür oben auf 💡.',
+    '🎨 <b>Kunstakademie</b> (in der Forschung): Farben, Wege-Muster, Hecken- und Zaunstile, besondere Deko. ✦ Meisterstücke sind die begehrtesten.',
     '⚡ <b>Strom</b> kommt aus Windrädern, Wasser-, Wellen-, Solar- und Offshore-Anlagen. Laternen, Werkstätten, Züge und Wunderwerke brauchen ihn.',
     '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder Fels, Offshore weit draußen, Geothermie nah an der Quelle, Solar auf Sand, Holzfäller im Wald, Steinbruch am Fels … bringen bis +50 %. Die Vorschau beim Bauen zeigt es. Schlechter als normal wird es nie.',
     '🏮 <b>Sehenswürdigkeiten</b> restaurieren: jede Stufe schaltet Neues frei und entzündet eine Laterne. Brennen alle, gibt es das Laternenfest.',
     '🏝️ <b>Inseln</b> entdeckst du per Boot vom 🛶 Steg aus. Brücken, Züge, Seilbahn und Schiffe verbinden sie; später warten ferne Inseln mit Truhen. Mit „Aufschütten“ wächst dein Land ins Meer.',
-    '🎢 <b>Freizeitpark</b> (nach dem Laternenfest, 🎡 Freizeit): Boden aufziehen, Fahrgeschäfte und Stände daraufstellen – vom Rummelplatz zum Wunderland. Bringt Eintritt, Besucher und Schönheit; die Fahrgeschäfte kosten nach deinem Einkommen.',
-    '🏛️ <b>Wunderwerke</b> wie Riesenrad, Botanischer Garten oder Schloss baust du in Abschnitten – jedes hat eine besondere Kraft.',
+    '🎢 <b>Freizeitpark</b> (nach dem Laternenfest, 🎡 Freizeit): Boden aufziehen, Fahrgeschäfte und Stände daraufstellen, vom Rummelplatz bis zum Wunderland. Bringt Eintritt, Besucher und Schönheit; die Fahrgeschäfte kosten nach deinem Einkommen.',
+    '🏛️ <b>Wunderwerke</b> wie Riesenrad, Botanischer Garten oder Schloss baust du in Abschnitten. Jedes hat eine besondere Kraft.',
     '⭐ <b>Erfolge und Album</b> (oben der Knopf mit deiner Figur): Sammeln lohnt sich, volle Album-Seiten schenken besondere Dinge und Erfolge neue Kleidung.']);
   if (tab === 'steuerung') {
     const touch = typeof matchMedia === 'function' && matchMedia('(hover: none)').matches;   // iPad/Handy: keine Tasten zeigen
-    const keys = [['A', 'Ansehen'], ['W', 'Weg'], ['V', 'Verschieben'], ['E · Entf · ⌫', 'Abreißen'], ['1 – 9', 'Karte aus der Leiste wählen'], ['R', 'Drehen beim Bauen'],
+    const keys = [['A', 'Ansehen'], ['W', 'Weg'], ['V', 'Verschieben'], ['E · Entf · ⌫', 'Abreißen'], ['1–9', 'Karte aus der Leiste wählen'], ['R', 'Drehen beim Bauen'],
       ['Strg/⌘ + Z', 'Rückgängig'], ['Esc', 'Abbrechen, Fenster schließen'], ['Leertaste halten + ziehen', 'Karte bewegen (auch rechte Maustaste)'],
-      ['Mausrad', 'Zoomen – beim Bauen: drehen'], ['Rechtsklick', 'Planung bzw. Werkzeug abbrechen']];
+      ['Mausrad', 'Zoomen, beim Bauen drehen'], ['Rechtsklick', 'Planung bzw. Werkzeug abbrechen']];
     const gestures = [['Ziehen', 'Karte bewegen'], ['Zwei Finger', 'Zoomen und bewegen'], ['Einmal tippen', 'Vorschau zeigen'], ['Nochmal tippen', 'Bauen'],
       ['Mit Weg/Rasen ziehen', 'Linie oder Rechteck planen, dann hineintippen'], ['⟳ unten', 'Drehen beim Bauen']];
     const table = rows => `<table class="help-keys">${rows.map(([k, v]) => `<tr><td><kbd>${k}</kbd></td><td>${v}</td></tr>`).join('')}</table>`;
     return (touch ? '' : `<div class="label">⌨️ Maus & Tastatur</div>${table(keys)}`) + `<div class="label">👆 Touch (iPad, Handy)</div>${table(gestures)}`;
   }
   return li([
-    '🏮 <b>Das Ziel:</b> Deine Insel war einmal berühmt für ihr Laternenfest. Restauriere die verfallenen Sehenswürdigkeiten, bis alle Laternen brennen – das 📖 Tagebuch erzählt, wie es früher war.',
-    '🐾 <b>Bewohner:</b> In jedem Wohnhaus lebt eine Tierfamilie. Tipp eine Figur an, um zu sehen, wer das ist und wohin sie gerade geht – morgens zur Arbeit, mittags ins Café, abends in den Park. Mit jeder entdeckten Insel zieht eine neue Art ein; alle stehen im Rathaus unter „Bewohner“.',
+    '🏮 <b>Das Ziel:</b> Deine Insel war einmal berühmt für ihr Laternenfest. Restauriere die verfallenen Sehenswürdigkeiten, bis alle Laternen brennen. Das 📖 Tagebuch erzählt, wie es früher war.',
+    '🐾 <b>Bewohner:</b> In jedem Wohnhaus lebt eine Tierfamilie. Tipp eine Figur an, um zu sehen, wer das ist und wohin sie gerade geht: morgens zur Arbeit, mittags ins Café, abends in den Park. Mit jeder entdeckten Insel zieht eine neue Art ein; alle stehen im Rathaus unter „Bewohner“.',
     '🏠 <b>Häuser</b> bringen Einwohner. Jedes Haus hat Wünsche (Weg vor der Tür, Deko, später Bäckerei, Park, Schule …). Tipp es an, um sie zu sehen.',
-    '✨ <b>Alles wächst selbst ausgelöst:</b> Sind die Wünsche erfüllt, funkelt es – antippen und ausbauen.',
-    '🏘️ <b>Viertel:</b> Was aneinandergrenzt oder über Wege verbunden ist, gehört zusammen – ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.',
-    '🪙 <b>Taler</b> verdienen Felder, Betriebe und Läden. Betriebe brauchen Einwohner als Mitarbeiter – bau also Häuser dazu.',
+    '✨ <b>Alles wächst selbst ausgelöst:</b> Sind die Wünsche erfüllt, funkelt es. Antippen und ausbauen.',
+    '🏘️ <b>Viertel:</b> Was aneinandergrenzt oder über Wege verbunden ist, gehört zusammen. Ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.',
+    '🪙 <b>Taler</b> verdienen Felder, Betriebe und Läden. Betriebe brauchen Einwohner als Mitarbeiter, bau also Häuser dazu.',
     '💡 <b>Tipps</b> tauchen unterwegs auf; alle stehen unter ☰ → ❓ Hilfe → Tipps.',
-    '❓ <b>Nicht verstanden?</b> Alles mit einem kleinen ? lässt sich antippen – Material, Wünsche, Begriffe. Unter ☰ → ❓ Hilfe findest du alles mit Suche. Und tipp deine eigene Figur an – sie sagt dir, was gerade dran ist.']);
+    '❓ <b>Nicht verstanden?</b> Alles mit einem kleinen ? lässt sich antippen, ob Material, Wünsche oder Begriffe. Unter ☰ → ❓ Hilfe findest du alles mit Suche. Und tipp deine eigene Figur an. Sie sagt dir, was gerade dran ist.']);
 }
 // Hilfe-Buch (Block 98): Anleitung, Tipps und Nachschlagen in einem Fenster; oben immer die Suche („Was ist …?“)
 const HELP_Q = 'Suchen: Was ist …? z. B. Metall, Marktplatz, Strom';
@@ -3364,11 +3364,12 @@ const NEWS_HISTORY = [
     '🏠 <b>Leiste oben:</b> Statt Emojis in Pillen stehen dort jetzt Bildchen, die das Spiel selbst zeichnet: Münzstapel, Haus, Bibliothek, Kristall, Kiste, Freundesbank und ein Wegweiser fürs Menü.',
     '🪟 <b>Infofenster und Ziele:</b> Beide haben jetzt die Hecke bzw. die Wolke als Rand. Oben rechts im Infofenster steht das angetippte Gebäude so, wie es bei dir aussieht, und die Knöpfe sind kleine Plättchen statt Pillen.',
     '🌙 <b>Nachts</b> werden Hecke und Wolken an den Fenstern dunkler, die Fläche innen bleibt hell und gut lesbar.',
-    '🪵 <b>Bildchen statt Emojis:</b> Rohstoffe, Strom, Laternen, Geschenke, Bewohner und rund 150 weitere Zeichen sind jetzt selbst gezeichnet – in Texten, Meldungen, über den Häusern und auf den Schildern der Karte. Oben beim Knopf „Du“ steht deine eigene Figur.',
+    '🪵 <b>Bildchen statt Emojis:</b> Rohstoffe, Strom, Laternen, Geschenke, Bewohner und rund 150 weitere Zeichen sind jetzt selbst gezeichnet, in Texten, Meldungen, über den Häusern und auf den Schildern der Karte. Oben beim Knopf „Du“ steht deine eigene Figur.',
     '📜 <b>Große Fenster:</b> Rathaus, Forschung, Einstellungen und die anderen Fenster haben jetzt auch Hecke bzw. Wolke als Rand, und alle Knöpfe sind Plättchen. Taler, Lager, Einwohner, Ideen, Schönheit und das Schloss für Gesperrtes erscheinen in Texten als Spiel-Bildchen.',
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
     '🪵 <b>Knöpfe:</b> Bei der Hecke sind alle Knöpfe jetzt kleine Holzbretter mit Maserung und Nägeln, bei den Wolken kleine Schäfchenwolken. Was gewählt ist, ist grün bzw. kräftig blau.',
-    '✏️ <b>Neue Schrift:</b> Überall im Spiel steht jetzt eine runde, leicht handgeschriebene Schrift wie im Schulheft – in Fenstern, Leisten, Knöpfen und auf den Schildern der Karte.',
+    '💬 <b>Texte überarbeitet:</b> Alle Hinweise, Meldungen und Beschreibungen im Spiel lesen sich jetzt ruhiger und natürlicher. Statt langer Gedankenstriche stehen dort kurze, klare Sätze.',
+    '✏️ <b>Neue Schrift:</b> Überall im Spiel steht jetzt eine runde, leicht handgeschriebene Schrift wie im Schulheft. Du findest sie in Fenstern, Leisten, Knöpfen und auf den Schildern der Karte.',
     '🪧 <b>Neue Leiste oben:</b> Ortsname und Werte stehen jetzt auf einem Holzbrett (Hecke) bzw. einer Wolke, ordentlich mittig. Lager, Du, Freunde und Menü sind runde Knöpfe rechts, damit man sie nicht mehr für Dinge aus dem Spiel hält. Auf dem Handy stehen die Knöpfe rechts untereinander.',
     '🔢 <b>Ruhigere Leiste oben:</b> Taler, Einwohner, Ideen und Sternstaub stehen dort jetzt kurz (3,1k · 158k · 1,5 Mio.), damit die Leiste nicht mehr zuckt. Tippst du auf Taler oder Einwohner, siehst du ein paar Sekunden die genauen Zahlen; die genauen Ideen stehen in der Forschung.',
     '🔽 <b>Ziele einklappen:</b> Oben rechts im Ziel-Fenster zeigt ein kleiner Pfeil-Knopf, dass du es antippen und einklappen kannst.',
@@ -3419,36 +3420,36 @@ const NEWS_HISTORY = [
     '⛺ <b>Sternenbasar</b> (unter Einrichtungen): Der Mondhase verkauft jeden Tag drei Dinge und jede Woche ein seltenes Stück, aus fünf Sammlungen mit 65 Waren. Mit 👁 kannst du eine Ware erst ausprobieren, mit ❤️ merken, und im 📖 Sammelbuch siehst du, was noch fehlt.',
   ] },
   { id: '2026-10-16-bruecken', date: '16. Oktober', title: 'Brücken in vier Materialien', items: [
-    '🌉 <b>Jede Brücke in Holz, Metall, Stein oder Kristall:</b> zwischen Anhöhen, übers Wasser (Weg und Gleis) und als Fußgängerbrücke am Bahnübergang. Brücke antippen → Material, Farbe, Planken, Deck, Stützen, Licht und Kristallzacken wählen – je nachdem, was die Brücke kann.',
+    '🌉 <b>Jede Brücke in Holz, Metall, Stein oder Kristall:</b> zwischen Anhöhen, übers Wasser (Weg und Gleis) und als Fußgängerbrücke am Bahnübergang. Brücke antippen → Material, Farbe, Planken, Deck, Stützen, Licht und Kristallzacken wählen, je nachdem, was die Brücke kann.',
     '🧰 <b>Das Brücken-Werkzeug wählt das Material</b> auch für neue Brücken übers Wasser. Wächst eine Brücke an eine längere heran, bekommt sie deren Aussehen.',
-    '⛵ <b>Boote fahren nur unter Bögen durch:</b> flache Brücken (ein Feld, Stege) sind zu niedrig. Versperrt eine Brücke einen Seeweg, sagt das Spiel es gleich – ↶ macht es rückgängig. Tipp: Fähren in alten Spielständen kurz prüfen.',
+    '⛵ <b>Boote fahren nur unter Bögen durch:</b> flache Brücken (ein Feld, Stege) sind zu niedrig. Versperrt eine Brücke einen Seeweg, sagt das Spiel es gleich. ↶ macht es rückgängig. Tipp: Fähren in alten Spielständen kurz prüfen.',
     '💡 <b>Brückenlicht braucht Strom</b> aus der Stadt, wie Laternen.',
     '🔓 <b>Freischalten:</b> Stein zwischen Anhöhen mit der Windigen Klippe, Kristall mit der Kristallhöhle, Metall zwischen Anhöhen mit der Eisenbahn.',
   ] },
   { id: '2026-10-11-anhoehen', date: '11. Oktober', title: 'Anhöhen, Brücken und Schnellwahl', items: [
-    '⛰️ <b>Anhöhen</b> (Gestalten → Anhöhen): Felder eine Ebene höher, mit Wand nach Wahl. Oben gehen Wege, Plätze, Deko und sogar Häuser und Bahnhöfe. <b>Treppen</b> führen hinauf – schmal oder breit, auch um die Ecke (drehen mit R bzw. ⟳).',
+    '⛰️ <b>Anhöhen</b> (Gestalten → Anhöhen): Felder eine Ebene höher, mit Wand nach Wahl. Oben gehen Wege, Plätze, Deko und sogar Häuser und Bahnhöfe. <b>Treppen</b> führen hinauf, schmal oder breit, auch um die Ecke (drehen mit R bzw. ⟳).',
     '🚆 <b>Züge auf die Anhöhe:</b> mit der Gleis-Rampe (vier Formen) hinauf, mit dem Bergportal hinein in den Berg.',
-    '🌉 <b>Brücke von Anhöhe zu Anhöhe:</b> Holzsteg oder Stahlbrücke, darüber ein Weg oder eine Schiene – darunter bleibt Platz für Wege und Schienen.',
+    '🌉 <b>Brücke von Anhöhe zu Anhöhe:</b> Holzsteg oder Stahlbrücke, darüber ein Weg oder eine Schiene. Darunter bleibt Platz für Wege und Schienen.',
     '👆 <b>Schnellwahl</b> unten links: ein Ziehen-Knopf mit Eisenbahn, Zäunen, Wegen und Gelände; ⭐ zeigt deine Favoriten (Stern an jeder Kachel) und was du zuletzt gebaut hast.',
-    '🧭 <b>Wegmuster folgen der Zugrichtung</b> – R dreht es um, angetippte Wege lassen sich nachträglich drehen.',
+    '🧭 <b>Wegmuster folgen der Zugrichtung.</b> R dreht es um, angetippte Wege lassen sich nachträglich drehen.',
   ] },
   { id: '2026-10-09-zaun', date: '9. Oktober', title: 'Zaun um Dinge auf dem Platz', items: [
-    '🧱 <b>Durchgang schließen:</b> Ein Zaun (auch Hecke oder Mauer) über einem Weg wird von selbst ein Durchgang. Tipp das Stück an und wähle „geschlossen“ – so geht jetzt auch ein Zaun rund um einen Brunnen auf dem Platz.',
+    '🧱 <b>Durchgang schließen:</b> Ein Zaun (auch Hecke oder Mauer) über einem Weg wird von selbst ein Durchgang. Tipp das Stück an und wähle „geschlossen“. So geht jetzt auch ein Zaun rund um einen Brunnen auf dem Platz.',
   ] },
   { id: '2026-10-09-mitte', date: '9. Oktober', title: 'Deko in die Mitte, Tunnel entfernen', items: [
-    '🌳 <b>Deko genau in die Feldmitte:</b> Tippst du nah an die Mitte, rastet kleine Deko dort ein – auf Wiese, Plätzen und breiten Wegen (nicht mitten auf einen schmalen Weg). Die Ecken bleiben frei.',
-    '🚇 <b>Tunnel entfernen</b> direkt im Tunnel-Werkzeug: oben „− Entfernen“ wählen und über die Tunnel ziehen – was darüber steht, bleibt stehen.',
+    '🌳 <b>Deko genau in die Feldmitte:</b> Tippst du nah an die Mitte, rastet kleine Deko dort ein, auf Wiese, Plätzen und breiten Wegen (nicht mitten auf einen schmalen Weg). Die Ecken bleiben frei.',
+    '🚇 <b>Tunnel entfernen</b> direkt im Tunnel-Werkzeug: oben „− Entfernen“ wählen und über die Tunnel ziehen. Was darüber steht, bleibt stehen.',
     '🚉 <b>U-Bahn-Station:</b> auf einem Weg oder Platz bleibt der Weg darunter, der Mast ist kleiner, die Mauerecken sind sauber.',
   ] },
   { id: '2026-10-09-werkzeuge', date: '9. Oktober', title: 'Abreißen über ✋, neue 👁 Durchsicht', items: [
     '✋ <b>Auswählen statt 🧹:</b> Das Abreißen ist aus der Leiste in ✋ gewandert. Rechteck aufziehen → unten „🗑️ Abreißen“ (mit Erstattung), ein Ding antippen → es hängt am Finger → „🗑️ Wegwerfen“. Einzeln geht es weiter im Fenster (👆 → 🗑️). Tasten: Entf oder E.',
     '🌲 <b>Wald roden, Fels sprengen:</b> einfach antippen → 🪓 Roden bzw. 🧨 Sprengen.',
-    '👁 <b>Durchsicht</b> (neben ↶, Taste D): Dächer, Gebäude, Bäume und Figuren werden blass, Tippen geht hindurch – praktisch, um hinter oder unter etwas zu bauen. Tunnel sieht man dabei auch.',
+    '👁 <b>Durchsicht</b> (neben ↶, Taste D): Dächer, Gebäude, Bäume und Figuren werden blass, Tippen geht hindurch. Praktisch, um hinter oder unter etwas zu bauen. Tunnel sieht man dabei auch.',
   ] },
   { id: '2026-10-09-ueberdachungen', date: '9. Oktober', title: 'Überdachungen', items: [
-    '⛱️ <b>Überdachungen</b> (Gestalten → Überdachungen): Holz-Pergola, Glas, Markise oder Steinarkaden über Wege, Plätze und Wiese ziehen – an die Außenecken kommen Stützen gleich mit, weitere stellst du selbst.',
+    '⛱️ <b>Überdachungen</b> (Gestalten → Überdachungen): Holz-Pergola, Glas, Markise oder Steinarkaden über Wege, Plätze und Wiese ziehen. An die Außenecken kommen Stützen gleich mit, weitere stellst du selbst.',
     '🏛️ <b>Steinarkaden</b> mit Säulengang und Rundbögen. Oben Dachgarten oder Pflaster nach Wahl, eine Brüstung (Mauer, Balustrade, Geländer) und kleine Deko obendrauf.',
-    '🪜 <b>Treppe aufs Dach:</b> unter Steinarkaden stellen – das Dach bekommt eine Öffnung, nebeneinander werden sie breiter. Dann gehen Leute oben spazieren.',
+    '🪜 <b>Treppe aufs Dach:</b> unter Steinarkaden stellen. Das Dach bekommt eine Öffnung, nebeneinander werden sie breiter. Dann gehen Leute oben spazieren.',
     '✋ Überdachungen lassen sich samt Deko verschieben und kopieren.',
   ] },
   { id: '2026-10-09-einstellungen', date: '9. Oktober', title: 'Minimap und Einstellungen', items: [
@@ -3456,14 +3457,14 @@ const NEWS_HISTORY = [
     '⚙️ <b>Einstellungen</b> als eigenes Fenster: Schnellwahl Schön · Ausgewogen · Schnell, dazu neue Schalter (immer Tag, Schatten, Symbole, Namensschilder, Einwohner, Tiere …).',
   ] },
   { id: '2026-10-08-bauleiste', date: '8. Oktober', title: 'Bauleiste neu', items: [
-    '🧭 <b>Bauleiste aufgeräumt:</b> Unten ist nur noch eine Reihe. Tippe auf einen Bereich (Stadt, Herstellen …) – darüber klappt alles aus dem Bereich auf, nach Gruppen sortiert und mit Namen. Eine Wahl, Esc oder daneben tippen klappt es wieder zu.',
+    '🧭 <b>Bauleiste aufgeräumt:</b> Unten ist nur noch eine Reihe. Tippe auf einen Bereich (Stadt, Herstellen …). Darüber klappt alles aus dem Bereich auf, nach Gruppen sortiert und mit Namen. Eine Wahl, Esc oder daneben tippen klappt es wieder zu.',
   ] },
   { id: '2026-10-08-beete', date: '8. Oktober', title: 'Neue Beete', items: [
-    '🌷 <b>Beete in neun Formen:</b> Steinrand, Rundbeet, Rosenbeet, Tulpen, Lavendel, Hochbeet, Sonnenblumen, Wildblumen – die meisten in der Kunstakademie (Beete).',
-    '🪵 <b>Boden nach Wahl:</b> Rindenmulch, Kies oder Grün – im Fenster des Beets umstellen. Gartenerde gibt es in der Kunstakademie.',
+    '🌷 <b>Beete in neun Formen:</b> Steinrand, Rundbeet, Rosenbeet, Tulpen, Lavendel, Hochbeet, Sonnenblumen, Wildblumen. Die meisten gibt es in der Kunstakademie (Beete).',
+    '🪵 <b>Boden nach Wahl:</b> Rindenmulch, Kies oder Grün, umstellen kannst du im Fenster des Beets. Gartenerde gibt es in der Kunstakademie.',
   ] },
   { id: '2026-10-08-kopieren', date: '8. Oktober', title: 'Kopieren', items: [
-    '⧉ <b>Kopieren:</b> Mit ✋ ein Rechteck aufziehen – unten erscheinen „Verschieben“ und „Kopieren“ mit Preis. Die Kopie hängt am Finger, lässt sich drehen und so oft absetzen, wie du magst (fertig mit Esc). Sie kostet wie neu gebaut, in Häuser ziehen neue Bewohner.',
+    '⧉ <b>Kopieren:</b> Mit ✋ ein Rechteck aufziehen, dann erscheinen unten „Verschieben“ und „Kopieren“ mit Preis. Die Kopie hängt am Finger, lässt sich drehen und so oft absetzen, wie du magst (fertig mit Esc). Sie kostet wie neu gebaut, in Häuser ziehen neue Bewohner.',
     '🖌️ <b>Pipette:</b> Markierst du nur Weg, nur Gleis oder nur eine Hecke/Zaun/Mauer, hast du danach genau diesen Stil in der Hand und ziehst ihn wie gewohnt weiter.',
     '🌉 <b>Breite Brücken in Nord-Süd-Richtung</b> bekommen keine Löcher mehr.',
   ] },
@@ -3471,31 +3472,31 @@ const NEWS_HISTORY = [
     '🎈 <b>Himmel ruhig:</b> Heißluftballons und Zeppelin lassen sich jetzt im Menü unter Grafik ausblenden (gilt nur auf diesem Gerät).',
   ] },
   { id: '2026-10-08-strassenlaternen', date: '8. Oktober', title: 'Große Straßenlaternen', items: [
-    '💡 <b>Straßenlaternen:</b> Hohe Masten für Straßen und Plätze – nachts fällt ein weiter Lichtfleck auf den Weg. Am Wegrand zeigt der Ausleger von selbst über den Weg. In der Kunstakademie (Deko), dann unter Stadtschmuck.',
-    '🎨 <b>6 Formen:</b> Mastleuchte, Peitschenmast, Kugelleuchte, Doppelausleger, Bischofsstab und der große Boulevard-Kandelaber – in allen Laternenfarben.',
+    '💡 <b>Straßenlaternen:</b> Hohe Masten für Straßen und Plätze. Nachts fällt ein weiter Lichtfleck auf den Weg. Am Wegrand zeigt der Ausleger von selbst über den Weg. In der Kunstakademie (Deko), dann unter Stadtschmuck.',
+    '🎨 <b>6 Formen:</b> Mastleuchte, Peitschenmast, Kugelleuchte, Doppelausleger, Bischofsstab und der große Boulevard-Kandelaber, in allen Laternenfarben.',
   ] },
   { id: '2026-10-08-parkbahn', date: '8. Oktober', title: 'Parkeisenbahn', items: [
-    '🚂 <b>Parkeisenbahn:</b> Unter Freizeit → Parkeisenbahn ein schmales Gleis als Rundkurs ziehen – über Wiese, Park und quer über Wege – und eine Station hineinsetzen. Dann dreht die Bimmelbahn ihre Runden, und deine Bewohner fahren mit.',
-    '🚋 <b>Mehr Züge:</b> Im Fenster jeder Station „+ Zug“ – mehrere Züge auf einer Strecke, jeder mit eigenem Modell. Nostalgische Straßenbahn und Mini-Zug mit Tierwagen gibt es in der Kunstakademie.',
+    '🚂 <b>Parkeisenbahn:</b> Unter Freizeit → Parkeisenbahn ein schmales Gleis als Rundkurs ziehen (über Wiese, Park und quer über Wege) und eine Station hineinsetzen. Dann dreht die Bimmelbahn ihre Runden, und deine Bewohner fahren mit.',
+    '🚋 <b>Mehr Züge:</b> Im Fenster jeder Station gibt es „+ Zug“: mehrere Züge auf einer Strecke, jeder mit eigenem Modell. Nostalgische Straßenbahn und Mini-Zug mit Tierwagen gibt es in der Kunstakademie.',
     '🎨 <b>Dachfarbe:</b> Stationen gibt es in vielen Farben.',
   ] },
   { id: '2026-10-08-boegen', date: '8. Oktober', title: 'Bogenbrücken', items: [
-    '🌉 <b>Brücken übers Wasser sind jetzt Bögen:</b> ab 2 Feldern Länge spannt sich die Brücke im Bogen von Ufer zu Ufer – Stein mit echten Bogenöffnungen, Holz auf Pfählen (die Ziegel- und die Rote Brücke von damals sind heute Stein in Ziegelfarbe bzw. Holz in Rot).',
-    '⛵ <b>Boote fahren darunter durch</b> – unter dem hohen Teil bzw. durch die Bögen. Bewohner laufen über den Bogen.',
-    '↔️ <b>Breite Brücken:</b> bis zu 4 Wege nebeneinander übers Wasser ziehen – wird eine breite Brücke mit Geländer nur außen. Brücken sind höchstens 16 Felder lang, übers Meer auch von Insel zu Insel.',
+    '🌉 <b>Brücken übers Wasser sind jetzt Bögen:</b> ab 2 Feldern Länge spannt sich die Brücke im Bogen von Ufer zu Ufer. Stein mit echten Bogenöffnungen, Holz auf Pfählen (die Ziegel- und die Rote Brücke von damals sind heute Stein in Ziegelfarbe bzw. Holz in Rot).',
+    '⛵ <b>Boote fahren darunter durch,</b> unter dem hohen Teil bzw. durch die Bögen. Bewohner laufen über den Bogen.',
+    '↔️ <b>Breite Brücken:</b> bis zu 4 Wege nebeneinander übers Wasser ziehen, dann wird es eine breite Brücke mit Geländer nur außen. Brücken sind höchstens 16 Felder lang, übers Meer auch von Insel zu Insel.',
   ] },
   { id: '2026-10-08-baenke', date: '8. Oktober', title: 'Neue Bänke, schönere Fußgängerbrücke', items: [
-    '🌳 <b>Rundbank</b> jetzt richtig groß – mit einem echten kleinen Baum in der Mitte.',
+    '🌳 <b>Rundbank</b> jetzt richtig groß, mit einem echten kleinen Baum in der Mitte.',
     '🪑 <b>Gartenbank neu</b> und zwei neue Bänke in der Kunstakademie: <b>Bank mit Blumenkästen</b> und <b>Laubenbank</b> unter einem Rosenbogen.',
     '🌉 <b>Fußgängerbrücke über Schienen:</b> so breit wie der Weg, die Rampen schließen sauber an.',
   ] },
   { id: '2026-10-08-hecken', date: '8. Oktober', title: 'Hecken wie Wege', items: [
-    '✂️ <b>Hecke antippen → Ändern:</b> nur dieses Stück, alle verbundenen oder alle Hecken – dann Form oder Farbe wählen. Gilt auch für Zäune und Mauern.',
-    '🔁 <b>Überbauen:</b> Einfach eine neue Hecke über die alte ziehen – auch nur in anderer Farbe.',
-    '🚂 <b>Gleise genauso:</b> Gleis antippen → nur dieses Feld, alle verbundenen oder alle Gleise – dann das Gleisbett wählen.',
+    '✂️ <b>Hecke antippen → Ändern:</b> nur dieses Stück, alle verbundenen oder alle Hecken. Dann Form oder Farbe wählen. Gilt auch für Zäune und Mauern.',
+    '🔁 <b>Überbauen:</b> Zieh einfach eine neue Hecke über die alte, auch nur in anderer Farbe.',
+    '🚂 <b>Gleise genauso:</b> Gleis antippen → nur dieses Feld, alle verbundenen oder alle Gleise. Dann das Gleisbett wählen.',
   ] },
   { id: '2026-10-08-buendig', date: '8. Oktober', title: 'Wege bis an die Hecke', items: [
-    '🧱 <b>Neue Hecken, Zäune und Mauern sind bündig:</b> Der Weg läuft bis an die Linie – auch um Ecken bleibt kein Graszwickel mehr.',
+    '🧱 <b>Neue Hecken, Zäune und Mauern sind bündig:</b> Der Weg läuft bis an die Linie. Auch um Ecken bleibt kein Graszwickel mehr.',
     '✨ <b>Alte Linien auf einmal umstellen:</b> Hecke antippen → „Bündig bis an die Linie“ → „Für alle anderen Linien übernehmen“.',
   ] },
   { id: '2026-10-08-umfaerben', date: '8. Oktober', title: 'Wege auf einmal umfärben', items: [
@@ -3504,100 +3505,100 @@ const NEWS_HISTORY = [
   ] },
   { id: '2026-10-08-wege', date: '8. Oktober', title: 'Wege: Muster + Farbe', items: [
     '🎨 <b>Muster und Farbe getrennt:</b> Beim Bauen wählst du unten erst das Muster (Kies, Platten, Pflaster, Holz …), dann eine von 21 Farben. Deine Wege bleiben, wie sie sind.',
-    '🧱 <b>Neue Muster:</b> Große, kleine und gemischte Platten, Plattenverband, Steinreihen, Kleinpflaster, Fischgrät groß und Holzbohlen – in der Kunstakademie mit Vorschau, bevor du kaufst. Farben kosten nichts.',
-    '🖼️ <b>Kunstakademie mit Vorschau:</b> Jedes Stück zeigt, wie es aussieht. Antippen öffnet eine Karte mit großem Bild – gekauft wird erst mit „Kaufen“.',
-    '✨ <b>Schöner:</b> Schachbrett und Gold als echtes Schachbrett, kräftigere Ränder, Erde heller, Fischgrät echt, Regenbogen ohne Kanten – und weit weg keine Streifen und Linien mehr.',
+    '🧱 <b>Neue Muster:</b> Große, kleine und gemischte Platten, Plattenverband, Steinreihen, Kleinpflaster, Fischgrät groß und Holzbohlen. In der Kunstakademie siehst du eine Vorschau, bevor du kaufst. Farben kosten nichts.',
+    '🖼️ <b>Kunstakademie mit Vorschau:</b> Jedes Stück zeigt, wie es aussieht. Antippen öffnet eine Karte mit großem Bild. Gekauft wird erst mit „Kaufen“.',
+    '✨ <b>Schöner:</b> Schachbrett und Gold als echtes Schachbrett, kräftigere Ränder, Erde heller, Fischgrät echt, Regenbogen ohne Kanten, und weit weg keine Streifen und Linien mehr.',
   ] },
-  { id: '2026-10-08-grafik', date: '8. Oktober', title: 'Viel flüssiger – auch nachts', items: [
-    '🚀 <b>Grafikkarte:</b> Weit rausgezoomt zeichnet jetzt die Grafikkarte – Tag und Nacht deutlich flüssiger. Sieht etwas komisch aus? ☰ → ⚙️ Einstellungen → „Grafikkarte“ ausschalten.',
-    '⏸️ <b>Drehendes steht weit weg still:</b> Mühlen, Windräder, Riesenrad und Fahrgeschäfte ruhen, wenn du weit rausgezoomt bist – nah dran drehen sie sich. Umstellen unter ☰ → ⚙️ Einstellungen.',
+  { id: '2026-10-08-grafik', date: '8. Oktober', title: 'Viel flüssiger, auch nachts', items: [
+    '🚀 <b>Grafikkarte:</b> Weit rausgezoomt zeichnet jetzt die Grafikkarte. Tag und Nacht ist das deutlich flüssiger. Sieht etwas komisch aus? ☰ → ⚙️ Einstellungen → „Grafikkarte“ ausschalten.',
+    '⏸️ <b>Drehendes steht weit weg still:</b> Mühlen, Windräder, Riesenrad und Fahrgeschäfte ruhen, wenn du weit rausgezoomt bist. Nah dran drehen sie sich. Umstellen unter ☰ → ⚙️ Einstellungen.',
     '🟢 <b>Freunde online:</b> Ein grüner Punkt zeigt, wer gerade spielt, sonst „zuletzt vor …“. Das Freundesbuch fasst Besuche, Herzen und Geschenke je Freund in einer Zeile zusammen.',
     '🎁 <b>Souvenirs:</b> Statt Rohstoffen verschickst du Andenken von deiner Insel; Wünsche auf dem Wunschzettel kannst du wieder abnehmen.',
     '💰 <b>Bezahlt bleibt bezahlt:</b> Einmal gekaufte Varianten (Schloss, Bahnhofslänge, Gleise) kosten beim Umstellen nichts mehr.',
   ] },
   { id: '2026-10-07-hecken', date: '7. Oktober', title: 'Bunte Hecken, passende Eingänge, längerer Bahnhof', items: [
-    '🚉 <b>Bahnhof 3 Felder lang:</b> Beim Bauen in der Leiste „3 Felder“ wählen oder im Fenster umstellen – dann steht die Tür genau auf einem Feld, passend zu einem 1er-Weg.',
-    '🚪 <b>Eingänge passen zum Weg:</b> Vor einem schmalen Weg führt ein Weg genauso breit bis zur Tür – statt eines breiten Platzes. Vor einem ganz breiten Weg bleibt der Vorplatz.',
-    '🌳 <b>Jede Hecke in deiner Farbe:</b> Niedrige, hohe, Buchs-, Blüten- und Lichterhecke lassen sich jetzt färben wie die Wilmerhecke – in der Leiste beim Bauen oder im Fenster der Hecke, auch für alle auf einmal.',
+    '🚉 <b>Bahnhof 3 Felder lang:</b> Beim Bauen in der Leiste „3 Felder“ wählen oder im Fenster umstellen. Dann steht die Tür genau auf einem Feld, passend zu einem 1er-Weg.',
+    '🚪 <b>Eingänge passen zum Weg:</b> Vor einem schmalen Weg führt ein Weg genauso breit bis zur Tür statt eines breiten Platzes. Vor einem ganz breiten Weg bleibt der Vorplatz.',
+    '🌳 <b>Jede Hecke in deiner Farbe:</b> Niedrige, hohe, Buchs-, Blüten- und Lichterhecke lassen sich jetzt färben wie die Wilmerhecke, in der Leiste beim Bauen oder im Fenster der Hecke, auch für alle auf einmal.',
   ] },
   { id: '2026-10-06-symmetrie', date: '6. Oktober', title: 'Hauptbahnhof symmetrisch', items: [
-    '🚉 <b>Halle immer in der Mitte:</b> Gleis – Steig – Halle – Steig – Gleis. Rechts der Halle ist alles gespiegelt, bei gerader Gleiszahl ist der Bahnhof genau symmetrisch.',
-    '➕ <b>Seite wählen:</b> „+ Gleis links“ oder „+ Gleis rechts“ (und „−“ genauso) – alle anderen Gleise bleiben, wo sie sind.',
-    '🛤️ Deine Hauptbahnhöfe wurden umgestellt. Dabei kann ein Gleis ein Feld gerückt sein – die Strecken davor kurz prüfen.',
+    '🚉 <b>Halle immer in der Mitte:</b> Gleis, Steig, Halle, Steig, Gleis. Rechts der Halle ist alles gespiegelt, bei gerader Gleiszahl ist der Bahnhof genau symmetrisch.',
+    '➕ <b>Seite wählen:</b> „+ Gleis links“ oder „+ Gleis rechts“ (und „−“ genauso). Alle anderen Gleise bleiben, wo sie sind.',
+    '🛤️ Deine Hauptbahnhöfe wurden umgestellt. Dabei kann ein Gleis ein Feld gerückt sein. Prüf die Strecken davor kurz.',
   ] },
   { id: '2026-10-06-mittelhalle', date: '6. Oktober', title: 'Hauptbahnhof mit Eingangshalle', items: [
-    '▣ <b>Mittelhalle:</b> Im Fenster des Hauptbahnhofs unter „Halle“ die Mitte wählen – eine Eingangshalle zwischen den Gleisen, das Portal davor, die Gleise gehen links und rechts ab. Bei gerader Gleiszahl genau symmetrisch.',
+    '▣ <b>Mittelhalle:</b> Im Fenster des Hauptbahnhofs unter „Halle“ die Mitte wählen. Dann gibt es eine Eingangshalle zwischen den Gleisen, das Portal davor, die Gleise gehen links und rechts ab. Bei gerader Gleiszahl genau symmetrisch.',
   ] },
   { id: '2026-10-06-zuletzt', date: '6. Oktober', title: 'Zuletzt gebaut', items: [
-    '🕘 <b>Schnell wieder bauen:</b> Der Knopf 🕘 neben der Suche zeigt deine letzten 8 gebauten Dinge – ein Tipp, und du baust weiter.',
+    '🕘 <b>Schnell wieder bauen:</b> Der Knopf 🕘 neben der Suche zeigt deine letzten 8 gebauten Dinge. Ein Tipp, und du baust weiter.',
   ] },
   { id: '2026-10-06-fluegel', date: '6. Oktober', title: 'Hauptbahnhof mit Seitenflügel', items: [
-    '🧳 <b>Gepäckhalle:</b> Im Fenster des Hauptbahnhofs kannst du links oder rechts einen Seitenflügel anbauen. Dann ist der Bahnhof ein Feld breiter (ungerade) – Portal und Eingang liegen mittig auf genau einem Feld, passend zu einem 1er-Weg.',
+    '🧳 <b>Gepäckhalle:</b> Im Fenster des Hauptbahnhofs kannst du links oder rechts einen Seitenflügel anbauen. Dann ist der Bahnhof ein Feld breiter (ungerade). Portal und Eingang liegen mittig auf genau einem Feld, passend zu einem 1er-Weg.',
   ] },
   { id: '2026-10-06-drehen', date: '6. Oktober', title: 'Ganze Anlagen drehen', items: [
-    '⟳ <b>Mehrere Dinge drehen:</b> Mit ✋ ein Rechteck aufziehen, dann mit ⟳ (oder R, Mausrad) die ganze Anlage in Vierteldrehungen drehen – jedes Ding dreht mit, alles bleibt zueinander gleich.',
+    '⟳ <b>Mehrere Dinge drehen:</b> Mit ✋ ein Rechteck aufziehen, dann mit ⟳ (oder R, Mausrad) die ganze Anlage in Vierteldrehungen drehen. Jedes Ding dreht mit, alles bleibt zueinander gleich.',
     '🌳 <b>Parks ziehen komplett um:</b> Parkrasen, Freizeitpark-Boden und Hecken, Zäune, Mauern samt Toren kommen jetzt mit.',
     '🧹 Keine grünen Linien mehr über Plätzen, Einwohner etwas kleiner.',
   ] },
   { id: '2026-10-06-freunde', date: '6. Oktober', title: 'Freunde: dein Name & was du verpasst hast', items: [
     '🏷️ <b>Dein Name:</b> Freunde sehen jetzt den Namen auf deinem Schild (Du → Figur), nicht mehr den aus dem Google-Konto.',
     '💌 <b>Während du weg warst:</b> Beim Öffnen zeigt eine Karte, wer da war, ein Herz dagelassen, ins Gästebuch geschrieben oder dir ein Päckchen geschickt hat. Am 🌐-Knopf steht, wie viel Neues wartet.',
-    '🔑 <b>Freundescode:</b> FNYMI- steht schon da – nur noch die 5 Zeichen eintippen.',
+    '🔑 <b>Freundescode:</b> FNYMI- steht schon da, du tippst nur noch die 5 Zeichen ein.',
   ] },
   { id: '2026-10-06-bahn', date: '6. Oktober', title: 'Die Bahn wird gemütlich', items: [
-    '🌿 <b>Gleis-Stile:</b> Schotter, Rasengleis, Waldbahn, Pflastergleis und Blumengleis. Beim Bauen in der Leiste wählen, über alte Gleise drüberziehen oder ein Gleis antippen und auf alle übertragen – umstellen kostet nichts.',
+    '🌿 <b>Gleis-Stile:</b> Schotter, Rasengleis, Waldbahn, Pflastergleis und Blumengleis. Beim Bauen in der Leiste wählen, über alte Gleise drüberziehen oder ein Gleis antippen und auf alle übertragen. Umstellen kostet nichts.',
     '🌸 <b>Bahnhöfe mit Blumen:</b> Blumenkästen, Kübel, eine Blumenampel und warme Lampen unterm Bahnsteigdach.',
     '☁️ <b>Ohne Oberleitung:</b> keine grauen Masten und Drähte mehr über den Gleisen (Strom brauchen die Züge weiterhin).',
     '🎨 Stadtschmuck in der Kunstakademie ist günstiger, und Bänke stecken nicht mehr ineinander.',
   ] },
   { id: '2026-10-06-schmuck', date: '6. Oktober', title: 'Stadtschmuck in Formen und Farben & ein Knopf für Online', items: [
-    '⛲ <b>Neue Brunnen:</b> Etagenbrunnen, Fontäne, Fischbrunnen und Blumenbrunnen – und der Kristallbrunnen funkelt prächtiger.',
+    '⛲ <b>Neue Brunnen:</b> Etagenbrunnen, Fontäne, Fischbrunnen und Blumenbrunnen. Und der Kristallbrunnen funkelt prächtiger.',
     '🏮 <b>Laternen und Bänke nach Wunsch:</b> je 5 Formen (Kandelaber, Lampion, Pilzlaterne … Gartenbank, Picknicktisch, Rundbank …) und 8 Farben. Wählen beim Bauen in der Leiste oder antippen und umstellen. Die Gruppe heißt jetzt „Stadtschmuck“.',
     '🌐 <b>Eigener Knopf für Online:</b> Freunde und Online-Speicher findest du jetzt oben unter 🌐.',
   ] },
   { id: '2026-10-06-fuereinander', date: '6. Oktober', title: 'Füreinander: Wunschzettel, Freundschaft & Partnerstadt', items: [
-    '📌 <b>Wunschzettel:</b> Im Rathaus hängst du einen Wunsch aus (z. B. 200 Bretter). Deine Freunde sehen ihn unter 👥 und helfen mit einem Klick – du sagst automatisch Danke.',
+    '📌 <b>Wunschzettel:</b> Im Rathaus hängst du einen Wunsch aus (z. B. 200 Bretter). Deine Freunde sehen ihn unter 👥 und helfen mit einem Klick. Du sagst automatisch Danke.',
     '💛 <b>Freundschaft wächst:</b> Besuche, Herzen, Gästebuch und Päckchen lassen bei jedem Freund Herzen wachsen (bis 5). Dafür gibt es Freundschaftsband, Herzballon, Freundesbank und Freundschaftsbaum.',
-    '🚩 <b>Partnerstadt:</b> Wähl unter 👥 einen Freund als Partnerstadt – seine Flagge weht neben deinem Rathaus, und ab und zu legt sein Boot an deinem Hafen an.',
+    '🚩 <b>Partnerstadt:</b> Wähl unter 👥 einen Freund als Partnerstadt. Dann weht die Flagge der Partnerstadt neben deinem Rathaus, und ab und zu legt ihr Boot an deinem Hafen an.',
   ] },
-  { id: '2026-10-06-figur', date: '6. Oktober', title: 'Deine Figur, Freunde, Tag & Nacht – und alles aufgeräumt', items: [
-    '🐾 <b>Deine Figur:</b> Du läufst jetzt selbst über deine Insel! Tipp dich an – du sagst dir, was gerade dran ist (fehlendes Material, Ausbauen, Wünsche). Tier, Farben, Hüte, Brillen, Schal, Ballon …: oben der neue Knopf mit deinem Gesicht.',
+  { id: '2026-10-06-figur', date: '6. Oktober', title: 'Deine Figur, Freunde, Tag & Nacht und alles aufgeräumt', items: [
+    '🐾 <b>Deine Figur:</b> Du läufst jetzt selbst über deine Insel! Tipp dich an. Du sagst dir, was gerade dran ist (fehlendes Material, Ausbauen, Wünsche). Tier, Farben, Hüte, Brillen, Schal, Ballon …: oben der neue Knopf mit deinem Gesicht.',
     '🧭 <b>Aufgeräumt:</b> 🏛️ Rathaus = deine Stadt (Zu tun, Bewohner, Inseln, Ort). Knopf mit deinem Gesicht = du (Figur, Erfolge, Album, Tagebuch). 🌐 = Freunde und Online-Speicher. ☰ = Hilfe und Einstellungen.',
     '❓ <b>Hilfe in einem Buch:</b> Anleitung, Tipps und Nachschlagen zusammen, oben eine Suche.',
-    '☁️ <b>Online-Speicher & Freunde:</b> Mit Google anmelden – die Insel ist auf allen Geräten gleich. Freunde besuchen, Herzen und Gästebuch-Einträge dalassen, Päckchen schicken.',
-    '🌙 <b>Tag und Nacht:</b> Ein Tag dauert jetzt 24 Minuten und läuft weiter, auch wenn das Spiel zu ist – oben am Ortsnamen zeigen Sonne und Mond die Tageszeit, im Rathaus steht die Uhrzeit. Ein Drittel ist Nacht: Laternen, Glühwürmchen und endlich auch Sternschnuppen über der Sternwarte.',
+    '☁️ <b>Online-Speicher & Freunde:</b> Mit Google anmelden, dann ist die Insel auf allen Geräten gleich. Freunde besuchen, Herzen und Gästebuch-Einträge dalassen, Päckchen schicken.',
+    '🌙 <b>Tag und Nacht:</b> Ein Tag dauert jetzt 24 Minuten und läuft weiter, auch wenn das Spiel zu ist. Oben am Ortsnamen zeigen Sonne und Mond die Tageszeit, im Rathaus steht die Uhrzeit. Ein Drittel ist Nacht: Laternen, Glühwürmchen und endlich auch Sternschnuppen über der Sternwarte.',
   ] },
   { id: '2026-10-06-hilfe', date: '6. Oktober', title: 'Hilfe am Ort & Vorplätze', items: [
-    '❓ <b>Hilfe am Ort:</b> Alles mit einem kleinen ? lässt sich antippen – fehlendes Material („Wo kriege ich Metall her?“), die Wünsche der Häuser, Begriffe wie Viertel oder Strom. „Zeig mir“ wählt gleich das richtige Gebäude.',
-    '📚 <b>Nachschlagen:</b> Ein Buch mit Suche – alle Gebäude, Rohstoffe, Wünsche und Begriffe (☰ → ❓ Hilfe).',
+    '❓ <b>Hilfe am Ort:</b> Alles mit einem kleinen ? lässt sich antippen: fehlendes Material („Wo kriege ich Metall her?“), die Wünsche der Häuser, Begriffe wie Viertel oder Strom. „Zeig mir“ wählt gleich das richtige Gebäude.',
+    '📚 <b>Nachschlagen:</b> Ein Buch mit Suche für alle Gebäude, Rohstoffe, Wünsche und Begriffe (☰ → ❓ Hilfe).',
     '🧱 <b>Vorplätze:</b> Liegt ein Weg vor der Tür, führt jetzt bei allen Gebäuden ein Weg oder Platz im selben Muster bis zur Tür.',
   ] },
   { id: '2026-10-05-wilmer', date: '5. Oktober', title: 'Wilmerhecke & neuer Hauptbahnhof', items: [
-    '🌳 <b>Wilmerhecke:</b> Bei den Hecken gibt es eine Hecke aus lauter kleinen runden Büschen – einfach ziehen wie einen Zaun. Gleich frei, auch mit Blüten oder Lichterkette.',
+    '🌳 <b>Wilmerhecke:</b> Bei den Hecken gibt es eine Hecke aus lauter kleinen runden Büschen. Zieh sie einfach wie einen Zaun. Gleich frei, auch mit Blüten oder Lichterkette.',
     '🚉 <b>Hauptbahnhof neu:</b> Portal mit Uhrturm genau in der Mitte, ein Weg vor dem Portal führt bis an die Tür. Schönere Bahnsteigdächer, dazu Laternen, Bänke und Bahnsteiguhren.',
   ] },
   { id: '2026-10-05-kap', date: '5. Oktober', title: 'Leuchtturm-Kap, Märchenschloss & Wege nach Wunsch', items: [
-    '🗼 <b>Leuchtturm-Kap:</b> Das Finale ist ein großes Kap mit Leuchtfeuer, Wärterhaus, Laternen-Girlanden und Feuerwerk. Dein alter Leuchtturm wächst mit, wo Platz ist – sonst im Fenster „Zum Kap ausbauen“.',
-    '🏰 <b>Märchenschloss wie im Märchen:</b> runde Türme, Balkone und Goldbänder rundherum, Fenster nach Wunsch – und statt der Steinplatte Rasen oder ein Platz im Wegmuster deiner Wahl.',
+    '🗼 <b>Leuchtturm-Kap:</b> Das Finale ist ein großes Kap mit Leuchtfeuer, Wärterhaus, Laternen-Girlanden und Feuerwerk. Dein alter Leuchtturm wächst mit, wo Platz ist. Sonst tippst du im Fenster auf „Zum Kap ausbauen“.',
+    '🏰 <b>Märchenschloss wie im Märchen:</b> runde Türme, Balkone und Goldbänder rundherum, Fenster nach Wunsch, und statt der Steinplatte Rasen oder ein Platz im Wegmuster deiner Wahl.',
     '🛤️ <b>Wege nach Wunsch:</b> ganz breit oder schmal, Kurven rund oder eckig, Enden bis ans Gebäude. Vor jedem kleinen Haus führt ein Gartenweg von selbst zur Tür.',
-    '🎨 <b>Umfärben:</b> Windräder, Läden, Hotels, Kultur- und Deko-Bauten bekommen deine Farben – auf Wunsch gleich alle gleichen auf einmal.',
+    '🎨 <b>Umfärben:</b> Windräder, Läden, Hotels, Kultur- und Deko-Bauten bekommen deine Farben, auf Wunsch gleich alle gleichen auf einmal.',
     '🧰 <b>Viele kleine Reparaturen:</b> Rückgängig, Verschieben und Abreißen rechnen genau, „Neue Insel“ fragt in einem eigenen Fenster, und im Menü gibt es „Bildrate: flüssig / sparsam“.',
   ] },
   { id: '2026-10-03-freizeitpark', date: '3. Oktober', title: 'Dein eigener Freizeitpark', items: [
-    '🎢 <b>Freizeitpark</b> (nach dem Laternenfest, 🎡 Freizeit): Zieh bunten Parkboden auf und stell Fahrgeschäfte darauf – Märchenschloss, Karussells, Teetassen, Freifallturm, Geisterbahn, Wildwasserbahn, Zuckerwatte und mehr. Aus dem Rummelplatz wird ein Wunderland.',
-    '🎢 <b>Achterbahn:</b> Zieh die Schiene wie einen Weg als Rundkurs, setz eine Station hinein – mit Lifthügel und Looping.',
-    '🎆 <b>Parade:</b> Im Fenster des Parkbodens feierst du eine Parade mit Feuerwerk – 3 Minuten lang mehr Einnahmen.',
+    '🎢 <b>Freizeitpark</b> (nach dem Laternenfest, 🎡 Freizeit): Zieh bunten Parkboden auf und stell Fahrgeschäfte darauf: Märchenschloss, Karussells, Teetassen, Freifallturm, Geisterbahn, Wildwasserbahn, Zuckerwatte und mehr. Aus dem Rummelplatz wird ein Wunderland.',
+    '🎢 <b>Achterbahn:</b> Zieh die Schiene wie einen Weg als Rundkurs, setz eine Station hinein, mit Lifthügel und Looping.',
+    '🎆 <b>Parade:</b> Im Fenster des Parkbodens feierst du eine Parade mit Feuerwerk. Das bringt 3 Minuten lang mehr Einnahmen.',
     '🛤️ <b>Mehr Freiheit:</b> Deko darf auf Wege, Gebäude ersetzen Wege, und Zäune bekommen ein Gartentor oder einen offenen Durchgang.',
   ] },
   { id: '2026-10-02-bewohner', date: '2. Oktober', title: 'Bewohner mit Tagesablauf', items: [
-    '🐾 <b>Neue Bewohner:</b> Mit jeder entdeckten Insel zieht eine neue Tierart ein – Eichhörnchen, Igel, Fuchs, Giraffe, Elefant und Ente. In jedem Wohnhaus wohnt jemand.',
-    '🌅 <b>Ein Tag auf der Insel:</b> Morgens zur Arbeit oder Schule, mittags ins Café oder auf den Markt, abends in den Park – nachts schlafen die meisten.',
+    '🐾 <b>Neue Bewohner:</b> Mit jeder entdeckten Insel zieht eine neue Tierart ein: Eichhörnchen, Igel, Fuchs, Giraffe, Elefant und Ente. In jedem Wohnhaus wohnt jemand.',
+    '🌅 <b>Ein Tag auf der Insel:</b> Morgens zur Arbeit oder Schule, mittags ins Café oder auf den Markt, abends in den Park. Nachts schlafen die meisten.',
     '👆 <b>Tipp eine Figur an:</b> Du siehst, wer das ist, wo sie wohnt und wohin sie gerade geht. Alle Familien stehen im Rathaus unter „Bewohner“.',
     '📍 <b>Der Platz zählt:</b> Windräder am Wasser, Solar auf Sand, Holzfäller im Wald … bringen bis +50 %. Die Vorschau beim Bauen zeigt es.',
   ] },
   { id: '2026-10-01-ordnung', date: '1. Oktober', title: 'Bau-Leiste neu sortiert & Suche', items: [
     '🧭 <b>Leiste nach einer einfachen Regel:</b> 🏭 Herstellen arbeitet ohne Kundschaft, 🛍️ Verkaufen braucht Kundschaft, 🎡 Freizeit zieht Besucher an oder bringt Ideen. Dazu 🏠 Wohnen, 🌸 Deko und 🛤️ Wege & Land.',
-    '🔍 <b>Suche:</b> Lupe antippen, „bäck“ tippen – schon steht die Bäckerei da.',
+    '🔍 <b>Suche:</b> Lupe antippen, „bäck“ tippen, schon steht die Bäckerei da.',
   ] },
   { id: '2026-09-30-leiste', date: '30. September', title: 'Personal, Kaufkraft & ein längeres Finale', items: [
     '👷 <b>Läden haben Personal:</b> Ein Laden bedient bis zu 150 Kunden je Mitarbeiter. Steht „Voll“ in seinem Fenster, lohnt sich ein zweiter.',
@@ -3611,7 +3612,7 @@ const NEWS_HISTORY = [
     '🎭 <b>Kultur:</b> Kino, Theater, Museum, Konzerthalle, Aquarium, Zoo, Stadion, Hotels und Kaufhaus ziehen Besucher an. ☕ Kaffee, Tee und Kakao wachsen auf den fernen Inseln.',
   ] },
   { id: '2026-09-30', date: '29. September', title: 'Aufträge am Hafen', items: [
-    '🚢 <b>Aufträge statt Börse:</b> Am Handelshafen legen Frachter an und kaufen dir ab, was sich stapelt. Am Großen Hafen gibt es Großaufträge – die Finanzspritze fürs Schloss.',
+    '🚢 <b>Aufträge statt Börse:</b> Am Handelshafen legen Frachter an und kaufen dir ab, was sich stapelt. Am Großen Hafen gibt es Großaufträge, die Finanzspritze fürs Schloss.',
     '🌊 <b>Schiffe fahren übers Wasser</b> und suchen sich den Weg um die Inseln herum.',
   ] },
 ];
@@ -3644,7 +3645,7 @@ function showNews(all = false) {
     <ul class="news">${d.items.map(t => `<li>${t}</li>`).join('')}</ul></details>`;
   openModal(`
     <h2>✨ Das ist neu</h2>
-    ${!all && days.length > 1 ? `<p class="muted">Seit du zuletzt hier warst, gab es an <b>${days.length} Tagen</b> Neues. Der neueste ist aufgeklappt – die älteren kannst du antippen, wenn du magst.</p>` : ''}
+    ${!all && days.length > 1 ? `<p class="muted">Seit du zuletzt hier warst, gab es an <b>${days.length} Tagen</b> Neues. Der neueste ist aufgeklappt. Die älteren kannst du antippen, wenn du magst.</p>` : ''}
     ${days.map(entry).join('')}
     ${!all ? '<p class="muted">Alle Updates: ☰ → ✨ Das ist neu.</p>' : ''}
     <div class="row"><button class="btn" id="m-ok" style="flex:1">Los geht's!</button></div>`);
@@ -3677,7 +3678,7 @@ function showMenu() {
 function showSaveMenu() {
   openModal(`
     <h2>💾 Spielstand</h2>
-    <p class="muted">Als Datei sichern oder laden – zusätzlich zum ☁️ Online-Speicher unter 🌐.</p>
+    <p class="muted">Als Datei sichern oder laden, zusätzlich zum ☁️ Online-Speicher unter 🌐.</p>
     <div class="row">
       <button class="btn ghost" style="flex:1" id="m-export">💾 Spielstand sichern</button>
       <button class="btn ghost" style="flex:1" id="m-import">📂 Spielstand laden</button>

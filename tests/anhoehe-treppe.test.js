@@ -370,28 +370,28 @@ describe('Treppe in eine bestehende Anhöhe', () => {
     const err = (x, y) => game(`placeError('huegeltreppe', ${x}, ${y})`);
     expect(err(11, 11)).toBe('Die Treppe gehört an den Rand der Anhöhe');
     game("buildSmall('bank', 12, 13, 4)");
-    expect(err(12, 13)).toBe('Hier steht: Bank – erst wegnehmen');
+    expect(err(12, 13)).toBe('Hier steht: Bank. Das musst du erst wegnehmen.');
     game("state.decos.clear(); state.tiles.set('12,13', { b: 'brunnen', lvl: 1 }); recalc()");   // Deko-Feld oben
-    expect(err(12, 13)).toBe('Hier steht: Brunnen – erst wegnehmen');
+    expect(err(12, 13)).toBe('Hier steht: Brunnen. Das musst du erst wegnehmen.');
     game("state.tiles.delete('12,13'); recalc()");
     game("build('huegeltreppe', 11, 14)");                                                  // führt schon auf (11, 13) hinauf
     expect(err(11, 13)).toBe('Hierher führt schon eine Treppe hinauf');
     game("state.edges.set(edgeBetween(12, 13, 13, 13), { b: 'zaun', style: 0 }); recalc()");   // oben zwischen zwei Feldern
-    expect(err(12, 13)).toBe('Am Rand steht: Zaun – erst entfernen');
-    expect(err(13, 13)).toBe('Am Rand steht: Zaun – erst entfernen');
+    expect(err(12, 13)).toBe('Am Rand steht: Zaun. Das musst du erst entfernen.');
+    expect(err(13, 13)).toBe('Am Rand steht: Zaun. Das musst du erst entfernen.');
     game("state.edges.clear(); buildSmall('laterne', 13, 13, VSLOT); recalc()");           // Eckpunkt oben (12,5 | 12,5), gespeichert beim Feld (13, 13)
     expect(game('postAt(13, 13) && postAt(13, 13).b')).toBe('laterne');
-    expect(err(12, 13)).toBe('An der Ecke steht: Laterne – erst wegnehmen');               // rechte Ecke von (12, 13)
+    expect(err(12, 13)).toBe('An der Ecke steht: Laterne. Das musst du erst wegnehmen.');               // rechte Ecke von (12, 13)
     game("state.decos.clear(); recalc(); state.hills.get('12,13').h = 2");
     expect(err(12, 13)).toBe('Die Treppe führt nur auf die erste Ebene');
     game("delete state.hills.get('12,13').h");
     hills([[17, 10], [17, 17], [18, 17], [19, 17], [17, 20], [17, 21]]);
-    expect(err(17, 10)).toBe('Hinter der Treppe muss Anhöhe bleiben – hier ist sie zu schmal');   // einzelnes Feld
-    expect(err(18, 17)).toBe('Hinter der Treppe muss Anhöhe bleiben – hier ist sie zu schmal');   // mitten im schmalen Grat
+    expect(err(17, 10)).toBe('Hinter der Treppe muss Anhöhe bleiben, hier ist sie zu schmal');   // einzelnes Feld
+    expect(err(18, 17)).toBe('Hinter der Treppe muss Anhöhe bleiben, hier ist sie zu schmal');   // mitten im schmalen Grat
     expect(err(19, 17)).toBe(null);                                                           // am Ende des Grats: hinauf nach −x
     expect(game("placeRot('huegeltreppe', 19, 17)")).toBe(3);
     game("state.terra.set('17,22', 'water'); recalc()");
-    expect(err(17, 21)).toBe('Vor der Treppe braucht es Platz – kein Wasser');
+    expect(err(17, 21)).toBe('Vor der Treppe braucht es Platz, kein Wasser');
     game(`state.money = ${net() - 1}`);
     expect(err(12, 13)).toBe('Zu wenig Taler');
     game(`state.money = ${net()}`);
@@ -403,7 +403,7 @@ describe('Treppe in eine bestehende Anhöhe', () => {
     hills(block(10, 10, 13, 13));
     game("build('huegeltreppe', 11, 14); setTool('verschieben')");
     game('pickUp(11, 14, -1)');
-    expect(game('moveError(12, 13, -1)')).toBe('Nur vor die Wand – in die Anhöhe die Treppe neu bauen');
+    expect(game('moveError(12, 13, -1)')).toBe('Nur vor die Wand. In die Anhöhe musst du die Treppe neu bauen.');
     game('dropAt(12, 13, -1)');
     expect(game("[!!hillAt(12, 13), !!moving, state.tiles.has('12,13')]")).toEqual([true, true, false]);
     expect(game('moveError(14, 12, -1)')).toBe(null);                                         // vor die Wand geht weiter
@@ -412,7 +412,7 @@ describe('Treppe in eine bestehende Anhöhe', () => {
     for (const start of ['pickUpGroup(11, 14, 11, 15)', 'startCopy(11, 14, 11, 15)']) {
       game(start);
       expect(game('moving.kind')).toBe('group');
-      expect(game('groupErrors(12, 13).first')).toBe('Nur vor die Wand – in die Anhöhe die Treppe neu bauen');
+      expect(game('groupErrors(12, 13).first')).toBe('Nur vor die Wand. In die Anhöhe musst du die Treppe neu bauen.');
       expect(game('dropGroup(12, 13)')).toBe(false);
       game('cancelMove()');
     }

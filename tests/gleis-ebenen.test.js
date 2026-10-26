@@ -46,7 +46,7 @@ describe('Gleise oben und unten', () => {
     game("state.techs.add('ubahn')");
     expect(game("placeError('tunneleinfahrt', 13, 10)")).toMatch(/Tunneleinfahrt steht unten/);
     game("build('huegelrampe', 12, 13)");
-    expect(game("placeError('schiene', 12, 14)")).toMatch(/Gleis-Rampe – die Schiene schließt an ihren Fuß/);
+    expect(game("placeError('schiene', 12, 14)")).toMatch(/Gleis-Rampe\. Die Schiene schließt an ihren Fuß/);
     expect(game("placeError('weg', 12, 14)")).toMatch(/Gleis-Rampe/);
     expect(game("tunnelError(12, 14)")).toMatch(/kein Tunnel/);                 // ein Feld ist Gleis oder Tunnel
   });

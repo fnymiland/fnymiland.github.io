@@ -620,5 +620,5 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
     ITEMS[m.id] = { cat: 'deko', name, sdShop: true, cost: m.cost, ...(m.mat ? { mat: m.mat } : {}), beauty: m.beauty, ...(tile ? { needs: 'grass' } : { small: true }), sammlung: smlg, desc: `Aus der Sammlung „${smlg}“ im Sternenbasar.` };
     SD_ART[m.id] = fn;
     SD_SHOP.push({ id: m.id, price: m.price, ...(m.rare ? { rare: true } : {}) });
-    if (!ITEM_TIPS[m.id]) ITEM_TIPS[m.id] = tile ? 'Aus dem Sternenbasar ✨ – braucht ein ganzes Feld Wiese.' : 'Aus dem Sternenbasar ✨ – kleine Deko für eine Ecke, bis zu 4 pro Feld.';
+    if (!ITEM_TIPS[m.id]) ITEM_TIPS[m.id] = tile ? 'Aus dem Sternenbasar ✨, braucht ein ganzes Feld Wiese.' : 'Aus dem Sternenbasar ✨. Kleine Deko für eine Ecke, bis zu 4 pro Feld.';
   }
