@@ -579,10 +579,11 @@ async function friendRest(id, e) {
   if (frRestCache[id] !== undefined) return frRestCache[id];
   try { const rest = await cloudApi.get(`worlds/${e.wid}/rest`); return (frRestCache[id] = rest ? JSON.parse(rest) : null); } catch (err) { return null; }
 }
+const restFlag = rest => { const town = rest && rest.town; return town ? { c: town.color, s: town.symbol } : null; };
 // Flagge eines Freundes: aus seinem Eintrag, sonst aus seiner Insel
 async function friendFlag(id, e) {
   if (e && flagOk(e.flag)) return { c: e.flag.c, s: e.flag.s };
-  const town = ((await friendRest(id, e)) || {}).town, f = town && { c: town.color, s: town.symbol };
+  const f = restFlag(await friendRest(id, e));
   return flagOk(f) ? f : null;
 }
 async function togglePartner(id, e) {
@@ -598,7 +599,7 @@ async function togglePartner(id, e) {
 function friendBoats() {
   const flags = [], seen = new Set(), add = (uid, f) => { if (flagOk(f) && !seen.has(uid) && flags.length < 3) { seen.add(uid); flags.push(f); } };
   if (state.partner) add(state.partner.uid, state.partner);
-  if (!VISIT) for (const [id, e] of Object.entries(frList || {})) if (e && e.st === 'freund') add(id, flagOk(e.flag) ? e.flag : frFlagCache[id]);
+  if (!VISIT) for (const [id, e] of Object.entries(frList || {})) if (e && e.st === 'freund') add(id, flagOk(e.flag) ? e.flag : restFlag(frRestCache[id]));
   if (!flags.length) return [];
   let hk = null;
   for (const [k, t] of state.tiles) if (t.b === 'hafen') { hk = k; break; }
