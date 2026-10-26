@@ -184,13 +184,14 @@ function lookSlab(el, role, inset = false) {
 // (9 Teile, Ränder „round“) um jeden Knopf – reines CSS, übersteht also das Neuzeichnen des Infofensters (patch nimmt fremde Klassen
 // weg). Maße: Buckel r, Abstand P, Ecke C (= r + P/2, damit die Kanten zwischen zwei Buckeln enden und nahtlos wiederholt werden)
 const CLOUD_KNOB = {
-  p:   ['#6b95d8', '#46699f', '#9dbbea'],                      // Hauptknopf, „Los!“
+  p:   ['#6b95d8', '#46699f', '#9dbbea'],                      // Hauptknopf, „Los!“ (Grundfarbe auch in style.css: --kc)
   on:  ['#5a86cf', '#3c5f97', '#8fb0e4'],                      // gewählte Wahl
   s:   ['#e3ecf8', '#b3c3dd', '#ffffff'],                      // Neben-Knöpfe, Wahl-Chips
   x:   ['#d9655a', '#a8443a', '#ec8c82'],                      // Abreißen & Co.
   off: ['#e6ebf2', '#c8d0dc', '#f4f6fa'],                      // gesperrt
 };
-const CLOUD_KNOB_R = 8.5, CLOUD_KNOB_P = 14, CLOUD_KNOB_DEPTH = 3;            // Ecke 15,5 px, unten 18,5 px (style.css: border-image 31 31 37 31)
+// ganze Pixel (Ecke 16, unten 19; style.css: border-image 32 32 38 32 / 16px …) – halbe Pixel gaben feine Nähte zwischen den 9 Teilen
+const CLOUD_KNOB_R = 9, CLOUD_KNOB_P = 14, CLOUD_KNOB_DEPTH = 3;
 function cloudKnobImage(top, under, hi) {
   const r = CLOUD_KNOB_R, P = CLOUD_KNOB_P, C = r + P / 2, W = 2 * C + P, H = W + CLOUD_KNOB_DEPTH, k = 2;
   const pts = [];

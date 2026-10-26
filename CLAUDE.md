@@ -560,11 +560,16 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Nebenknöpfe mit Nagelköpfen; Farbe über `--k`/`--kd`/`--kt`. Wolken = Wölkchen mit gleichmäßigen Buckeln ringsum als `border-image`
     (`--ck`), Bilder je Knopfart aus `cloudKnobs()` (ui-look.js, `CLOUD_KNOB` p/on/s/x/off, einmal gemalt, an `body` als `--cloud-…`).
     Nie per JS an einzelne Knöpfe malen: `patch()` im Infofenster nimmt fremde Klassen/Attribute alle 0,2 s wieder weg – border-image
-    ist reines CSS und wächst mit jeder Knopfgröße (Ränder „round“). Zahlen im CSS (31 31 37 31 / 15,5 px …) = (r + P/2) bzw. + Dicke, ×2
+    ist reines CSS und wächst mit jeder Knopfgröße (Ränder „round“). Zahlen im CSS (32 32 38 32 / 16 px …) = (r + P/2) bzw. + Dicke, ×2, ganze Pixel (halbe gaben Nähte)
     im Bild; wer `CLOUD_KNOB_R/P/DEPTH` ändert, ändert sie mit (Test prüft das). Wolken-Knöpfe brauchen mehr Innenabstand (Buckel), kleine
     Knöpfe (`.btn.small`, „Los!“, Ziel-Chips) nehmen dieselbe Wolke verkleinert (`border-image-width`). Ältere, stärkere Regeln mit
     Hintergrund (z. B. `.card.basar .btn.small.basar-try`) dort zurücknehmen; Prüfschleife: in Wolken `background-image: none`,
     durchsichtig, kein Schatten, `border-image-source` gesetzt; in Hecke Maserung + Kante; kein Text läuft über (beide Aussehen, alle Fenster, Handy).
+    Unter der Wolke liegt eine Fläche in Wolkenfarbe (`--kbg` aus `--kc`, eingerückt um `--ki`/`--kd`): Der Browser glättet die Kanten der
+    9 border-image-Teile einzeln, ohne die Fläche scheinen feine Nähte durch. Wer eine Knopfart ergänzt, setzt `--ck` **und** `--kc`.
+    Text-Prüfung: tools/knopf-text-pruefung.js (`await KT_RUN()` im Spiel): Inhalt mittig in Brett bzw. Wolke, Abstand zu Nägeln/Buckeln,
+    mehrzeilig, Überdeckung – in beiden Aussehen, am Rechner und bei 375 px. Knopfreihen `.row` brechen um, statt Knöpfe schmaler als ihren
+    Text zu quetschen (`.row > .btn { min-width: max-content }`; auf dem Handy ragte „Schließen“ im Tagebuch aus der Wolke).
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

@@ -1444,28 +1444,35 @@ body.look-hecke .look-pick button.on { box-shadow: 0 2px 0 var(--kd), 0 0 0 2px 
 body.look-wolke .btn, body.look-wolke #goal .task.ready .t-go,
 body.look-wolke :is(.look, .set-btn, .look-pick button, .arrange-btn, .arrange-mv, .store-row .keep, .sub, .style-chip),
 body.look-wolke #goal .task-chips .chip, body.look-wolke #visit-band .btn {
-  background: none; box-shadow: none; border-radius: 0; border: 0 solid transparent; padding: 8px 17px 10px;
-  border-image: var(--ck) 31 31 37 31 fill / 15.5px 15.5px 18.5px 15.5px round; color: var(--kt);
-  --ck: var(--cloud-s); --kt: #3b4763; }
+  background: var(--kbg); box-shadow: none; border-radius: 0; border: 0 solid transparent; padding: 8px 17px 10px;
+  border-image: var(--ck) 32 32 38 32 fill / 16px 16px 19px 16px round; color: var(--kt);
+  --ck: var(--cloud-s); --kc: #e3ecf8; --kt: #3b4763; --ki: 9px; --kd: 3px;
+  /* Fläche in Wolkenfarbe unter dem Bauch: deckt die feinen Nähte, die der Browser zwischen den 9 Teilen glättet */
+  --kbg: linear-gradient(var(--kc), var(--kc)) var(--ki) var(--ki) / calc(100% - 2 * var(--ki)) calc(100% - 2 * var(--ki) - var(--kd)) no-repeat; }
 body.look-wolke .btn:not(.small) { padding: 11px 21px 13px; }
 /* kleine Knöpfe: dieselbe Wolke verkleinert (kleinere Buckel), sonst würden sie zu hoch */
 body.look-wolke :is(.btn.small, .arrange-btn, .arrange-mv), body.look-wolke #goal .task.ready .t-go, body.look-wolke #goal .task-chips .chip {
-  padding: 6px 13px 8px; border-image-width: 11px 11px 13px 11px; }
-body.look-wolke .btn, body.look-wolke #goal .task.ready .t-go { --ck: var(--cloud-p); --kt: #fff; }
-body.look-wolke .btn.ghost, body.look-wolke #visit-band .btn, body.look-wolke .fr-btns .btn.ghost { --ck: var(--cloud-s); --kt: #3b4763; }
+  padding: 6px 13px 8px; border-image-width: 11px 11px 13px 11px; --ki: 6px; --kd: 2px; }
+body.look-wolke .btn, body.look-wolke #goal .task.ready .t-go { --ck: var(--cloud-p); --kc: #6b95d8; --kt: #fff; }
+body.look-wolke .btn.ghost, body.look-wolke #visit-band .btn, body.look-wolke .fr-btns .btn.ghost { --ck: var(--cloud-s); --kc: #e3ecf8; --kt: #3b4763; }
 body.look-wolke :is(.look.on, .look-pick button.on, .sub.active, .style-chip.on, .style-chip.wsel.open),
-body.look-wolke .fr-btns .btn.on { --ck: var(--cloud-on); --kt: #fff; }
-body.look-wolke .look.art-more { --ck: var(--cloud-s); --kt: #3b4763; }
-body.look-wolke .btn.danger { --ck: var(--cloud-x); --kt: #fff; }
-body.look-wolke .btn:disabled, body.look-wolke .arrange-mv:disabled { --ck: var(--cloud-off); --kt: #8b95aa; }
+body.look-wolke .fr-btns .btn.on { --ck: var(--cloud-on); --kc: #5a86cf; --kt: #fff; }
+body.look-wolke .look.art-more { --ck: var(--cloud-s); --kc: #e3ecf8; --kt: #3b4763; }
+body.look-wolke .btn.danger { --ck: var(--cloud-x); --kc: #d9655a; --kt: #fff; }
+body.look-wolke .btn:disabled, body.look-wolke .arrange-mv:disabled { --ck: var(--cloud-off); --kc: #e6ebf2; --kt: #8b95aa; }
 body.look-wolke #sel-bar .btn { box-shadow: none; filter: drop-shadow(0 5px 6px rgba(50, 70, 110, .18)); }
 body.look-wolke .look-pick button.on { box-shadow: none; }
 @media (hover: hover) {
-  body.look-wolke :is(.btn, .look, .set-btn, .arrange-btn, .style-chip, .sub):not(:disabled):hover { background: none; filter: brightness(1.04); }
+  body.look-wolke :is(.btn, .look, .set-btn, .arrange-btn, .style-chip, .sub):not(:disabled):hover { background: var(--kbg); filter: brightness(1.04); }
 }
 body.look-wolke #goal .task-chips .chip { padding: 6px 10px 8px; }          /* „Erfolge“ und „Album“ bleiben nebeneinander */
 body.look-hecke #goal .task-chips .chip { padding: 3px 7px; }
 /* ältere, stärkere Regeln (Farbe je Knopfart, Basar-Ausprobieren) hier zurücknehmen bzw. ins Holz setzen */
-body.look-wolke :is(.btn.ghost, .btn.danger, .btn:disabled, .card.basar .btn.small.basar-try, .btn:active) { background: none; box-shadow: none; }
+body.look-wolke :is(.btn.ghost, .btn.danger, .btn:disabled, .card.basar .btn.small.basar-try, .btn:active) { background: var(--kbg); box-shadow: none; }
 body.look-hecke .card.basar .btn.small.basar-try { background: radial-gradient(circle at 7px 50%, var(--kd) 1.6px, transparent 2.2px),
   radial-gradient(circle at calc(100% - 7px) 50%, var(--kd) 1.6px, transparent 2.2px), var(--grain), var(--k); box-shadow: 0 3px 0 var(--kd); color: var(--kt); }
+/* Knopf-Reihen: ein Knopf wird nie schmaler als sein Text (Nutzer 26.10.2026: „ist der Text immer zentriert, überlappt da nirgendwo
+   etwas?“ – auf dem Handy ragte „Schließen“ im Tagebuch aus der Wolke bzw. an die Nägel). Passt die Reihe nicht, rutscht ein Knopf in
+   die nächste Zeile; sonst bleiben alle gleich breit */
+.row { flex-wrap: wrap; }
+.row > .btn { min-width: max-content; }
