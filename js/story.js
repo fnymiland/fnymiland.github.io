@@ -600,6 +600,7 @@ function statCount(k, n = 1) { if (!state || !state.stats || (typeof viewOnly ==
 // Versteckte Erfolge (Nutzer 26.10.2026, „alle 12“): in der Liste nur „???“ mit Rätsel-Hinweis; gefunden = achieved['h_<id>'] = 1 –
 // zählt als Stern (Inselsterne) und steht wie alle Erfolge im öffentlichen Teil (Besucher sehen, was gefunden ist)
 const nearWater = (x, y, r = 2) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (terrainAt(x + dx, y + dy) === 'water') return true; return false; };
+const SPAZIER_FELDER = 100;                                               // 10 km (1 Feld = 0,1 km wie bei Bahn und Wegen)
 const HIDDEN_ACHV = [
   { id: 'sternfaenger', icon: '🌠', name: 'Sternenfänger', hint: 'Nachts lohnt sich ein Blick nach oben …', done: '10 Sternschnuppen angetippt', check: () => statOf('starTaps') >= 10 },
   { id: 'alleneune', icon: '🐾', name: 'Alle Neune', hint: 'Eine bunte Nachbarschaft …', done: 'Alle 9 Tierarten wohnen auf deiner Insel',
@@ -617,7 +618,7 @@ const HIDDEN_ACHV = [
   { id: 'regenbogenweg', icon: '🌈', name: 'Regenbogenweg', hint: 'Bunt wie nach dem Regen …', done: 'Wege in 7 Farben',
     check: () => { const c = new Set(); for (const t of state.tiles.values()) if (t.b === 'weg') c.add(wegParts(t.style)[1]); return c.size >= 7; } },
   { id: 'dochnicht', icon: '🔁', name: 'Ach, doch nicht', hint: 'Jeder ändert mal seine Meinung …', done: '10-mal hintereinander zurück', check: () => statOf('undo10') >= 1 },
-  { id: 'spaziergang', icon: '🚶', name: 'Spaziergänger', hint: 'Einfach mal laufen lassen …', done: 'Deine Figur ist 100 km gelaufen', check: () => statOf('walk') >= 1000 },
+  { id: 'spaziergang', icon: '🚶', name: 'Spaziergänger', hint: 'Einfach mal laufen lassen …', done: 'Deine Figur ist 10 km gelaufen', check: () => statOf('walk') >= SPAZIER_FELDER },   // Nutzer: „leichter“ (100 km dauerte Wochen)
 ];
 const noteStarTap = () => statCount('starTaps');
 const RANKS = [

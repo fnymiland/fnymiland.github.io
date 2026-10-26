@@ -139,6 +139,11 @@ describe('Versteckte Erfolge (Nutzer: „alle 12“)', () => {
     expect(game('state.stats.starTaps')).toBe(2);
     game("for (let i = 0; i < 20; i++) tapCritter({ id: 'moewe' })");
     expect(game('state.stats.gullTaps')).toBe(20);
+    expect(game('SPAZIER_FELDER')).toBe(100);                                   // „Spaziergänger“: 10 km (Nutzer: leichter)
+    game("state.stats.walk = 99; checkAchievements(true)");
+    expect(game('!!state.achieved.h_spaziergang')).toBe(false);
+    game("state.stats.walk = 100; checkAchievements(true)");
+    expect(game('state.achieved.h_spaziergang')).toBe(1);
     game("undoRun = 9; noteUndo()");
     expect(game('state.stats.undo10')).toBe(1);
     game("undoRun = 5; undoStack.length = 0; undoable(() => { state.money += 1; state.tiles.set('3,3', { b: 'weg', style: 'kies' }); })");
