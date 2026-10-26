@@ -110,6 +110,38 @@
         over: () => { if (n === 5) { x.strokeStyle = 'rgba(255,240,190,.9)'; x.lineWidth = 2; x.lineCap = 'round'; x.beginPath(); x.moveTo(X0 + 6, Y0 - 42); x.lineTo(X0 + 30, Y0 - 27); x.stroke(); glint(x, X0 + 31, Y0 - 26, 5); } sparkle(x, n >= 3 ? n - 1 : 0); } });
     }) },
   ];
+  // Runde 2 (Nutzer: „die Rahmen von 1 sind so genial, aber die Innenfarbe sowie die Sterne sollten gleich bleiben wie bei 8“)
+  const METAL = [['#f6c9a0', '#c98250', '#8a4a20'], ['#ffffff', '#d9dee8', '#9aa3b5', '#6f7890'], GOLD, ['#ffffff', '#e8eef9', '#b9c6e0', '#8796b8'], ['#ffd0e0', '#fff0b0', '#c8f5d8', '#c4e4ff', '#e4d0ff']];
+  const night = (n, grow) => r => {
+    for (let i = 0; i < 30; i++) { x0.fillStyle = 'rgba(255,255,255,.8)'; x0.beginPath(); x0.arc(X0 - r + (i * 23.3 % (2 * r)), Y0 - r + (i * 11.7 % (2 * r)), i % 5 ? 0.45 : 0.9, 0, 7); x0.fill(); }
+    if (!grow) return; const x = x0;
+    if (n >= 3) { x.save(); x.translate(X0, Y0); x.rotate(-0.6); const g = x.createRadialGradient(0, 0, 1, 0, 0, r); g.addColorStop(0, 'rgba(230,230,255,.45)'); g.addColorStop(1, 'rgba(230,230,255,0)'); x.scale(1, 0.3); x.fillStyle = g; x.beginPath(); x.arc(0, 0, r, 0, 7); x.fill(); x.restore(); }
+    if (n >= 4) for (const [c, dy] of [['rgba(90,240,170,.5)', -r * 0.55], ['rgba(240,120,220,.4)', -r * 0.35]]) { x.strokeStyle = c; x.lineWidth = 4; x.beginPath(); for (let t = -r; t <= r; t += 2) x.lineTo(X0 + t, Y0 + dy + Math.sin(t / 5) * 2); x.stroke(); }
+    if (n >= 2) { x.fillStyle = '#ffe9a0'; x.beginPath(); x.arc(X0 + r * 0.55, Y0 + r * 0.5, 3.6, 0, 7); x.fill(); x.fillStyle = '#121a48'; x.beginPath(); x.arc(X0 + r * 0.55 + 1.8, Y0 + r * 0.5 - 1.2, 3.1, 0, 7); x.fill(); }
+  };
+  let x0 = null;
+  const metalNight = grow => n => mk(x => {
+    x0 = x;
+    if (n >= 4) halo(x, 46, n === 5 ? 'rgba(255,205,245,.8)' : 'rgba(200,215,255,.7)');
+    medal(x, n, { rimCols: METAL[n - 1], face: ['#25306a', '#0b1030'], faceDeco: night(n, grow), over: () => sparkle(x, n >= 4 ? (n === 5 ? 6 : 3) : 0) });
+  });
+  K.push({ name: 'A Metallrahmen, Nachthimmel innen gleich', sub: 'Bronze · Silber · Gold · Platin · Opal', f: metalNight(false) },
+    { name: 'B Metallrahmen, Nachthimmel wächst mit', sub: 'dazu Mond · Milchstraße · Polarlicht', f: metalNight(true) });
+  // Probe: groß und klein (Leiste ≈ 30 px, Freundesliste ≈ 22 px) auf Holz und Wolke
+  window.MD_MIX = () => {
+    let el = document.getElementById('md-sheet'); if (el) el.remove();
+    el = document.createElement('div'); el.id = 'md-sheet';
+    el.style.cssText = 'position:fixed;inset:0;z-index:999;background:#f3efe6;padding:8px 16px;overflow:auto;font:700 14px/1.2 var(--font);color:#5a3d24';
+    const row = (k, h) => [1, 2, 3, 4, 5].map(n => `<img src="${MD_IMG(k, n)}" style="height:${h}px">`).join('');
+    // klein: eng zugeschnitten (Medaille füllt den Platz, Schein und Glitzer ragen nur wenig hinaus)
+    const tight = (k, h) => [1, 2, 3, 4, 5].map(n => `<span style="display:inline-block;width:${h}px;height:${h}px;position:relative"><img src="${MD_IMG(k, n)}" style="position:absolute;height:${Math.round(h * 1.75)}px;left:50%;top:50%;transform:translate(-50%,-50%)"></span>`).join('');
+    el.innerHTML = [8, 9].map(k => `<div>${K[k].name} <span style="font-weight:500;font-size:12px;color:#8a6a4a">${K[k].sub}</span></div>
+      <div style="display:flex;align-items:center;gap:14px;margin:-4px 0 -2px">${row(k, 128)}</div>
+      <div style="display:flex;gap:16px;align-items:center;margin:0 0 10px">
+        <span style="display:flex;gap:4px;align-items:center;padding:3px 10px;border-radius:6px;background:var(--grain, none), #ecd4a3;border:1.5px solid #8a5a34">klein in der Leiste: ${tight(k, 30)}</span>
+        <span style="display:flex;gap:4px;align-items:center;padding:3px 10px;border-radius:10px;background:#fff;border:2px solid #a9bde0;color:#3b4763">Freundesliste: ${tight(k, 22)}</span></div>`).join('');
+    document.body.append(el); return 'Probe';
+  };
   const cache = {};
   window.MD_IMG = (k, n) => cache[k + ':' + n] ||= K[k].f(n);
   window.MD_SHEET = (page, h = 112) => {
