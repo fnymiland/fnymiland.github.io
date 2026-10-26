@@ -15,6 +15,58 @@
   const ON = () => starUrl('#f2bd3a', '#c98f1e', '#f8d978');
   const OFF = () => document.body.classList.contains('look-wolke') ? starUrl('#e3e9f3', '#c3cee0') : starUrl('#e9dcbc', '#c9b48a');
   const row = (n, size = 15) => Array.from({ length: 5 }, (_, i) => `<i style="width:${size}px;height:${size}px;background:url(${i < n ? ON() : OFF()}) center/contain no-repeat;display:inline-block"></i>`).join('');
+  // Runde 2 (Nutzer: „sieht lame aus … man sollte nicht 3/5 sehen, sondern nur die, die man schon hat – ein 3-Sterne-Restaurant hat
+  // auch nicht 3/5 Sterne an der Tür“): nur verdiente Sterne, in einer Fassung. Varianten: plakette, rosette, bogen
+  let VAR = 'plakette';
+  const S = 3;
+  const cv = (w, h, f) => { const c = document.createElement('canvas'); c.width = w * S; c.height = h * S; const x = c.getContext('2d'); x.scale(S, S); f(x); return c.toDataURL(); };
+  const star = (x, cx, cy, R, fill = '#f2bd3a', edge = '#b07a12', hi = '#fbe39a') => {
+    const p = (r0, k) => { x.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r0 * 0.46 : r0; x.lineTo(cx + Math.cos(a) * q, cy + k + Math.sin(a) * q); } x.closePath(); };
+    x.fillStyle = edge; p(R, R * 0.12); x.fill(); x.fillStyle = fill; p(R, 0); x.fill();
+    x.fillStyle = hi; x.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? R * 0.19 : R * 0.42; x.lineTo(cx - R * 0.1 + Math.cos(a) * q, cy - R * 0.1 + Math.sin(a) * q); } x.closePath(); x.fill();
+  };
+  const rr = (x, X, Y, W, H, R) => { x.beginPath(); x.roundRect(X, Y, W, H, R); };
+  const BADGE = {
+    plakette(n) {                                         // Emaille-Plakette mit Goldrand
+      const s = 15, gap = 3, pad = 8, w = pad * 2 + n * s + (n - 1) * gap, h = 28;
+      return [w, h, cv(w, h, x => {
+        rr(x, 0, 1.5, w, h - 1.5, 7); x.fillStyle = '#9a6a12'; x.fill();
+        rr(x, 0, 0, w, h - 2, 7); const gg = x.createLinearGradient(0, 0, 0, h); gg.addColorStop(0, '#f6d27a'); gg.addColorStop(1, '#c9932a'); x.fillStyle = gg; x.fill();
+        rr(x, 2.5, 2.5, w - 5, h - 7, 5); const en = x.createLinearGradient(0, 0, 0, h); en.addColorStop(0, '#41549c'); en.addColorStop(1, '#232d5c'); x.fillStyle = en; x.fill();
+        x.strokeStyle = 'rgba(246,210,122,.7)'; x.lineWidth = 0.8; rr(x, 4.2, 4.2, w - 8.4, h - 10.4, 3.5); x.stroke();
+        for (let i = 0; i < n; i++) star(x, pad + s / 2 + i * (s + gap), h / 2 - 1.5, s / 2);
+        x.fillStyle = 'rgba(255,255,255,.13)'; rr(x, 3, 3, w - 6, (h - 7) / 2, 4); x.fill();
+      })];
+    },
+    rosette(n) {                                          // Ordensrosette: Bänder, blaue Blütenblätter, Goldscheibe, Sterne darin
+      const w = 46, h = 58, cx = 23, cy = 22;
+      return [w, h, cv(w, h, x => {
+        x.fillStyle = '#2f4a9e'; x.beginPath(); x.moveTo(cx - 3, cy + 10); x.lineTo(cx - 13, h - 2); x.lineTo(cx - 8, h - 6); x.lineTo(cx - 4, h - 1); x.lineTo(cx + 2, cy + 12); x.fill();
+        x.fillStyle = '#4867c2'; x.beginPath(); x.moveTo(cx + 3, cy + 10); x.lineTo(cx + 13, h - 2); x.lineTo(cx + 8, h - 6); x.lineTo(cx + 4, h - 1); x.lineTo(cx - 2, cy + 12); x.fill();
+        for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; x.fillStyle = i % 2 ? '#5b7bd6' : '#8aa6ea'; x.beginPath(); x.arc(cx + Math.cos(a) * 17, cy + Math.sin(a) * 17, 5.4, 0, Math.PI * 2); x.fill(); }
+        x.fillStyle = '#9a6a12'; x.beginPath(); x.arc(cx, cy + 1, 15, 0, Math.PI * 2); x.fill();
+        const gg = x.createLinearGradient(0, cy - 15, 0, cy + 15); gg.addColorStop(0, '#f6d27a'); gg.addColorStop(1, '#c9932a'); x.fillStyle = gg; x.beginPath(); x.arc(cx, cy, 15, 0, Math.PI * 2); x.fill();
+        x.fillStyle = '#2b3770'; x.beginPath(); x.arc(cx, cy, 12, 0, Math.PI * 2); x.fill();
+        const pos = { 1: [[0, 0, 8]], 2: [[-5, 0, 5.2], [5, 0, 5.2]], 3: [[0, -4.5, 4.6], [-5, 3.6, 4.6], [5, 3.6, 4.6]], 4: [[-4.5, -4.5, 4], [4.5, -4.5, 4], [-4.5, 4.5, 4], [4.5, 4.5, 4]],
+          5: [[0, -6, 3.6], [-6, -1.5, 3.6], [6, -1.5, 3.6], [-3.6, 5.5, 3.6], [3.6, 5.5, 3.6]] }[n];
+        for (const [dx, dy, r] of pos) star(x, cx + dx, cy + dy, r);
+        x.fillStyle = 'rgba(255,255,255,.2)'; x.beginPath(); x.ellipse(cx - 4, cy - 6, 6, 3, -0.5, 0, Math.PI * 2); x.fill();
+      })];
+    },
+    bogen(n) {                                            // leuchtende Sterne im Bogen, die mittleren größer
+      const s = 16, w = n * (s + 2) + 12, h = 30;
+      return [w, h, cv(w, h, x => {
+        for (let i = 0; i < n; i++) {
+          const t = n === 1 ? 0.5 : i / (n - 1), cx = 6 + s / 2 + 1 + i * (s + 2), cy = 19 - Math.sin(t * Math.PI) * 6, R = s / 2 * (0.85 + Math.sin(t * Math.PI) * 0.25);
+          const gl = x.createRadialGradient(cx, cy, 0, cx, cy, R * 1.9); gl.addColorStop(0, 'rgba(255,226,130,.75)'); gl.addColorStop(1, 'rgba(255,226,130,0)');
+          x.fillStyle = gl; x.beginPath(); x.arc(cx, cy, R * 1.9, 0, Math.PI * 2); x.fill();
+          star(x, cx, cy, R);
+        }
+      })];
+    },
+  };
+  const badge = (n, h) => { const [w0, h0, url] = BADGE[VAR](n); return `<img src="${url}" alt="${n} Inselsterne" style="height:${h}px;width:${Math.round(w0 / h0 * h)}px;vertical-align:middle">`; };
+  window.IS_VAR = v => { VAR = v; return v; };
   const css = `
     .is-stars { display: inline-flex; gap: 1px; margin: 0 2px 0 8px; vertical-align: middle; }
     .is-goal { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 7px; margin: 2px 0 7px; font-size: 12px; font-weight: 700; color: #5a3d24; }
@@ -34,19 +86,19 @@
   let timer = null, n0 = 3;
   const place = () => {
     const tb = document.getElementById('town-btn'), flag = document.getElementById('hud-flag');
-    if (tb && !tb.querySelector('.is-stars')) { const s = document.createElement('span'); s.className = 'is-stars'; s.innerHTML = row(n0); flag.after(s); }
+    if (tb && !tb.querySelector('.is-stars')) { const s = document.createElement('span'); s.className = 'is-stars'; s.innerHTML = badge(n0, VAR === 'rosette' ? 34 : 22); flag.after(s); }
     const hall = typeof townHallAt === 'function' && townHallAt();
     let sign = document.getElementById('is-sign');
     if (hall) {
       if (!sign) { sign = document.createElement('div'); sign.id = 'is-sign'; sign.className = 'is-sign'; document.body.append(sign); }
-      sign.innerHTML = `<div class="pl">${row(n0, 17)}</div><div class="st"></div>`;
+      sign.innerHTML = VAR === 'plakette' ? `${badge(n0, 34)}<div class="st"></div>` : badge(n0, VAR === 'rosette' ? 62 : 34);
       const sz = ((ITEMS[(state.tiles.get(hall[0] + ',' + hall[1]) || {}).b] || {}).size || [2, 2]), p = toScreen(hall[0] + sz[0] / 2, hall[1] + sz[1] / 2), r = document.getElementById('world').getBoundingClientRect();
       sign.style.left = (r.left + p.x) + 'px'; sign.style.top = (r.top + p.y - 92 * cam.z) + 'px';
     }
   };
   let goalOrig = null;
   const goalLine = () => { const have = starCount(), need = TH[n0] || TH[4], left = Math.max(0, need - have), from = TH[n0 - 1] || 0;
-    return `<div class="is-goal"><span>${row(1, 14).split('</i>')[0].replace('display:inline-block', 'display:inline-block;vertical-align:-2px;margin-right:4px')}</i>Noch ${left} Erfolge bis zum ${n0 + 1}. Inselstern</span><span class="is-bar"><b style="width:${Math.max(0, Math.min(100, Math.round((have - from) / (need - from) * 100)))}%"></b></span></div>`; };
+    return `<div class="is-goal"><span>Noch ${left} Erfolge bis zum ${n0 + 1}. Inselstern</span><span class="is-bar"><b style="width:${Math.max(0, Math.min(100, Math.round((have - from) / (need - from) * 100)))}%"></b></span></div>`; };
   window.IS_ON = (n = 3) => {
     n0 = n; IS_OFF(true);
     goalOrig = goalHtml; goalHtml = () => goalOrig().replace('</h4>', '</h4>' + goalLine()); updateHud();
@@ -64,13 +116,13 @@
   window.IS_VISIT = (n = 4, name = 'Sonnenhafen', who = 'Mira') => {
     let el = document.querySelector('.is-vb'); if (el) el.remove();
     el = document.createElement('div'); el.className = 'is-vb';
-    el.innerHTML = `<span>Zu Besuch bei ${who}: ${name}</span><span class="is-stars" style="margin:0">${row(n, 17)}</span><button class="btn small">Erfolge ansehen</button><button class="btn small ghost">Nach Hause</button>`;
+    el.innerHTML = `<span>Zu Besuch bei ${who}: ${name}</span><span class="is-stars" style="margin:0">${badge(n, VAR === 'rosette' ? 36 : 24)}</span><button class="btn small">Erfolge ansehen</button><button class="btn small ghost">Nach Hause</button>`;
     document.body.append(el); return 'Besuchsband';
   };
   window.IS_FRIENDS = () => {
     const fr = [['Mira', 'Sonnenhafen', 4, '♥♥♥♡'], ['Paul', 'Kleeblattbucht', 2, '♥♥♡♡'], ['Lotte', 'Nebelsee', 5, '♥♥♥♥'], ['Ben', 'Hühnerhügel', 0, '♥♡♡♡']];
     openModal(`<h2>Freunde</h2><div class="label">Freunde</div>
-      ${fr.map(([n, i, s, h]) => `<div class="fr-friend"><div class="fr-row"><span>${n} <small class="bond">${h}</small><br><small class="muted">${i}</small> <span class="is-stars" style="margin:0 0 0 4px">${row(s, 13)}</span></span>
+      ${fr.map(([n, i, s, h]) => `<div class="fr-friend"><div class="fr-row"><span>${n} <small class="bond">${h}</small><br><small class="muted">${i}</small> ${s ? `<span class="is-stars" style="margin:0 0 0 4px">${badge(s, VAR === 'rosette' ? 30 : 18)}</span>` : ''}</span>
         <span class="fr-btns"><button class="btn small">Besuchen</button><button class="btn small ghost">Erfolge</button></span></div></div>`).join('')}
       <div class="row"><button class="btn" onclick="closeModal()">Schließen</button></div>`);
     return 'Freunde';
@@ -80,7 +132,7 @@
     const H = [['🌠', 'Sternenfänger', true, 'Nachts lohnt sich ein Blick nach oben …'], ['?', '???', false, 'Eine bunte Nachbarschaft …'], ['?', '???', false, 'Immer im Kreis …']];
     const stars = (n, of) => `${'⭐'.repeat(n)}${'<span class="off">⭐</span>'.repeat(of - n)}`;
     openModal(`<h2>Erfolge von Sonnenhafen</h2>
-      <p class="big" style="font-size:18px;display:flex;align-items:center;gap:8px"><span class="is-stars" style="margin:0">${row(4, 20)}</span> 4 Inselsterne · ⭐ 78</p>
+      <p class="big" style="font-size:18px;display:flex;align-items:center;gap:8px"><span class="is-stars" style="margin:0">${badge(4, VAR === 'rosette' ? 44 : 26)}</span> 4 Inselsterne · ⭐ 78</p>
       <p class="muted">Mira braucht noch 22 Erfolge für den 5. Inselstern.</p>
       ${A.map(([i, n, h, of]) => `<div class="achv-row${h === of ? ' done' : ''}"><span class="ai">${i}</span><div class="at"><div><b>${n}</b> <span class="stars">${stars(h, of)}</span></div></div></div>`).join('')}
       <div class="label">Versteckte Erfolge · 1 von 12 gefunden</div>
@@ -90,7 +142,7 @@
   };
   window.IS_UP = (n = 3) => {
     openModal(`<h2>Dein ${n}. Inselstern!</h2>
-      <p style="display:flex;justify-content:center"><span class="is-stars" style="margin:0">${row(n, 34)}</span></p>
+      <p style="display:flex;justify-content:center"><span class="is-stars" style="margin:0">${badge(n, VAR === 'rosette' ? 90 : 46)}</span></p>
       <p>${typeof state === 'object' && state.town ? state.town.name : 'Deine Insel'} hat jetzt ${n} Inselsterne. Besucher sehen sie am Rathaus, oben bei deinem Namen und in ihrer Freundesliste.</p>
       <div class="hall-row"><span>🪙 Taler</span><b>+${n * 5} % (vorher +${(n - 1) * 5} %)</b></div>
       <div class="hall-row"><span>🏛️ Am Rathaus</span><b>Sternenfahne weht jetzt</b></div>
