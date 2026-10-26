@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Schriften ausprobieren</title>
+<!-- Nutzer 26.10.2026: „Ich muss es erst sehen“ – das echte Spiel (Testwelt, speichert nichts) mit Umschaltern für die Schrift-Vorschläge
+     aus tools/schrift-vorschlaege.js. Hecke/Wolken hier wird nicht gespeichert (setzt nur uiLookId, nicht setUiLook). -->
+<style>
+  :root { --bg: #f3efe6; --tx: #2c2a24; --edge: #d9cfbb; --on: #5c9c43; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--tx); font: 600 14px/1.3 system-ui, -apple-system, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header { flex: none; padding: 8px 10px 6px; border-bottom: 1px solid var(--edge); }
+  .row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; align-items: center; }
+  .row + .row { margin-top: 4px; }
+  button { flex: none; font: inherit; border: 1.5px solid var(--edge); background: #fff; color: var(--tx); border-radius: 8px; padding: 6px 10px; cursor: pointer; white-space: nowrap; }
+  button.on { background: var(--on); border-color: var(--on); color: #fff; }
+  .sep { flex: none; width: 1px; align-self: stretch; background: var(--edge); margin: 0 4px; }
+  #note { margin: 4px 2px 0; color: #5a5548; font-weight: 500; min-height: 1.3em; }
+  iframe { flex: 1; width: 100%; border: 0; display: block; }
+</style>
+</head>
+<body>
+<header>
+  <div class="row" id="fonts">
+    <button data-f="">Heute</button>
+    <button data-f="A">A Märchenbuch</button>
+    <button data-f="B">B Rund &amp; freundlich</button>
+    <button data-f="C">C Holzschild</button>
+    <button data-f="D">D Kräftig &amp; verspielt</button>
+    <button data-f="E">E Bilderbuch</button>
+  </div>
+  <div class="row" id="views">
+    <button data-look="hecke">Hecke</button>
+    <button data-look="wolke">Wolken</button>
+    <span class="sep"></span>
+    <button data-v="info">Infofenster</button>
+    <button data-v="hall">Rathaus</button>
+    <button data-v="text">Sternstaub (viel Text)</button>
+    <button data-v="set">Einstellungen</button>
+    <button data-v="none">Alles zu</button>
+  </div>
+  <p id="note"></p>
+</header>
+<iframe id="game" src="../index.html?welt=og" title="Spiel"></iframe>
+<script>
+  const NOTES = {
+    '': 'Heute: Alegreya (Überschriften), Alegreya Sans (Leisten), Nunito (Text) – drei Schriften.',
+    A: 'A Märchenbuch: Alegreya für Überschriften, Alegreya Sans für alles andere (heutige Schriften ohne Nunito).',
+    B: 'B Rund & freundlich: Fredoka für Überschriften, Leisten und Knöpfe, Nunito für Text.',
+    C: 'C Holzschild: Bree Serif für Überschriften, Signika für alles andere.',
+    D: 'D Kräftig & verspielt: Baloo 2 überall.',
+    E: 'E Bilderbuch: Grandstander für Überschriften, Leisten und Knöpfe, Signika für Text.',
+  };
+  let font = '', look = 'hecke', ready = false;
+  const frame = document.getElementById('game'), G = () => frame.contentWindow;
+  const mark = () => {
+    for (const b of document.querySelectorAll('[data-f]')) b.classList.toggle('on', b.dataset.f === font);
+    for (const b of document.querySelectorAll('[data-look]')) b.classList.toggle('on', b.dataset.look === look);
+    document.getElementById('note').textContent = NOTES[font] + (ready ? '' : '  (Spiel lädt …)') + '  Die Schilder auf der Karte bleiben in der Vorschau noch in der alten Schrift.';
+  };
+  const apply = async () => {
+    mark();
+    if (!ready) return;
+    const g = G();
+    g.eval(`uiLookId = '${look}'; applyUiLook()`);   // nur ansehen, nicht speichern (uiLookId ist eine Variable des Spiels)
+    await g.SF_APPLY(font || null);
+    if (g.updateHud) g.updateHud();
+  };
+  const show = v => {
+    if (!ready) return;
+    const g = G();
+    g.closeModal(); g.closePanel();
+    if (v === 'info') g.openInfo(-20, 47);
+    if (v === 'hall') g.openTownHall('todo');
+    if (v === 'text') g.openStardust();
+    if (v === 'set') g.showSettings();
+  };
+  frame.addEventListener('load', () => {
+    const doc = frame.contentDocument, s = doc.createElement('script');
+    s.src = 'tools/schrift-vorschlaege.js?' + Date.now();        // relativ zum Spiel (index.html liegt eine Ebene höher)
+    s.onerror = () => { document.getElementById('note').textContent = 'Konnte tools/schrift-vorschlaege.js nicht laden.'; };
+    s.onload = () => {
+      // warten, bis das Spiel steht (Testwelt geladen), dann die Wahl anwenden
+      const wait = () => { const g = G(); if (g.eval('typeof state !== "undefined" && !!state && !!state.town') && g.applyUiLook && g.openInfo) { ready = true; apply(); } else setTimeout(wait, 200); };
+      setTimeout(wait, 1500);
+    };
+    doc.head.append(s);
+  });
+  document.getElementById('fonts').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (b) { font = b.dataset.f; apply(); } });
+  document.getElementById('views').addEventListener('click', e => {
+    const l = e.target.closest('[data-look]'); if (l) { look = l.dataset.look; apply(); return; }
+    const v = e.target.closest('[data-v]'); if (v) show(v.dataset.v);
+  });
+  mark();
+</script>
+</body>
+</html>
