@@ -1703,3 +1703,9 @@ body.look-wolke .cats-isle { margin-bottom: 31px; }
    Buckeln (cloudDiscImage, ui-look.js). Ohne Leinwand bleibt der glatte Kreis von oben */
 body.look-wolke #hud .hud-act .pill { background: var(--cloud-disc, radial-gradient(circle at 50% 35%, #ffffff, #e9f0fa 72%)) center / 118% 118% no-repeat;
   border: 0; border-radius: 0; box-shadow: none; filter: drop-shadow(0 4px 5px rgba(50, 70, 110, .2)); }
+
+/* Nachts auch innen dunkler (Nutzer 26.10.2026: „mit abdunkeln“): die gemalte Fläche bekommt eine Abendfarbe (UI_NIGHT_INNER, ui-look.js),
+   Kästchen, Zeilen und Bilder im Fenster dunkeln je Nachtstufe leicht mit; Text bleibt lesbar */
+body[data-night="1"] :is(#modal-card:not(.basar-night), #panel .p-scroll, #goal, #sheet .tools) > * { filter: brightness(.97); }
+body[data-night="2"] :is(#modal-card:not(.basar-night), #panel .p-scroll, #goal, #sheet .tools) > * { filter: brightness(.94); }
+body[data-night="3"] :is(#modal-card:not(.basar-night), #panel .p-scroll, #goal, #sheet .tools) > * { filter: brightness(.9); }

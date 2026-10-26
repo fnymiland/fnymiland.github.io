@@ -51,6 +51,9 @@ const uiNightStep = () => {
   return Math.round(Math.max(0, Math.min(1, nightAt() / NIGHT_MAX)) * 3);
 };
 let uiNightNow = 0;
+// nachts auch innen etwas dunkler (Nutzer 26.10.2026: „der Wolkenrand wird dunkel, aber der Inhalt bleibt hell“ → „mit abdunkeln“):
+// Fläche ein Viertel so stark wie der Rand (Hecke warmer Dämmerton, Wolken Abendblau); Kästchen und Bilder im Fenster über body[data-night]
+const UI_NIGHT_INNER = { hecke: '70,50,40', wolke: '40,55,110', a: 0.12 };
 // fester Zufall je Platte (sieht bei jedem Neumalen gleich aus)
 const slabRnd = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 // Umriss eines abgerundeten Rechtecks, alle `step` px ein Punkt, leicht verschoben – von Hand geschnitten statt border-radius
@@ -143,7 +146,7 @@ function paintSlab(w, h, role, seed, look = uiLookId, night = 0) {
     x.save(); x.globalCompositeOperation = 'source-atop';
     x.beginPath(); x.rect(-pad, -pad, w + 2 * pad, h + 2 * pad + L.depth + 8); x.roundRect(ins, ins, w - 2 * ins, h - 2 * ins, ir);
     x.fillStyle = `rgba(22,32,78,${(0.48 * k).toFixed(3)})`; x.fill('evenodd');
-    x.beginPath(); x.roundRect(ins, ins, w - 2 * ins, h - 2 * ins, ir); x.fillStyle = `rgba(60,45,30,${(0.07 * k).toFixed(3)})`; x.fill();
+    x.beginPath(); x.roundRect(ins, ins, w - 2 * ins, h - 2 * ins, ir); x.fillStyle = `rgba(${UI_NIGHT_INNER[L.deco]},${(UI_NIGHT_INNER.a * k).toFixed(3)})`; x.fill();
     x.restore();
   }
   return { canvas: c, pad, depth: L.depth };
@@ -611,6 +614,7 @@ function uiNightSync() {
   const n = uiNightStep();
   if (n === uiNightNow) return;
   uiNightNow = n;
+  if (document.body) document.body.dataset.night = String(n);              // style.css: Inhalt der Fenster etwas dunkler
   for (const el of SLABS) if (el.isConnected) drawSlab(el);
 }
 
