@@ -573,13 +573,17 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     mehrzeilig, Überdeckung – in beiden Aussehen, am Rechner und bei 375 px. Knopfreihen `.row` brechen um, statt Knöpfe schmaler als ihren
     Text zu quetschen (`.row > .btn { min-width: max-content }`; auf dem Handy ragte „Schließen“ im Tagebuch aus der Wolke).
     **Abstand zur Hecke** (Nutzer: „Buttons unten in der Hecke“): Büsche reichen bei Platten 11 px ins Element (Ziel-Fenster, `::before`) bzw.
-    pad + 11 = 29 px (Infofenster, Platte als Hintergrund) – Knöpfe samt Kante brauchen davor mindestens 6 px; Innenabstand von `#panel`
+    pad + 11 = 29 px (Infofenster, Platte als Hintergrund) – Knöpfe samt Kante brauchen davor mindestens 6 px (seit v1303 haben alle Fenster
+    6 px mehr Innenabstand, Nutzer: „ein paar Pixel mehr Luft“; Ziel-/Infofenster dafür 12 px breiter); Innenabstand von `#panel`
     zählt, nicht der von `.p-scroll` (dessen negativer Rand hebt sich auf). Prüfen: `await KT_EDGE()` (tools/knopf-text-pruefung.js),
     Rechner und 375 px. Ziel-Fenster klappt beim Antippen; der Pfeil-Knopf rechts in der Überschrift zeigt es (`h4::after` Brett bzw.
     Wölkchen, `::before` Pfeil darüber – die Wolke malt ihre Fläche über den Hintergrund), `aria-expanded` setzt `updateHud`.
     **Zahlen in der Leiste oben** nur über `hudNum` (bis 999 genau, dann `fmtHud`: 3,1k · 158k · 1,5 Mio., abgerundet; nach Antippen von
     Taler/Einwohner 5 s die volle Zahl) – lange, ständig wechselnde Zahlen ließen die ganze Leiste zucken. Ziffern `tabular-nums`.
     Das Ziel-Fenster steht `--goal-over` (Hecke 12, Wolken 16 px) tiefer als `top`, weil Büsche/Buckel über seinen Rand hinausstehen.
+    **Nichts darf über den Innenabstand eines Scrollbereichs (`.p-scroll`, `.tab-scroll`: 8 px) hinausragen** (negativer Rand, `::after`
+    mit `left:-10px`): sonst scrollt er quer und unten erscheint ein grauer Balken. Prüfen: `await KT_QUER()`. Mitlaufende Köpfe (`.me-edit`)
+    in Papierfarbe, nie durchsichtig – sonst scheint beim Scrollen alles darunter durch.
     **Leiste oben (Konzept A, Nutzer 26.10.2026)**: drei Gruppen in index.html – `.hud-info` (Ort), `.hud-vals` (Taler, Einwohner, Ideen,
     Sternstaub auf einem Brett bzw. einer weißen Wolke `--cloud-w`), `.hud-act` (Lager, Du, Online, Menü als runde Scheiben). Neue Werte gehören
     in `.hud-vals`, neue Knöpfe in `.hud-act`. Inhalt senkrecht mittig (`align-items: center`, Bildchen ohne negativen Rand; Wolke: unten 3 px

@@ -1198,15 +1198,15 @@ body.look-wolke #toolbar #cats .quick.active::before, body.look-wolke #toolbar #
 body.phone #toolbar { background: none; }
 
 /* aufklappendes Feld: Platte als Hintergrund (scrollt selbst), Dinge ohne Kachel – gewählt hell hinterlegt */
-#sheet.slab-in { background-color: transparent; background-size: 100% 100%; background-repeat: no-repeat; box-shadow: none; border-radius: 0; padding: 30px 32px 42px; }
-body.look-wolke #sheet.slab-in { padding: 30px 36px 38px; }
+#sheet.slab-in { background-color: transparent; background-size: 100% 100%; background-repeat: no-repeat; box-shadow: none; border-radius: 0; padding: 36px 38px 48px; }
+body.look-wolke #sheet.slab-in { padding: 36px 42px 44px; }
 #sheet .tool { background: none; box-shadow: none; border-radius: 12px; }
 @media (hover: hover) { #sheet .tool:hover { background: rgba(255, 255, 255, .55); } body.look-wolke #sheet .tool:hover { background: rgba(120, 160, 230, .12); } }
 #sheet .tool.active { background: rgba(255, 214, 90, .35); box-shadow: inset 0 0 0 2px #e0b84a; }
 body.look-wolke #sheet .tool.active { background: rgba(120, 160, 230, .2); box-shadow: inset 0 0 0 2px #6b95d8; }
 .sheet-h i.wi { width: 26px; height: 21px; margin-right: 1px; }
 body.look-wolke #sheet .sheet-h, body.look-wolke #sheet .tool { color: #3b4763; }
-body.phone #sheet.slab-in { padding: 28px 31px 40px; }   /* innen ganz neben der Hecke bzw. den Wolkenbuckeln */
+body.phone #sheet.slab-in { padding: 34px 37px 46px; }   /* innen ganz neben der Hecke bzw. den Wolkenbuckeln */
 
 /* Minikarte und Drehknopf über der (jetzt höheren) Bauleiste */
 #minimap { bottom: calc(var(--bar, 56px) + 6px); }
@@ -1216,9 +1216,9 @@ body:has(#minimap:not([hidden])) #rot-btn { bottom: calc(var(--bar, 56px) + 6px 
    Wolken: Braun → Blaugrau über die Farb-Variablen (gilt für alles darin) */
 body.look-wolke #panel, body.look-wolke #goal, body.look-wolke #sheet, body.look-wolke #modal-card:not(.basar-night) { --brown: #3b4763; --brown2: #74819c; --cream2: #eaf0f9; --shadow: #c6d2e6; --yellow: #d6e4fa; }
 #panel.slab-in { background-color: transparent; background-size: 100% 100%; background-repeat: no-repeat; box-shadow: none; border-radius: 0;
-  width: min(360px, calc(100% - 16px)); right: 6px; padding: 34px 34px 44px; }
-body.look-wolke #panel.slab-in { padding: 36px 38px 46px; }
-#panel .p-hero { float: right; width: 108px; height: 92px; margin: -14px -10px 2px 8px; background: var(--hero) center bottom / contain no-repeat;
+  width: min(372px, calc(100% - 16px)); right: 6px; padding: 40px 40px 50px; }
+body.look-wolke #panel.slab-in { padding: 42px 44px 52px; }
+#panel .p-hero { float: right; width: 108px; height: 92px; margin: -14px -8px 2px 8px; background: var(--hero) center bottom / contain no-repeat;
   filter: drop-shadow(0 4px 3px rgba(40, 30, 20, .25)); }
 #panel h3 { font-family: var(--font); font-size: 23px; font-weight: 800; line-height: 1.05; flex-wrap: wrap; }
 #panel h3 .lvl { order: -1; width: 100%; background: none; padding: 0; border-radius: 0; font: 800 11.5px/1.2 var(--font);
@@ -1239,16 +1239,16 @@ body.look-wolke .btn.danger { background: #d9655a; box-shadow: 0 4px 0 #a8443a; 
 body.look-wolke .btn:disabled { background: #dfe5ee; color: #8b95aa; box-shadow: 0 4px 0 #c3cbd8; }
 
 /* Ziel-Fenster: Aufgaben als Zeilen statt weißer Karten */
-#goal.slab { background: transparent; box-shadow: none; border-radius: 0; left: 22px; padding: 12px 14px 12px; }
+#goal.slab { background: transparent; box-shadow: none; border-radius: 0; left: 22px; padding: 18px 20px 18px; }
 #goal h4 { font-family: var(--font); font-size: 15px; font-weight: 800; }
 #goal .task { background: none; box-shadow: none; border-radius: 0; margin-top: 0; padding: 6px 1px; border-top: 1.5px dotted rgba(138, 106, 72, .35); }
 body.look-wolke #goal .task { border-top-color: rgba(90, 110, 150, .25); }
 #goal .task.ready { background: none; }
 #goal .t-ic, #goal .task.ready .t-ic { background: none; }
 #goal .task.ready .t-go { padding: 4px 10px; font-size: 12px; }
-body.phone #goal.slab { left: 18px; padding: 8px 12px 9px; border-radius: 0; }
+body.phone #goal.slab { left: 18px; padding: 14px 18px 15px; border-radius: 0; }
 @media (max-width: 600px) { #panel.slab-in { width: auto; right: 6px; left: 6px; } }
-body.phone:not(.phone-land) #panel.slab-in { left: 0; right: 0; padding: 30px 30px 42px; }
+body.phone:not(.phone-land) #panel.slab-in { left: 0; right: 0; padding: 36px 36px 48px; }
 body.phone #panel .p-hero { width: 84px; height: 70px; margin: -10px -6px 0 6px; }
 /* Info- und Bau-Feld scrollen innen (.p-scroll bzw. #tools) – sonst rollt der Inhalt über die Hecke bzw. die Wolkenbuckel */
 #panel.slab-in:not([hidden]) { display: flex; flex-direction: column; overflow: hidden; }
@@ -1257,22 +1257,22 @@ body.phone #panel .p-hero { width: 84px; height: 70px; margin: -10px -6px 0 6px;
 #toolbar.open #sheet.slab-in { display: flex; flex-direction: column; overflow: hidden; }
 #sheet.slab-in > * { flex: none; }
 #sheet.slab-in > .tools { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: flex-start; margin: 0 -8px; padding: 0 8px 4px; }
-body.phone #goal.slab { padding: 13px 16px 13px; }
+body.phone #goal.slab { padding: 19px 22px 19px; }
 
 /* Große Fenster (Aussehen, Schritt 5): Platte als Hintergrund (lookSlab 'paper', inset), Überschrift in der Märchenbuch-Schrift.
    openModal setzt die Klassen jedes Mal neu – darum hier über #modal-card, nicht über .slab-in. Sternenbasar (Nacht) bleibt dunkel */
-#modal-card:not(.basar-night) { background-color: transparent; background-size: 100% 100%; background-repeat: no-repeat; box-shadow: none; border-radius: 0; padding: 38px 40px 46px; }
-body.look-wolke #modal-card:not(.basar-night) { padding: 40px 44px 48px; }
+#modal-card:not(.basar-night) { background-color: transparent; background-size: 100% 100%; background-repeat: no-repeat; box-shadow: none; border-radius: 0; padding: 44px 46px 52px; }
+body.look-wolke #modal-card:not(.basar-night) { padding: 46px 50px 54px; }
 #modal-card.basar-night { background-image: none !important; }
 #modal-card.tabbed:not(.basar-night) > .tab-scroll { margin: 0 -8px; padding: 2px 8px 4px; }
-body.phone #modal-card:not(.basar-night) { padding: 34px 32px 42px; }
+body.phone #modal-card:not(.basar-night) { padding: 40px 38px 48px; }
 #modal { background: rgba(40, 60, 50, .28); }
 .card h2 { font-family: var(--font); font-weight: 800; font-size: 26px; line-height: 1.1; }
 /* Mitlaufender Kopf mit der Figur („Du“): in der Papierfarbe, sonst scheint beim Scrollen alles darunter durch (Nutzer 26.10.2026:
-   „wenn man im Charakter-Menü scrollt, glitcht der Text“); unten läuft er weich aus, seitlich deckt er den Innenabstand mit ab */
-#modal-card .tab-scroll > .me-edit { --paper: #f8f0dc; background: var(--paper); box-shadow: 0 -12px 0 var(--paper), -10px 0 0 var(--paper), 10px 0 0 var(--paper); }
+   „wenn man im Charakter-Menü scrollt, glitcht der Text“); unten läuft er weich aus, seitlich deckt er den Innenabstand des Scrollbereichs (8 px) mit ab, nicht mehr, sonst scrollt es quer */
+#modal-card .tab-scroll > .me-edit { --paper: #f8f0dc; background: var(--paper); box-shadow: 0 -12px 0 var(--paper), -8px 0 0 var(--paper), 8px 0 0 var(--paper); }
 body.look-wolke #modal-card .tab-scroll > .me-edit { --paper: #ffffff; }
-#modal-card .tab-scroll > .me-edit::after { content: ''; position: absolute; left: -10px; right: -10px; top: 100%; height: 12px; pointer-events: none;
+#modal-card .tab-scroll > .me-edit::after { content: ''; position: absolute; left: -8px; right: -8px; top: 100%; height: 12px; pointer-events: none;
   background: linear-gradient(var(--paper), transparent); }
 /* Emojis in Texten als Spiel-Symbole (wiText): Zeichen bleibt im Text, sichtbar ist das Bild */
 i.wt { display: inline-block; width: 1.35em; height: 1.15em; vertical-align: -.24em; overflow: hidden; text-indent: 300%; white-space: nowrap;
@@ -1504,12 +1504,12 @@ body.look-wolke #goal > h4:first-child::before { background-position: 50% 5.5px;
 
 /* Hecke: Knöpfe nicht in die Büsche (Nutzer 26.10.2026: „in der Holzansicht sind die Buttons unten in der Hecke“) – mindestens 8 px
    zwischen Knopf (samt Kante) und Papierrand. Ziel-Fenster etwas breiter, damit „Erfolge“ und „Album“ nebeneinander bleiben */
-body.look-hecke #goal.slab { padding: 16px 19px 20px; }
-@media (min-width: 601px) { body.look-hecke:not(.phone) #goal.slab { width: 240px; } }
-body.look-hecke.phone #goal.slab { padding: 15px 18px 19px; }
-body.look-hecke #panel.slab-in { padding: 37px 37px 47px; }                 /* Büsche bis 29 px vom Rand (Platte 18 + 11) */
-body.look-hecke.phone:not(.phone-land) #panel.slab-in { padding: 37px 37px 45px; }
-body.look-wolke.phone:not(.phone-land) #panel.slab-in { padding: 34px 34px 42px; }
+body.look-hecke #goal.slab { padding: 22px 25px 26px; }
+@media (min-width: 601px) { body.look-hecke:not(.phone) #goal.slab { width: 252px; } }
+body.look-hecke.phone #goal.slab { padding: 21px 24px 25px; }
+body.look-hecke #panel.slab-in { padding: 43px 43px 53px; }                 /* Büsche bis 29 px vom Rand (Platte 18 + 11) */
+body.look-hecke.phone:not(.phone-land) #panel.slab-in { padding: 43px 43px 51px; }
+body.look-wolke.phone:not(.phone-land) #panel.slab-in { padding: 40px 40px 48px; }
 
 /* Leiste oben: Ziffern gleich breit, damit kurze Zahlen (3,1k · 158k) die Knöpfe daneben nicht schieben (Nutzer 26.10.2026: „die Leiste zuckt“) */
 #hud .pill b, #hud .pill small { font-variant-numeric: tabular-nums; }
@@ -1607,3 +1607,13 @@ body.phone .set-grid, .set-grid.set-one { grid-template-columns: minmax(0, 1fr);
 .set-btn span { overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
 /* Kacheln nur mit Bildchen (Tiere, Rohstoffe): Bild mittig statt auf der Grundlinie – Malis höhere Zeile schob es sonst nach unten */
 :is(.look, .btn):has(> i.wt:only-child) { display: flex; align-items: center; justify-content: center; }
+
+/* Mehr Luft zwischen Inhalt und Hecke/Wolkenrand (Nutzer 26.10.2026: „der Abstand zum Rand in den einzelnen Kacheln ist sehr gering,
+   da sollte ein paar Pixel mehr Luft sein“): alle Innenabstände der Fenster oben je 6 px größer; Ziel- und Infofenster dafür 12 px
+   breiter, damit innen nichts enger umbricht */
+#goal.slab { width: 242px; }
+@media (max-width: 600px) { #goal.slab { width: 212px; } }
+/* Handy: dafür rücken die Fenster näher an den Bildschirmrand (die Hecke ist selbst Rand genug), und im Du-Fenster wird die Figur etwas
+   kleiner, damit „✓ Läuft auf der Insel herum“ einzeilig bleibt */
+body.phone #modal { padding-left: 8px; padding-right: 8px; }
+@media (max-width: 400px) { .me-edit { gap: 8px; } .me-edit canvas { width: 68px; height: 85px; } }

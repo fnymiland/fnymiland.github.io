@@ -2841,5 +2841,12 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         Alegreya/Alegreya Sans/Nunito, auch auf der Karte; Einstellungen und reine Bildchen-Kacheln angepasst; alle Fenster beide Aussehen geprüft (v1296)
   - [x] 5h Sprache (Nutzer 26.10.2026, Skill humanizer-de): alle 681 Gedankenstriche in rund 650 Spieltexten umgeschrieben (Meldungen, Fenster,
         Beschreibungen, Tagebuch, Neuigkeiten), Inhalt unverändert; Test tests/sprache.test.js verhindert neue (v1297)
+  - [x] 5i Du-Fenster (Nutzer 26.10.2026: „wenn man im Charakter-Menü scrollt, glitcht der Text“): mitlaufender Kopf in Papierfarbe statt
+        durchsichtig (v1298)
+  - [x] 5j Mehr Luft zum Rand (Nutzer 26.10.2026): alle Fenster 6 px mehr Innenabstand, Ziel-/Infofenster 12 px breiter; Handy: Fenster
+        näher an den Bildschirmrand, Figur im Du-Fenster kleiner (sonst „Läuft auf der Insel herum“ zweizeilig); 2 px Querscrollen im
+        Du-Fenster und im Infofenster (Hausbild) behoben; neue Prüfung `KT_QUER()` (v1303)
+  - [ ] 5k Emojis in Menüs abwägen (Einstellungen, „Das ist neu“, Rathaus …) – Vorschlag zeigen
+  - [ ] 5l Menü-Knopf oben rechts: Wegweiser zeigt nicht, dass es ins Menü geht – Varianten als Bild zeigen
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

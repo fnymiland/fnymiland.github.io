@@ -131,6 +131,26 @@
     return Object.entries(res).filter(([, m]) => Object.values(m).some(v => v < 6)).map(([k, m]) => `${k}: ${JSON.stringify(m)}`);
   };
   window.KT_CHECK = check;
+  // Scrollbereiche, die quer scrollen (ein Rand-Effekt, der 2 px übersteht, macht unten einen grauen Balken; Nutzer 26.10.2026)
+  window.KT_QUER = async (info = [-20, 47]) => {
+    const quer = where => [...document.querySelectorAll('#modal-card, #modal-card *, #panel, #panel *, #goal, #sheet, #sheet *')]
+      .filter(e => /auto|scroll/.test(getComputedStyle(e).overflowX) && e.clientWidth > 0 && e.scrollWidth > e.clientWidth + 0.5)
+      .map(e => `${where}: ${e.id || e.className} ${e.scrollWidth}/${e.clientWidth}`);
+    const out = [];
+    for (const look of ['hecke', 'wolke']) {
+      setUiLook(look); closeModal(); openInfo(...info); await sleep(300); out.push(...quer(`${look} Infofenster`)); closePanel();
+      for (const [name, f] of OPENERS) {
+        try { closeModal(); f(); await sleep(250); } catch (e) { continue; }
+        out.push(...quer(`${look} ${name}`));
+        for (const t of [...document.querySelectorAll('#modal-card [data-tab]')].map(b => b.dataset.tab)) {
+          const b = document.querySelector(`#modal-card [data-tab="${t}"]`); if (!b) continue;
+          b.click(); await sleep(150); out.push(...quer(`${look} ${name}/${t}`));
+        }
+      }
+      closeModal();
+    }
+    return [...new Set(out)];
+  };
   window.KT_RUN = async (info = [-20, 47], looks = ['hecke', 'wolke']) => {
     const out = [];
     for (const look of looks) {
