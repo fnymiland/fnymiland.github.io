@@ -121,6 +121,18 @@ describe('Aussehen', () => {
     expect(r).toEqual([0, 2, 3, 'object', 0]);
   });
 
+  it('Ziel-Fenster zeigt, dass es sich einklappen lässt: Pfeil-Knopf in der Überschrift, aria-expanded folgt dem Antippen', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    expect(css).toMatch(/#goal > h4:first-child::before \{[^}]*var\(--chev-up\)/);
+    expect(css).toMatch(/#goal\.small > h4:first-child::before \{[^}]*var\(--chev-down\)/);
+    game('goalSmall = false; updateHud()');
+    const goal = document.getElementById('goal');
+    expect([goal.classList.contains('small'), goal.getAttribute('aria-expanded')]).toEqual([false, 'true']);
+    goal.querySelector('h4').click();
+    expect([goal.classList.contains('small'), goal.getAttribute('aria-expanded')]).toEqual([true, 'false']);
+    game('goalSmall = null; updateHud()');
+  });
+
   it('Knöpfe: Hecke = Holzbrett (CSS), Wolken = Wölkchen per border-image; Bildmaße passen zu den Zahlen in style.css', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
     expect(css).toMatch(/body\.look-hecke \.btn, body\.look-hecke #goal \.task\.ready \.t-go,[^{]*\{[^}]*var\(--grain\)/);

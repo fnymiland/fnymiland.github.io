@@ -570,6 +570,11 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Text-Prüfung: tools/knopf-text-pruefung.js (`await KT_RUN()` im Spiel): Inhalt mittig in Brett bzw. Wolke, Abstand zu Nägeln/Buckeln,
     mehrzeilig, Überdeckung – in beiden Aussehen, am Rechner und bei 375 px. Knopfreihen `.row` brechen um, statt Knöpfe schmaler als ihren
     Text zu quetschen (`.row > .btn { min-width: max-content }`; auf dem Handy ragte „Schließen“ im Tagebuch aus der Wolke).
+    **Abstand zur Hecke** (Nutzer: „Buttons unten in der Hecke“): Büsche reichen bei Platten 11 px ins Element (Ziel-Fenster, `::before`) bzw.
+    pad + 11 = 29 px (Infofenster, Platte als Hintergrund) – Knöpfe samt Kante brauchen davor mindestens 6 px; Innenabstand von `#panel`
+    zählt, nicht der von `.p-scroll` (dessen negativer Rand hebt sich auf). Prüfen: `await KT_EDGE()` (tools/knopf-text-pruefung.js),
+    Rechner und 375 px. Ziel-Fenster klappt beim Antippen; der Pfeil-Knopf rechts in der Überschrift zeigt es (`h4::after` Brett bzw.
+    Wölkchen, `::before` Pfeil darüber – die Wolke malt ihre Fläche über den Hintergrund), `aria-expanded` setzt `updateHud`.
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

@@ -1476,3 +1476,31 @@ body.look-hecke .card.basar .btn.small.basar-try { background: radial-gradient(c
    die nächste Zeile; sonst bleiben alle gleich breit */
 .row { flex-wrap: wrap; }
 .row > .btn { min-width: max-content; }
+
+/* Ziel-Fenster: sichtbarer Knopf zum Ein-/Ausklappen (Nutzer 26.10.2026: „sieht nicht aus, als könnte man sie einklappen“) – das
+   ganze Fenster klappt beim Antippen, der Knopf zeigt es: offen Pfeil nach oben, eingeklappt nach unten. Brett bzw. Wölkchen wie die Knöpfe */
+#goal > h4:first-child { position: relative; padding-right: 30px; }
+/* ::after = Plättchen (Brett bzw. Wölkchen), ::before = Pfeil darüber (die Wolke malt ihre Fläche über den Hintergrund) */
+#goal > h4:first-child::after, #goal > h4:first-child::before { content: ''; position: absolute; right: -2px; top: 50%; width: 22px; height: 22px; margin-top: -12px;
+  box-sizing: border-box; pointer-events: none; }
+#goal > h4:first-child::after { background: var(--chip); border-radius: 7px; box-shadow: 0 2px 0 var(--chip-side); }
+#goal > h4:first-child::before { z-index: 1; background: var(--chev-up) center / 12px 12px no-repeat; }
+#goal.small > h4:first-child::before { background-image: var(--chev-down); }
+body { --chev-up: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2.5 7.6 6 4.1l3.5 3.5' fill='none' stroke='%235a3d24' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --chev-down: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2.5 4.4 6 7.9l3.5-3.5' fill='none' stroke='%235a3d24' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/></svg>"); }
+body.look-wolke { --chev-up: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2.5 7.6 6 4.1l3.5 3.5' fill='none' stroke='%233b4763' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  --chev-down: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2.5 4.4 6 7.9l3.5-3.5' fill='none' stroke='%233b4763' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/></svg>"); }
+body.look-hecke #goal > h4:first-child::after { border-radius: 4px; border: 1.5px solid var(--wood-d); box-shadow: 0 2px 0 var(--wood-d); background: var(--grain), var(--wood); }
+body.look-wolke #goal > h4:first-child::after, body.look-wolke #goal > h4:first-child::before { width: 26px; height: 25px; margin-top: -13px; right: -4px; }
+body.look-wolke #goal > h4:first-child::after { border-radius: 0; box-shadow: none; background: none; border: 0 solid transparent;
+  border-image: var(--cloud-s) 32 32 38 32 fill / 10px 10px 12px 10px round; }
+body.look-wolke #goal > h4:first-child::before { background-position: 50% 5.5px; }   /* Mitte der Wolke ohne ihre Unterseite */
+
+/* Hecke: Knöpfe nicht in die Büsche (Nutzer 26.10.2026: „in der Holzansicht sind die Buttons unten in der Hecke“) – mindestens 8 px
+   zwischen Knopf (samt Kante) und Papierrand. Ziel-Fenster etwas breiter, damit „Erfolge“ und „Album“ nebeneinander bleiben */
+body.look-hecke #goal.slab { padding: 16px 19px 20px; }
+@media (min-width: 601px) { body.look-hecke:not(.phone) #goal.slab { width: 240px; } }
+body.look-hecke.phone #goal.slab { padding: 15px 18px 19px; }
+body.look-hecke #panel.slab-in { padding: 37px 37px 47px; }                 /* Büsche bis 29 px vom Rand (Platte 18 + 11) */
+body.look-hecke.phone:not(.phone-land) #panel.slab-in { padding: 37px 37px 45px; }
+body.look-wolke.phone:not(.phone-land) #panel.slab-in { padding: 34px 34px 42px; }

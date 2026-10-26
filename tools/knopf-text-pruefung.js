@@ -82,6 +82,54 @@
     ['Du', () => openYou('figur')], ['Netz', () => openNet()], ['Hilfe', () => openHelp()], ['Album', () => openAlbum()], ['Basar', () => openBasar()],
     ['Lexikon', () => openLexikon()], ['Tagebuch', () => openDiary()], ['Freischalten', () => openUnlocks()], ['Tipps', () => openTipBook()],
     ['Sternstaub', () => openStardust()], ['Wünsche', () => openWishPicker()]];
+  // Abstand Knopf (samt Kante) ↔ Papierrand (Nutzer 26.10.2026: „in der Holzansicht sind die Buttons unten in der Hecke“).
+  // Papier: Hecke = Form + 11 px Büsche, Wolke = Form; Form = Element (Platte per ::before) bzw. Element − pad (Platte als Hintergrund)
+  const paper = (host, look) => {
+    const r = host.getBoundingClientRect(), inset = host.classList.contains('slab-in'), L = SLAB_STYLE[look].paper;
+    const p0 = inset ? L.pad : 0, hb = look === 'hecke' ? 11 : 2;
+    return { l: r.left + p0 + hb, t: r.top + p0 + hb, r: r.right - p0 - hb, b: r.bottom - p0 - (inset ? L.depth : 0) - hb };
+  };
+  const edge = look => {
+    const g = {};
+    for (const host of document.querySelectorAll('#goal, #panel, #modal-card, #sheet')) {
+      if (!vis(host)) continue;
+      const s = paper(host, look);
+      for (const e of host.querySelectorAll('.btn, .look, .set-btn, .chip, .t-go, .style-chip, .arrange-btn, .sub, .tool, .sw, input')) {
+        if (!vis(e)) continue;
+        const q = e.getBoundingClientRect(), cs = getComputedStyle(e);
+        let t = q.top, b = q.bottom, shown = true;
+        const sh = cs.boxShadow !== 'none' && cs.boxShadow.match(/(-?\d+(?:\.\d+)?)px (-?\d+(?:\.\d+)?)px/);
+        if (sh) b += Math.max(0, +sh[2]);
+        for (let a = e.parentElement; a && a !== host; a = a.parentElement) {
+          const c = getComputedStyle(a);
+          if (c.overflowY !== 'visible' || c.overflowX !== 'visible') { const r = a.getBoundingClientRect(); if (b < r.top || t > r.bottom) shown = false; t = Math.max(t, r.top); b = Math.min(b, r.bottom); }
+        }
+        if (!shown || b <= t) continue;
+        const k = host.id, m = g[k] ||= { l: 99, t: 99, r: 99, b: 99 };
+        m.l = Math.min(m.l, q.left - s.l); m.r = Math.min(m.r, s.r - q.right); m.t = Math.min(m.t, t - s.t); m.b = Math.min(m.b, s.b - b);
+      }
+    }
+    for (const k in g) for (const s in g[k]) g[k][s] = +g[k][s].toFixed(1);
+    return g;
+  };
+  // alle Fenster, oben und unten gescrollt; meldet je Fenster den kleinsten Abstand je Seite
+  window.KT_EDGE = async (info = [-20, 47]) => {
+    const res = {}, note = (key, g) => { for (const [h, m] of Object.entries(g)) { const k = `${key} ${h}`; const o = res[k] ||= { l: 99, t: 99, r: 99, b: 99 }; for (const s in m) o[s] = Math.min(o[s], m[s]); } };
+    const scrollAll = async y => { for (const x of document.querySelectorAll('#modal-card, #modal-card *, #panel .p-scroll, #sheet .tools')) if (x.scrollHeight > x.clientHeight + 4) x.scrollTop = y; await sleep(120); };
+    for (const look of ['hecke', 'wolke']) {
+      setUiLook(look); closeModal(); closePanel(); await sleep(250);
+      note(look, edge(look));
+      openInfo(...info); await sleep(300);
+      for (const y of [0, 99999]) { await scrollAll(y); note(look, edge(look)); }
+      closePanel();
+      for (const [name, f] of OPENERS) {
+        try { closeModal(); f(); await sleep(250); } catch (e) { continue; }
+        for (const y of [0, 99999]) { await scrollAll(y); note(`${look} ${name}`, edge(look)); }
+      }
+      closeModal();
+    }
+    return Object.entries(res).filter(([, m]) => Object.values(m).some(v => v < 6)).map(([k, m]) => `${k}: ${JSON.stringify(m)}`);
+  };
   window.KT_CHECK = check;
   window.KT_RUN = async (info = [-20, 47], looks = ['hecke', 'wolke']) => {
     const out = [];

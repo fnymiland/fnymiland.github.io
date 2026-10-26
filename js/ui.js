@@ -987,7 +987,9 @@ function updateHud() {
   const goal = $('goal');
   goal.style.top = top + 'px';
   if (!$('panel').classList.contains('float')) $('panel').style.top = window.innerWidth > 600 ? top + 'px' : '';   // schmal: CSS (unten) – sonst bliebe der alte Wert (Block 84e)
-  goal.classList.toggle('small', goalSmall ?? PHONE);
+  const goalSm = goalSmall ?? PHONE;
+  goal.classList.toggle('small', goalSm);
+  if (goal.getAttribute('aria-expanded') !== String(!goalSm)) goal.setAttribute('aria-expanded', String(!goalSm));   // Pfeil oben rechts (style.css)
   setHtml(goal, goalHtml(), true);
   // Leiste unten: was inzwischen freigeschaltet ist, wird sofort bunt
   const sig = Object.keys(ITEMS).map(id => +available(id)).join('') + Object.values(STYLES).flat().map(st => +styleOk(st)).join('') + BR_MAT_IDS.map(m => +!brLeisteLock(m)).join('');   // Brückenmaterial: Schloss in der Leiste (160c G1)
@@ -3350,6 +3352,7 @@ const NEWS_HISTORY = [
     '📜 <b>Große Fenster:</b> Rathaus, Forschung, Einstellungen und die anderen Fenster haben jetzt auch Hecke bzw. Wolke als Rand, und alle Knöpfe sind Plättchen. Taler, Lager, Einwohner, Ideen, Schönheit und das Schloss für Gesperrtes erscheinen in Texten als Spiel-Bildchen.',
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
     '🪵 <b>Knöpfe:</b> Bei der Hecke sind alle Knöpfe jetzt kleine Holzbretter mit Maserung und Nägeln, bei den Wolken kleine Schäfchenwolken. Was gewählt ist, ist grün bzw. kräftig blau.',
+    '🔽 <b>Ziele einklappen:</b> Oben rechts im Ziel-Fenster zeigt ein kleiner Pfeil-Knopf, dass du es antippen und einklappen kannst.',
   ] },
   { id: '2026-10-24-wundergarten', date: '24. Oktober', title: 'Riesenrad und Sternwarte', items: [
     '🎡 <b>Riesenrad:</b> Es steht jetzt wie ein echtes Riesenrad auf einem gepflasterten Platz, mit einem Zaun um den Fuß, einem Tor und einem Tickethäuschen daneben. Laternen, Bänke, Bäume und der Weg rundherum sind echte Dinge, die du verändern kannst. Wechselst du den Belag des Wegs, wechselt das Pflaster unter dem Rad mit.',
