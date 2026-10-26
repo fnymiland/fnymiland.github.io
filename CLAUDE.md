@@ -485,6 +485,14 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Ehrennadeln → Pokale, `ITEMS[].rank`), `ALBUM` (volle Seite → Belohnung, `ITEMS[].album`/`STYLES[].album`).
     „Neu freigeschaltet“ entsteht automatisch aus `unlockKeys` (ui.js) – neue Dinge brauchen einen Eintrag in
     `ITEM_TIPS`. Belohnungen stehen nie selbst im Album. Beim Laden wird still gezählt (keine Fenster/Bänder).
+    **Inselsterne** (26.10.2026): Erfolgs-Sterne → 1–5 Inselsterne ab `ISLE_STARS` (10/25/45/70/100), je +5 % Taler in `boostMul('inc')`.
+    Gezeigt wird **nur, was man hat** (Nutzer: „ein 3-Sterne-Restaurant hängt nicht 3/5 an die Tür“) als Medaille `UI_DRAW.medaille1–5`
+    (ohne Rahmen, Bronze, Silber, Gold, Regenbogen mit Glitzerstaub; innen immer derselbe Nachthimmel). Oben `#hud-medal`, Ziel-Fenster
+    `isleGoalHtml`, Rathaus auf der Karte `drawIsleMedal`, Aufstieg `isleUpShow`, Erfolge anderer Inseln `openIsleAchv`. `achieved` steht
+    in `LIVE_PRIV_ALSO` (öffentlich **und** privat): Besucher und Freunde lesen es aus `worlds/<wid>/rest` (`friendRest`); fremde Daten
+    nur über `achvStarsOf` (begrenzt). **Neue Erfolge** möglichst aus dem Spielstand ableiten (alte Stände haben sofort ihren Fortschritt),
+    sonst Zähler über `statCount(k)` in `state.stats` (fehlt = 0, beim Besuch nie). **Versteckte** in `HIDDEN_ACHV` (`check`, Hinweis endet
+    auf „…“), gefunden = `achieved['h_<id>'] = 1`, bleibt gefunden.
     Eine einmal volle Seite behält ihre Belohnung (`state.legacy`); wer neue Dinge ins Album bringt, trägt ihre Schlüssel
     in `LATE_ALBUM` ein, damit alte Stände ihre Belohnung nicht verlieren.
 31. **Wunderwerke** (`WONDERS` in story.js, Zeichnungen in draw-wonders.js): `cat: 'wunder'`, jedes nur einmal; Tile hat

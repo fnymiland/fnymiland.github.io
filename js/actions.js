@@ -1175,6 +1175,9 @@ function undoSnap() {
   const bkHid = bkOn() ? new Map([...state.bruecken].map(([k, b]) => [k, bkSupports(b).filter(e => bkEdgeBlocker(...bkEdgeCells(...keyXY(k), b.ax, e)))])) : null;
   return { money: state.money, res: { ...state.res }, claimed: new Set(state.claimed), maps, bkHid };
 }
+// versteckter Erfolg „Ach, doch nicht“: zehnmal hintereinander zurück; etwas Neues gemacht = von vorn
+let undoRun = 0;
+function noteUndo() { undoRun++; if (undoRun >= 10 && typeof statCount === 'function' && !(state.stats && state.stats.undo10)) statCount('undo10'); }
 function undoCommit(s) {
   if (typeof cloudTouched === 'function') cloudTouched();          // Online-Speicher (Block 93): eigene Aktion
   const changes = [];
@@ -1187,6 +1190,7 @@ function undoCommit(s) {
   for (const r of Object.keys(state.res)) if (state.res[r] !== s.res[r]) dres[r] = state.res[r] - (s.res[r] || 0);
   if (undoCut) { undoCut = false; undoStack.length = 0; if (typeof updateUndoBtn === 'function') updateUndoBtn(); return; }   // z. B. Laternenfest: nicht zurückzukaufen
   if (!changes.length && !claimed.length) return;
+  undoRun = 0;
   undoStack.push({ changes, claimed, dm: state.money - s.money, dres, ...(s.bkHid && changes.some(c => c[0] === 'bruecken') ? { bkHid: s.bkHid } : {}) });
   if (undoStack.length > UNDO_MAX) undoStack.shift();
   if (typeof updateUndoBtn === 'function') updateUndoBtn();
@@ -1277,5 +1281,6 @@ function undo() {
   save();
   if (panelLive && !$('panel').hidden) panelLive();             // offenes Fenster: Ding noch da? (sonst zu)
   if (!tw) toast('↶ Rückgängig');
+  noteUndo();
   return true;
 }

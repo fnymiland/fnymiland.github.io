@@ -1161,7 +1161,8 @@ function showNextAchv() {
   const el = achvEl();
   if (!el.hidden || !achvQueue.length) return;
   const e = achvQueue.shift();
-  el.innerHTML = e.rank
+  el.innerHTML = e.hidden ? `🔎 Versteckter Erfolg gefunden: <b>${e.hidden.icon} ${e.hidden.name}</b> ⭐`
+    : e.rank
     ? `🎖️ <b>${e.rank.name}</b>${e.rank.item ? `! ${ITEMS[e.rank.item].name} ist freigeschaltet.` : '!'}`
     : `🏆 Erfolg: <b>${e.a.icon} ${e.a.name}: ${tierText(e.a, e.a.tiers[e.tier - 1])}</b> ⭐`;
   el.hidden = false;
@@ -3061,8 +3062,16 @@ function openIsleAchv(ach, title, back = null) {
     <div class="isle-head">${isl ? isleMedalHtml(isl) : ''}<div><b>${isl ? `${isl} Inselstern${isl > 1 ? 'e' : ''}` : 'Noch kein Inselstern'}</b> · ⭐ ${stars}</div></div>
     ${ACHIEVEMENTS.map(a => { const n = Math.max(0, Math.min(a.tiers.length, Math.floor(+ach[a.id]) || 0));
       return `<div class="achv-row${n >= a.tiers.length ? ' done' : ''}"><span class="ai">${a.icon}</span><div class="at"><div><b>${a.name}</b> <span class="stars">${'⭐'.repeat(n)}${'<span class="off">⭐</span>'.repeat(a.tiers.length - n)}</span></div></div></div>`; }).join('')}
+    ${hiddenAchvHtml(ach)}
     <div class="row"><button class="btn" id="m-ok" style="flex:1">${back ? 'Zurück' : 'Schließen'}</button></div>`);
   $('m-ok').onclick = back || closeModal;
+}
+function hiddenAchvHtml(ach) {
+  const found = HIDDEN_ACHV.filter(h => ach && ach['h_' + h.id]).length;
+  return `<div class="label">Versteckte Erfolge · ${found} von ${HIDDEN_ACHV.length} gefunden</div>
+    ${HIDDEN_ACHV.map(h => ach && ach['h_' + h.id]
+      ? `<div class="achv-row found done"><span class="ai">${h.icon}</span><div class="at"><div><b>${h.name}</b><span class="hid-tag">versteckt</span> <span class="stars">⭐</span></div><small>${h.done}</small></div></div>`
+      : `<div class="achv-row hidden-q"><span class="ai">❔</span><div class="at"><div><b>???</b> <span class="stars"><span class="off">⭐</span></span></div><small>${h.hint}</small></div></div>`).join('')}`;
 }
 function isleUpShow() {
   const n = isleUpPending; isleUpPending = 0;
@@ -3091,7 +3100,8 @@ function erfolgeHtml() {
         <div><b>${a.name}</b> <span class="stars">${'⭐'.repeat(n)}${'<span class="off">⭐</span>'.repeat(a.tiers.length - n)}</span></div>
         <div class="bar"><i style="width:${done ? 100 : Math.min(100, v / goal * 100)}%"></i></div>
         <small>${done ? '✓ alle Stufen geschafft' : `${tierText(a, v)} / ${tierText(a, goal)}`}</small></div></div>`;
-    }).join('')}`;
+    }).join('')}
+    ${hiddenAchvHtml(state.achieved)}`;
 }
 // Wünsche der Bewohner (Rathaus → Zu tun)
 function wishesHtml() {
@@ -3427,6 +3437,9 @@ const NEWS_HISTORY = [
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
     '🪵 <b>Knöpfe:</b> Bei der Hecke sind alle Knöpfe jetzt kleine Holzbretter mit Maserung und Nägeln, bei den Wolken kleine Schäfchenwolken. Was gewählt ist, ist grün bzw. kräftig blau.',
     '💬 <b>Texte überarbeitet:</b> Alle Hinweise, Meldungen und Beschreibungen im Spiel lesen sich jetzt ruhiger und natürlicher. Statt langer Gedankenstriche stehen dort kurze, klare Sätze.',
+    '⭐ <b>Inselsterne:</b> Deine Erfolge machen jetzt etwas aus. Ab 10, 25, 45, 70 und 100 Erfolgs-Sternen bekommt deine Insel einen Inselstern: eine Medaille, erst ohne Rahmen, dann in Bronze, Silber, Gold und zuletzt im glitzernden Regenbogen. Jeder Inselstern bringt +5 % Taler. Die Medaille hängt über deinem Rathaus und steht oben neben deiner Flagge.',
+    '👀 <b>Für Besucher sichtbar:</b> Wer dich besucht, sieht deine Medaille und kann deine Erfolge ansehen. In der Freundesliste steht sie neben jedem Namen, ein Tippen zeigt die Erfolge.',
+    '🏆 <b>Viel mehr Erfolge:</b> 26 neue, zum Beispiel für volle Albumseiten, Läden, Brunnen, Feste, Päckchen und Hilfe bei Wünschen. Dazu 12 versteckte Erfolge, die nur einen Rätsel-Hinweis verraten. Viel Spaß beim Suchen!',
     '✨ <b>Neue Symbole:</b> Sternstaub ist jetzt ein Sternsäckchen, oben in der Leiste und bei jeder Sternstaub-Zahl. Der Bereich Gestalten in der Bauleiste hat eine Gießkanne.',
     '☰ <b>Menü-Knopf:</b> Oben rechts zeigen jetzt drei Striche, wo es zu Hilfe, Neuigkeiten, Einstellungen und Spielstand geht.',
     '🧹 <b>Ruhigere Fenster:</b> Bildchen stehen nur noch, wo sie etwas zeigen: an Zahlen, bei Gebäuden, Tieren und Dingen. Vor Überschriften, Knöpfen und am Anfang jeder Zeile sind sie weg.',

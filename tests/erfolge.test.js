@@ -66,7 +66,7 @@ describe('Erfolge', () => {
 
   it('Rathaus: Reiter „Erfolge“ mit allen Erfolgen und Fortschritt', () => {
     game("openTownHall('erfolge')");
-    expect(document.querySelectorAll('#modal-card .achv-row').length).toBe(game('ACHIEVEMENTS.length'));
+    expect(document.querySelectorAll('#modal-card .achv-row').length).toBe(game('ACHIEVEMENTS.length + HIDDEN_ACHV.length'));   // dazu die versteckten (26.10.2026)
     expect($('modal-card').textContent).toContain('⭐');
   });
 

@@ -597,6 +597,29 @@ const ACHIEVEMENTS = [
 // Zähler für Erfolge (state.stats; ältere Stände und Besuche haben sie nicht → 0)
 const statOf = k => (state && state.stats && +state.stats[k]) || 0;
 function statCount(k, n = 1) { if (!state || !state.stats || (typeof viewOnly === 'function' && viewOnly())) return; state.stats[k] = statOf(k) + n; }
+// Versteckte Erfolge (Nutzer 26.10.2026, „alle 12“): in der Liste nur „???“ mit Rätsel-Hinweis; gefunden = achieved['h_<id>'] = 1 –
+// zählt als Stern (Inselsterne) und steht wie alle Erfolge im öffentlichen Teil (Besucher sehen, was gefunden ist)
+const nearWater = (x, y, r = 2) => { for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if (terrainAt(x + dx, y + dy) === 'water') return true; return false; };
+const HIDDEN_ACHV = [
+  { id: 'sternfaenger', icon: '🌠', name: 'Sternenfänger', hint: 'Nachts lohnt sich ein Blick nach oben …', done: '10 Sternschnuppen angetippt', check: () => statOf('starTaps') >= 10 },
+  { id: 'alleneune', icon: '🐾', name: 'Alle Neune', hint: 'Eine bunte Nachbarschaft …', done: 'Alle 9 Tierarten wohnen auf deiner Insel',
+    check: () => { const a = new Set(); for (const t of state.tiles.values()) for (const r of residentsOf(t)) a.add(r.animal); return a.size >= ANIMALS.length; } },
+  { id: 'einsiedler', icon: '🏡', name: 'Einsiedler', hint: 'Manche mögen es ruhig …', done: 'Ein Wohnhaus ganz allein auf einer fernen Insel',
+    check: () => { const per = new Map(); for (const [k, t] of state.tiles) { if (t.b === 'weg' || t.b === 'lm') continue; const id = islandAt(...keyXY(k)); if (!id || id === 'home') continue;
+      const o = per.get(id) || { homes: 0, other: 0 }; if (isHome(t.b)) o.homes++; else o.other++; per.set(id, o); } return [...per.values()].some(o => o.homes === 1 && o.other === 0); } },
+  { id: 'wasserratten', icon: '🛶', name: 'Wasserratten', hint: 'Wohnen, wo es schaukelt …', done: '10 Hausboote', check: () => tileCount(t => t.b === 'hausboot') >= 10 },
+  { id: 'baumkronen', icon: '🌳', name: 'Baumkronendorf', hint: 'Ganz oben wohnen …', done: '5 Baumhäuser', check: () => tileCount(t => t.b === 'baumhaus') >= 5 },
+  { id: 'rundfahrt', icon: '🚂', name: 'Rundfahrt', hint: 'Immer im Kreis …', done: 'Ein Zug fährt auf einem Ring', check: () => T.rail.lines.some(l => l.loop && l.count > 0) },
+  { id: 'langebruecke', icon: '🌉', name: 'Lange Brücke', hint: 'Ganz weit hinüber …', done: 'Eine Brücke über 10 Felder', check: () => !!state.bruecken && [...state.bruecken.values()].some(b => (b.n || 0) >= 10) },
+  { id: 'gipfelhaus', icon: '⛰️', name: 'Gipfelhaus', hint: 'Mit der besten Aussicht …', done: 'Ein Haus oben auf einer Anhöhe, mit Blick aufs Meer',
+    check: () => { for (const [k, t] of state.tiles) { if (!isHome(t.b)) continue; const [x, y] = keyXY(k); if (hillLevel(x, y) >= 1 && nearWater(x, y)) return true; } return false; } },
+  { id: 'moewenfreund', icon: '🕊️', name: 'Möwenfreund', hint: 'Die Vögel am Wasser …', done: '20 Möwen angetippt', check: () => statOf('gullTaps') >= 20 },
+  { id: 'regenbogenweg', icon: '🌈', name: 'Regenbogenweg', hint: 'Bunt wie nach dem Regen …', done: 'Wege in 7 Farben',
+    check: () => { const c = new Set(); for (const t of state.tiles.values()) if (t.b === 'weg') c.add(wegParts(t.style)[1]); return c.size >= 7; } },
+  { id: 'dochnicht', icon: '🔁', name: 'Ach, doch nicht', hint: 'Jeder ändert mal seine Meinung …', done: '10-mal hintereinander zurück', check: () => statOf('undo10') >= 1 },
+  { id: 'spaziergang', icon: '🚶', name: 'Spaziergänger', hint: 'Einfach mal laufen lassen …', done: 'Deine Figur ist 100 km gelaufen', check: () => statOf('walk') >= 1000 },
+];
+const noteStarTap = () => statCount('starTaps');
 const RANKS = [
   { stars: 0, name: 'Noch ohne Ehrennadel' },
   { stars: 5, name: 'Ehrennadel Bronze', item: 'pokal_bronze' },
@@ -634,6 +657,12 @@ function checkAchievements(silent = false) {
     let n = state.achieved[a.id] || 0;
     while (n < a.tiers.length && v >= a.tiers[n] - 1e-9) { n++; if (!silent) achvQueue.push({ a, tier: n }); }
     state.achieved[a.id] = n;
+  }
+  for (const h of HIDDEN_ACHV) {                                          // versteckte: einmal gefunden, bleibt gefunden
+    const key = 'h_' + h.id;
+    if (state.achieved[key]) continue;
+    let ok = false; try { ok = h.check(); } catch (e) { ok = false; }
+    if (ok) { state.achieved[key] = 1; if (!silent) achvQueue.push({ hidden: h }); }
   }
   const after = rankOf(starCount());
   bpCheckStars(silent);                                                 // 📜 jeder dritte Stern ein Bauplan (Block 163)
@@ -792,6 +821,7 @@ function collectStarAt(x, y) {
   if (i < 0) return false;
   const [s] = fallenStars.splice(i, 1), got = Math.max(50, Math.round(T.sci * 180));
   state.science += got;
+  noteStarTap();                                                         // versteckter Erfolg „Sternenfänger“
   const sd = sdStar();                                                   // ✨ Sternstaub (Block 161)
   sparkle(s.x, s.y); sfx('star');
   addFloat(s.x, s.y, `💡 +${fmt(got)} · ✨ +${sd}`, '#f2c14e');

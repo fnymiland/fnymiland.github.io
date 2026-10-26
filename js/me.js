@@ -158,7 +158,7 @@ function stepMe(dt, now = performance.now()) {
     if (!nx) { f.path = null; f.wait = 2; if (f.say && meOnScreen() && !bubble) speak(f, f.say); f.say = null; }
     else if (!walkable(nx[0], nx[1], true) || edgeBlocks(f.fx, f.fy, nx[0], nx[1])) f.path = null;   // inzwischen verbaut
     else if (!walkable(nx[0], nx[1])) { f.tx = f.fx; f.ty = f.fy; f.wait = 0.4; }                    // Schranke zu
-    else { f.path.shift(); [f.tx, f.ty] = nx; }
+    else { f.path.shift(); [f.tx, f.ty] = nx; if (typeof statCount === 'function') statCount('walk'); }   // versteckter Erfolg „Spaziergänger“
   }
   f.px = f.fx + (f.tx - f.fx) * f.t;
   f.py = f.fy + (f.ty - f.fy) * f.t;

@@ -120,3 +120,40 @@ describe('Mehr Erfolge (Nutzer 26.10.2026: „es sollte mehr Erfolge geben“)',
     expect(game("ACHIEVEMENTS.find(a => a.id === 'tageswunsch').value()")).toBe(3);
   });
 });
+
+describe('Versteckte Erfolge (Nutzer: „alle 12“)', () => {
+  it('12 Stück mit Rätsel-Hinweis; jede Prüfung läuft im leeren Spiel ohne Fehler und ist dort nicht erfüllt', () => {
+    const list = game('HIDDEN_ACHV.map(h => ({ id: h.id, hint: h.hint, ok: h.check() }))');
+    expect(list.length).toBe(12);
+    for (const h of list) { expect(h.hint).toMatch(/…$/); expect(h.ok).toBe(false); }
+  });
+  it('gefunden: zählt als Stern (auch für die Inselsterne), Band „Versteckter Erfolg“, bleibt gefunden', () => {
+    game("state.stats.starTaps = 10; checkAchievements()");
+    expect(game("state.achieved.h_sternfaenger")).toBe(1);
+    expect(game("achvQueue.some(e => e.hidden && e.hidden.id === 'sternfaenger') || document.getElementById('achv').textContent.includes('Sternenfänger')")).toBe(true);
+    game("state.stats.starTaps = 0; checkAchievements(true)");
+    expect(game("state.achieved.h_sternfaenger")).toBe(1);
+  });
+  it('Zähler: Sternschnuppe, Möwe, zehnmal Zurück, Schritte der Figur', () => {
+    game("state.stats = { earned: 0 }; noteStarTap(); noteStarTap()");
+    expect(game('state.stats.starTaps')).toBe(2);
+    game("for (let i = 0; i < 20; i++) tapCritter({ id: 'moewe' })");
+    expect(game('state.stats.gullTaps')).toBe(20);
+    game("undoRun = 9; noteUndo()");
+    expect(game('state.stats.undo10')).toBe(1);
+    game("undoRun = 5; undoStack.length = 0; undoable(() => { state.money += 1; state.tiles.set('3,3', { b: 'weg', style: 'kies' }); })");
+    expect(game('undoRun')).toBe(0);                                             // etwas Neues gemacht: Zählung von vorn
+  });
+  it('Erfolge-Seite: Nicht-Gefundene als ??? mit Hinweis, Gefundene mit Namen und Rand; Besucher sehen dasselbe', () => {
+    game("state.achieved = { h_wasserratten: 1 }; openYou('erfolge')");
+    const card = document.getElementById('modal-card');
+    expect(card.textContent).toContain('Versteckte Erfolge · 1 von 12 gefunden');
+    expect(card.textContent).toContain('Wasserratten');
+    expect(card.textContent).toContain('Immer im Kreis …');
+    expect(card.querySelectorAll('.achv-row.found').length).toBe(1);
+    game("closeModal(); openIsleAchv({ h_rundfahrt: 1 }, 'Sonnenhafen')");
+    expect(card.textContent).toContain('Rundfahrt');
+    expect(card.textContent).toContain('1 von 12 gefunden');
+    game('closeModal()');
+  });
+});

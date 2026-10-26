@@ -1262,6 +1262,7 @@ function stepCritters(now) { for (const c of critters) critterPos(c, now); }
 function tapCritter(c) {
   const now = performance.now(), n = NATURE_BY_ID[c.id], key = 'natur:' + c.id;
   if (!c.flee) { c.flee = now; c.until = now + 1800; }
+  if (c.id === 'moewe' && typeof statCount === 'function') statCount('gullTaps');   // versteckter Erfolg „Möwenfreund“
   if (!state.album) state.album = new Set();
   if (state.album.has(key)) return false;                                // schon entdeckt: läuft nur weg, kein Name mehr
   state.album.add(key);

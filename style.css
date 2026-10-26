@@ -1659,3 +1659,7 @@ body.look-wolke .isle-goal .isle-bar { background: rgba(59, 71, 99, .14); }
 .fr-achv .isle-medal { width: 22px; height: 22px; }
 #visit-medal .isle-medal { width: 26px; height: 26px; }
 #visit-medal:empty { display: none; }
+/* versteckte Erfolge: gefunden mit goldenem Rand, sonst blass mit Rätsel-Hinweis */
+.achv-row.found { box-shadow: inset 0 0 0 2px #e0b23a; border-radius: 10px; }
+.achv-row.hidden-q .ai { opacity: .55; }
+.hid-tag { font-size: 10px; font-weight: 800; color: #9a6a12; background: #fff1c4; border-radius: 5px; padding: 1px 5px; margin-left: 6px; }
