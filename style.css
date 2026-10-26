@@ -1639,3 +1639,19 @@ body.phone #modal { padding-left: 8px; padding-right: 8px; }
 i.wt.deko { display: none; }
 /* Menü-Knopf: drei Striche, mit Luft in der Scheibe wie die anderen Bildchen (das Bild ist auf die Striche zugeschnitten) */
 #hud #menu-btn i.wi[data-ic="menue"] { background-position: center; background-size: 58% auto; }
+
+/* Inselsterne (26.10.2026): Medaille (UI_DRAW.medaille1–5) – nur verdiente Sterne; Gold und Regenbogen mit Schein */
+.isle-medal { display: inline-block; flex: none; width: 1.6em; height: 1.6em; background: center / contain no-repeat; vertical-align: middle; font-style: normal; }
+.isle-medal[hidden] { display: none; }
+.isle-medal.t4 { filter: drop-shadow(0 0 3px rgba(255, 200, 90, .85)); }
+.isle-medal.t5 { filter: drop-shadow(0 0 4px rgba(255, 140, 220, .9)) drop-shadow(0 0 2px rgba(255, 230, 150, .9)); }
+#hud #hud-medal { width: 28px; height: 28px; margin: 0 0 0 6px; }
+.isle-goal { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 6px; margin: 1px 0 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.isle-goal .isle-bar { flex: 1 0 100%; height: 6px; border-radius: 3px; background: rgba(90, 61, 36, .15); overflow: hidden; }
+body.look-wolke .isle-goal .isle-bar { background: rgba(59, 71, 99, .14); }
+.isle-goal .isle-bar b { display: block; height: 100%; border-radius: 3px; background: #f2bd3a; }
+.isle-head { display: flex; align-items: center; gap: 12px; margin: 2px 0 8px; }
+.isle-head .isle-medal { width: 56px; height: 56px; }
+.isle-head small { display: block; font-weight: 600; opacity: .8; }
+.isle-up { display: flex; justify-content: center; margin: 4px 0 10px; }
+.isle-medal.big { width: 110px; height: 110px; }

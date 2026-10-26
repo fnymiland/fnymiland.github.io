@@ -30,6 +30,35 @@ function uiStar5(cx, cy, R, col, tilt = 0) {                // fünfzackiger Ste
   uiPath(Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + tilt + i * Math.PI / 5, q = i % 2 ? R * 0.46 : R; return [cx + Math.cos(a) * q, cy + Math.sin(a) * q]; }), col);
 }
 function uiGoldStar(cx, cy, R, tilt = 0) { uiStar5(cx, cy + R * 0.13, R, '#c98f1e', tilt); uiStar5(cx, cy, R, '#f2bd3a', tilt); uiStar5(cx - R * 0.1, cy - R * 0.1, R * 0.42, '#fbe39a', tilt); }
+// Medaille der Inselsterne (Entwürfe tools/medaillen-konzepte.js, Nutzer: Rahmen „ohne · Bronze · Silber · Gold · Regenbogen“, innen
+// immer gleich, Stufe 5 „Glitzerstaub“). Eng gezeichnet, damit sie auch 22 px klein den Platz füllt; Schein kommt per CSS (.isle-medal.t4/.t5)
+const MEDAL_RIMS = [null, ['#f6c9a0', '#c98250', '#8a4a20'], ['#ffffff', '#d9dee8', '#9aa3b5', '#6f7890'], ['#fff0a8', '#f2c14a', '#d49a2a', '#a8700f']];
+const MEDAL_RAINBOW = ['#ff7fa6', '#ffb84a', '#ffe452', '#5fd895', '#5fb0ff', '#a986ff', '#ff7fa6'];
+const MEDAL_STARS = { 1: [[0, 0, 9.5]], 2: [[-5.6, 0, 5.8], [5.6, 0, 5.8]], 3: [[0, -4.9, 5.2], [-5.5, 3.9, 5.2], [5.5, 3.9, 5.2]],
+  4: [[-4.9, -4.9, 4.6], [4.9, -4.9, 4.6], [-4.9, 4.9, 4.6], [4.9, 4.9, 4.6]], 5: [[0, -6.5, 4.2], [-6.3, -1.6, 4.2], [6.3, -1.6, 4.2], [-3.9, 5.7, 4.2], [3.9, 5.7, 4.2]] };
+function uiMedal(n) {
+  const X = 32, Y = 31, r = 28, b = n === 1 ? 1.6 : n === 5 ? 6.5 : 5;
+  const vgrad = cols => { const gr = g.createLinearGradient(0, Y - r, 0, Y + r); cols.forEach((c, i) => gr.addColorStop(i / (cols.length - 1), c)); return gr; };
+  const disc = (rad, fill, dy = 0) => { g.fillStyle = fill; g.beginPath(); g.arc(X, Y + dy, rad, 0, Math.PI * 2); g.fill(); };
+  if (n === 1) disc(r, '#1a2050');
+  else if (n === 5) {
+    disc(r, '#8a7aa8', 1.6);
+    if (g.createConicGradient) { const cg = g.createConicGradient(-Math.PI / 2, X, Y); MEDAL_RAINBOW.forEach((c, i) => cg.addColorStop(i / (MEDAL_RAINBOW.length - 1), c)); disc(r, cg); }
+    else { const lg = g.createLinearGradient(X - r, 0, X + r, 0); MEDAL_RAINBOW.forEach((c, i) => lg.addColorStop(i / (MEDAL_RAINBOW.length - 1), c)); disc(r, lg); }
+    disc(r, vgrad(['rgba(255,255,255,.32)', 'rgba(255,255,255,0)', 'rgba(60,30,90,.25)']));
+    for (let i = 0; i < 70; i++) { const a = i * 2.39996, d = r - 1 - (i * 7.31 % 5.5); g.fillStyle = i % 3 ? 'rgba(255,255,255,.92)' : 'rgba(255,245,200,.95)';   // Glitzerstaub
+      g.beginPath(); g.arc(X + Math.cos(a) * d, Y + Math.sin(a) * d, i % 5 ? 0.45 : 0.85, 0, Math.PI * 2); g.fill(); }
+    uiStar4(X + Math.cos(-2.3) * (r - 3), Y + Math.sin(-2.3) * (r - 3), 3.2, '#ffffff'); uiStar4(X + Math.cos(2.4) * (r - 3), Y + Math.sin(2.4) * (r - 3), 2.6, '#fffbe6');
+  } else { const cols = MEDAL_RIMS[n - 1]; disc(r, shade(cols[cols.length - 1], -0.3), 1.6); disc(r, vgrad(cols)); }
+  disc(r - b + 1.2, vgrad(['rgba(0,0,0,.28)', 'rgba(255,255,255,.35)']));                // Kante nach innen
+  disc(r - b, vgrad(['#25306a', '#0b1030']));
+  g.save(); g.beginPath(); g.arc(X, Y, r - b, 0, Math.PI * 2); g.clip();
+  for (let i = 0; i < 30; i++) { g.fillStyle = 'rgba(255,255,255,.8)'; g.beginPath(); g.arc(X - r + (i * 23.3 % (2 * r)), Y - r + (i * 11.7 % (2 * r)), i % 5 ? 0.45 : 0.9, 0, Math.PI * 2); g.fill(); }
+  g.restore();
+  const k = (r - b) / 15;
+  for (const [dx, dy, sz] of MEDAL_STARS[n]) uiGoldStar(X + dx * k, Y + dy * k, sz * k);
+  g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.ellipse(X - r * 0.32, Y - r * 0.45, r * 0.42, r * 0.17, -0.55, 0, Math.PI * 2); g.fill();
+}
 function uiHeart(cx, cy, s, col) {
   g.fillStyle = col; g.beginPath();
   g.moveTo(cx, cy + 12 * s); g.bezierCurveTo(cx - 18 * s, cy, cx - 12 * s, cy - 14 * s, cx, cy - 6 * s);
@@ -357,6 +386,8 @@ Object.assign(UI_DRAW, {
     for (const [x, y] of [[59, 30], [61, 37], [57, 41]]) ellipse(x, y, 1.7, 2.4, '#7fc2ef');
     for (const [x, y, c] of [[22, 47, '#f2a0c8'], [30, 49, '#f6d35a'], [36, 46, '#f2a0c8']]) { uiDisc(x, y, 2.6, c); uiDisc(x, y, 1, '#fff6d0'); }
   },
+  // Inselsterne (Nutzer 26.10.2026): Medaille, innen Nachthimmel mit goldenen Sternen, Rahmen je Stufe (uiMedal)
+  medaille1() { uiMedal(1); }, medaille2() { uiMedal(2); }, medaille3() { uiMedal(3); }, medaille4() { uiMedal(4); }, medaille5() { uiMedal(5); },
 });
 
 // Ladebildschirm: eine langsam drehende Sonne statt des weißen Kreisels (läuft, während die übrigen Skripte noch laden)

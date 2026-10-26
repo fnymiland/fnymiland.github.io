@@ -574,6 +574,25 @@ const RANKS = [
 ];
 const starCount = () => Object.values((state && state.achieved) || {}).reduce((sum, n) => sum + n, 0);
 const rankOf = stars => [...RANKS].reverse().find(r => stars >= r.stars);
+// Inselsterne (Nutzer 26.10.2026: „Erfolge sollen einen Sinn haben und prominent für Besucher sichtbar sein“): Erfolgs-Sterne ergeben
+// 1–5 Inselsterne, je +5 % Taler (boostMul). Gezeigt wird nur, was man hat, als Medaille (UI_DRAW.medaille1–5); Besucher und Freunde
+// sehen sie, weil achieved im öffentlichen Teil des Spiegels steht (live.js, LIVE_PRIV_ALSO)
+const ISLE_STARS = [10, 25, 45, 70, 100], ISLE_STAR_BONUS = 0.05;
+const isleStarsOf = stars => ISLE_STARS.filter(t => stars >= t).length;
+const isleStars = () => isleStarsOf(starCount());
+let isleUpPending = 0, isleSeen = null;
+// silent (Laden, stilles Zählen): nur merken; sonst ein neuer Inselstern → Fenster, sobald keins offen ist
+function isleCheck(silent) {
+  const n = isleStars();
+  if (silent || isleSeen == null || n <= isleSeen) { isleSeen = n; if (silent) isleUpPending = 0; return; }
+  isleSeen = n; isleUpPending = n;
+  setTimeout(isleUpTry, 1500);                                               // erst das Erfolgs-Band, dann das Fenster
+}
+function isleUpTry() {
+  if (!isleUpPending || (typeof viewOnly === 'function' && viewOnly())) return;
+  if (typeof document !== 'undefined' && !document.getElementById('modal').hidden) { setTimeout(isleUpTry, 1000); return; }
+  if (typeof isleUpShow === 'function') isleUpShow();
+}
 // silent: beim Laden – schon Erreichtes still zählen, ohne Band-Gewitter
 function checkAchievements(silent = false) {
   if (!state.achieved) state.achieved = {};
@@ -586,6 +605,7 @@ function checkAchievements(silent = false) {
   }
   const after = rankOf(starCount());
   bpCheckStars(silent);                                                 // 📜 jeder dritte Stern ein Bauplan (Block 163)
+  isleCheck(silent);                                                    // Inselsterne (26.10.2026)
   if (!silent && after !== before) achvQueue.push({ rank: after });
   if (!silent) showNextAchv();
 }
@@ -717,6 +737,7 @@ function boostMul(kind, now = Date.now()) {
   if (D && D.kind === kind) m *= D.mul;
   if (kind === 'inc' && parkFestLeft(now) > 0) m *= state.parkFest.mul;
   if (kind === 'inc' && fzFestLeft(now) > 0) m *= state.fzFest.mul;           // Parade (Block 60d)
+  if (kind === 'inc') m *= 1 + ISLE_STAR_BONUS * isleStars();                 // Inselsterne: je +5 % Taler
   return m;
 }
 // 🔭 Sternschnuppen: nachts fällt ab und zu eine neben ein Haus – antippen bringt Ideen (3 Minuten Ideen, mindestens 50)

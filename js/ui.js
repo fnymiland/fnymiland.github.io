@@ -993,6 +993,7 @@ function updateHud() {
   const fl = $('hud-flag');
   if (fl.dataset.col !== state.town.color) { fl.dataset.col = state.town.color; fl.style.background = state.town.color; }
   setText(fl, state.town.symbol);
+  isleMedalSync();                                                       // Inselsterne neben der Flagge
   const top = $('hud').getBoundingClientRect().bottom + 8;
   const goal = $('goal');
   goal.style.top = top + 'px';
@@ -1000,7 +1001,7 @@ function updateHud() {
   const goalSm = goalSmall ?? PHONE;
   goal.classList.toggle('small', goalSm);
   if (goal.getAttribute('aria-expanded') !== String(!goalSm)) goal.setAttribute('aria-expanded', String(!goalSm));   // Pfeil oben rechts (style.css)
-  setHtml(goal, goalHtml(), true);
+  setHtml(goal, state.tutorial >= 0 ? goalHtml() : goalHtml().replace('</h4>', '</h4>' + isleGoalHtml()), true);   // darunter: Weg zum nächsten Inselstern
   // Leiste unten: was inzwischen freigeschaltet ist, wird sofort bunt
   const sig = Object.keys(ITEMS).map(id => +available(id)).join('') + Object.values(STYLES).flat().map(st => +styleOk(st)).join('') + BR_MAT_IDS.map(m => +!brLeisteLock(m)).join('');   // Brückenmaterial: Schloss in der Leiste (160c G1)
   if (sig !== unlockSig) { if (unlockSig) { buildToolbar(); if (tool === 'bruecke') renderStyleBar(tool); } unlockSig = sig; }
@@ -3023,9 +3024,46 @@ function todHtml() {
     <div class="muted">${t.dark ? 'Jetzt' : 'Nachts'}: ${night.join(' · ')}. Ein Tag dauert 24 Minuten, auf allen Geräten gleich.</div></div>`;
 }
 // Erfolge (Block 98: im Fenster „Du“)
+// Inselsterne (26.10.2026): Medaille (UI_DRAW.medaille1–5, als CSS-Variable wie die Bildchen in Texten), Weg zum nächsten, Aufstieg
+const isleMedalHtml = (n, cls = '') => { wtEnsure('medaille' + n); return `<i class="isle-medal t${n}${cls ? ' ' + cls : ''}" role="img" aria-label="${n} Inselstern${n > 1 ? 'e' : ''}" style="background-image:var(${wtVar('medaille' + n)})"></i>`; };
+function isleNextText() {
+  const s = starCount(), next = ISLE_STARS.find(t => s < t);
+  return next == null ? '' : `Noch ${next - s} Erfolg${next - s > 1 ? 'e' : ''} bis zum ${isleStarsOf(s) + 1}. Inselstern`;
+}
+function isleGoalHtml() {
+  const s = starCount(), i = isleStarsOf(s), next = ISLE_STARS[i];
+  if (next == null) return '';
+  const from = ISLE_STARS[i - 1] || 0, pct = Math.round((s - from) / (next - from) * 100);
+  return `<div class="isle-goal" data-hall="erfolge"><span>${isleNextText()}</span><span class="isle-bar"><b style="width:${pct}%"></b></span></div>`;
+}
+function isleMedalSync() {
+  const el = $('hud-medal'), n = isleStars();
+  if (!el) return;
+  if (el.hidden !== !n) el.hidden = !n;
+  if (!n || el.dataset.n === String(n)) return;
+  el.dataset.n = String(n); el.className = 'isle-medal t' + n;
+  wtEnsure('medaille' + n); el.style.backgroundImage = `var(${wtVar('medaille' + n)})`;
+  el.setAttribute('aria-label', `${n} Inselstern${n > 1 ? 'e' : ''}`); el.title = el.getAttribute('aria-label');
+}
+function isleUpShow() {
+  const n = isleUpPending; isleUpPending = 0;
+  if (!n) return;
+  sfx('star');
+  openModal(`
+    <h2>Dein ${n}. Inselstern!</h2>
+    <div class="isle-up">${isleMedalHtml(n, 'big')}</div>
+    <p>${escHtml(state.town.name)} hat jetzt ${n} Inselstern${n > 1 ? 'e' : ''}. Besucher sehen ${n > 1 ? 'sie' : 'ihn'} am Rathaus, oben bei deinem Namen und in ihrer Freundesliste.</p>
+    <div class="hall-row"><span>🪙 Taler</span><b>+${Math.round(n * ISLE_STAR_BONUS * 100)} %${n > 1 ? ` (vorher +${Math.round((n - 1) * ISLE_STAR_BONUS * 100)} %)` : ''}</b></div>
+    ${n < ISLE_STARS.length ? `<p class="muted">Der nächste Inselstern kommt bei ${ISLE_STARS[n]} Erfolgs-Sternen.</p>` : '<p class="muted">Mehr Inselsterne gibt es nicht. Deine Insel ist legendär!</p>'}
+    <div class="row"><button class="btn" id="m-ok" style="flex:1">Schön!</button></div>`);
+  $('m-ok').onclick = closeModal;
+}
 function erfolgeHtml() {
   const stars = starCount(), rank = rankOf(stars), next = RANKS.find(r => r.stars > stars);
+  const isl = isleStars();
   return `
+    <div class="isle-head">${isl ? isleMedalHtml(isl) : ''}<div><b>${isl ? `${isl} Inselstern${isl > 1 ? 'e' : ''}` : 'Noch kein Inselstern'}</b>${isl ? ` · +${Math.round(isl * ISLE_STAR_BONUS * 100)} % Taler` : ''}
+      <small>${isleNextText() || 'Alle fünf Inselsterne! Mehr geht nicht.'}</small></div></div>
     <p class="big" style="font-size:18px">⭐ ${stars} · ${rank.name}</p>
     ${next ? `<p class="muted">Nächste: ${next.name} ab ${next.stars} ⭐${next.item ? `, schaltet den ${ITEMS[next.item].name} frei` : ''}</p>` : ''}
     ${ACHIEVEMENTS.map(a => {
