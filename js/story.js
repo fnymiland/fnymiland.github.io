@@ -564,7 +564,39 @@ const ACHIEVEMENTS = [
   { id: 'kunst', icon: '🎨', name: 'Kunstakademie-Stücke', tiers: [5, 20, DESIGN.filter(d => d.price).length], value: () => state.design.size },   // Gratis-Farben kauft man nicht
   { id: 'wunder', icon: '🏛️', name: 'Wunderwerke', tiers: [1, 3, 5], value: () => tileCount(t => wonderDone(t)) },
   { id: 'fzpark', icon: '🎢', name: 'Freizeitpark-Stufe', tiers: [1, 2, 3], value: () => fzBest() },
+  // mehr Erfolge (Nutzer 26.10.2026: „es sollte mehr Erfolge geben … dass man die Erfolge auch haben will“): möglichst aus dem, was der
+  // Spielstand schon kennt (alte Stände haben ihren Fortschritt sofort), sonst neue Zähler in state.stats (statCount; fehlen = 0)
+  { id: 'album', icon: '📒', name: 'Volle Albumseiten',   // 8 = ALBUM.length (ALBUM steht weiter unten; Test prüft es)
+    tiers: [1, 4, 8], value: () => (state.album ? ALBUM.filter(p => albumDone(p.id)).length : 0) },
+  { id: 'natur', icon: '🦋', name: 'Naturbeobachtungen', tiers: [3, 8, NATURE.length], value: () => albumCount('natur') },
+  { id: 'fzdinge', icon: '🎡', name: 'Freizeitpark-Dinge', tiers: [5, 15, 40], value: () => tileCount(t => ITEMS[t.b] && ITEMS[t.b].cat === 'fz') },
+  { id: 'laeden', icon: '🛍️', name: 'Läden', tiers: [5, 15, 40], value: () => tileCount(t => !!SHOPS[t.b]) },
+  { id: 'bildung', icon: '🎓', name: 'Schulen, Bibliotheken, Unis', tiers: [3, 8, 20], value: () => tileCount(t => ITEMS[t.b] && ITEMS[t.b].cat === 'bildung') },
+  { id: 'brunnen', icon: '⛲', name: 'Brunnen', tiers: [1, 5, 15], value: () => tileCount(t => /brunnen$/.test(t.b)) + decoCount(d => /brunnen$/.test(d.b)) },
+  { id: 'haefen', icon: '⚓', name: 'Stege und Häfen', tiers: [1, 5, 15], value: () => tileCount(t => t.b === 'bootssteg' || t.b === 'hafen') },
+  { id: 'seilbahn', icon: '🚡', name: 'Seilbahn-Stationen', tiers: [2, 6, 12], value: () => tileCount(t => t.b === 'seilbahn') },
+  { id: 'ubahn', icon: '🚇', name: 'U-Bahn-Strecke', unit: 'Felder', tiers: [10, 50, 200], value: () => (state.tunnels ? state.tunnels.size : 0) },
+  { id: 'anhoehen', icon: '⛰️', name: 'Anhöhen', unit: 'Felder', tiers: [10, 50, 200], value: () => (state.hills ? state.hills.size : 0) },
+  { id: 'daecher', icon: '⛱️', name: 'Überdachte Wege', unit: 'Felder', tiers: [10, 50, 200], value: () => (state.roofs ? state.roofs.size : 0) },
+  { id: 'hecken', icon: '🌿', name: 'Hecken, Zäune und Mauern', tiers: [25, 100, 400], value: () => (state.edges ? state.edges.size : 0) },
+  { id: 'erfindungen', icon: '🔨', name: 'Erfindungen', tiers: [1, 2, INVENTIONS.length], value: () => (state.inventions ? state.inventions.size : 0) },
+  { id: 'verkehr', icon: '🚢', name: 'Verkehrsmittel', tiers: [2, 5, 8], value: () => (state.vehicles ? state.vehicles.size : 0) },
+  { id: 'meister', icon: '🖼️', name: 'Meisterstücke', tiers: [1, 4, DESIGN.filter(d => d.master).length], value: () => DESIGN.filter(d => d.master && state.design.has(d.id)).length },
+  { id: 'wandfarben', icon: '🖌️', name: 'Hausfarben verbaut', tiers: [5, 10, WALLS.length], value: () => { const c = new Set(); for (const t of state.tiles.values()) if (t.wall != null) c.add(t.wall); return c.size; } },
+  { id: 'basar', icon: '🌟', name: 'Schätze aus dem Sternenbasar', tiers: [1, 5, 15], value: () => (state.sdItems ? state.sdItems.size : 0) },
+  { id: 'sternstaub', icon: '✨', name: 'Sternstaub gesammelt', tiers: [100, 1000, 5000], value: () => statOf('sdTotal') },
+  { id: 'truhen', icon: '🧰', name: 'Truhen geöffnet', tiers: [1, 3, 6], value: () => (state.sdGot ? [...state.sdGot].filter(k => k.startsWith('chest:')).length : 0) },
+  { id: 'tageswunsch', icon: '💭', name: 'Tageswünsche erfüllt', tiers: [3, 15, 50], value: () => (state.sdGot ? [...state.sdGot].filter(k => k.startsWith('wish:')).length : 0) },
+  { id: 'feste', icon: '🎉', name: 'Feste und Paraden', tiers: [1, 5, 20], value: () => statOf('fests') },
+  { id: 'souvenirs', icon: '🎁', name: 'Souvenirs bekommen', tiers: [1, 5, 15], value: () => (state.souvenirs ? state.souvenirs.length : 0) },
+  { id: 'souvenirs_weg', icon: '💌', name: 'Souvenirs verschenkt', tiers: [1, 10, 30], value: () => statOf('svSent') },
+  { id: 'paeckchen', icon: '📦', name: 'Päckchen verschickt', tiers: [1, 10, 30], value: () => statOf('mails') },
+  { id: 'wunschhilfe', icon: '📌', name: 'Bei Wünschen geholfen', tiers: [1, 5, 15], value: () => statOf('wishHelp') },
+  { id: 'freundschaft', icon: '❤️', name: 'Freundschaft', unit: 'Herzen', tiers: [1, 3, 5], value: () => state.bond || 0 },
 ];
+// Zähler für Erfolge (state.stats; ältere Stände und Besuche haben sie nicht → 0)
+const statOf = k => (state && state.stats && +state.stats[k]) || 0;
+function statCount(k, n = 1) { if (!state || !state.stats || (typeof viewOnly === 'function' && viewOnly())) return; state.stats[k] = statOf(k) + n; }
 const RANKS = [
   { stars: 0, name: 'Noch ohne Ehrennadel' },
   { stars: 5, name: 'Ehrennadel Bronze', item: 'pokal_bronze' },
@@ -789,6 +821,7 @@ function startParkFest(now = Date.now()) {
   const st = parkBest();
   if (!st || parkFestWait(now) > 0) return false;
   state.parkFest = { until: now + PARKFEST_LEN, next: now + PARKFEST_EVERY, mul: PARKFEST_MUL[st] };
+  statCount('fests');                                                    // Erfolg „Feste und Paraden“
   sdAdd(SD.feier);                                                       // ✨ Sternstaub (Block 161)
   sfx('star'); confettiBurst();
   toast(`🎉 Parkfest! 3 Minuten lang Einnahmen ×${String(PARKFEST_MUL[st]).replace('.', ',')} · ✨ +${SD.feier}`);
@@ -811,6 +844,7 @@ function startFzFest(now = Date.now()) {
   const st = fzBest();
   if (!st || fzFestWait(now) > 0) return false;
   state.fzFest = { until: now + FZFEST_LEN, next: now + FZFEST_EVERY, mul: FZFEST_MUL[st] };
+  statCount('fests');
   const best = FZPARKS.reduce((a, p) => (!a || p.stage > a.stage ? p : a), null), pts = best.tiles.map(keyXY);
   const mid = [pts.reduce((n, p) => n + p[0], 0) / pts.length, pts.reduce((n, p) => n + p[1], 0) / pts.length];   // Mitte des Parks
   sdAdd(SD.feier);                                                       // ✨ Sternstaub (Block 161)

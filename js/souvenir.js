@@ -148,6 +148,7 @@ async function svSend(friendUid, name, k) {
     await cloudApi.set(`mail/${friendUid}/s${Date.now().toString(36)}${cloudUser.uid.slice(0, 6)}`,
       { from: cloudUser.uid, n: me.n, a, at: cloudApi.TS(), sv: { k, c: me.c, s: me.s, t: String(me.t || '').slice(0, 30) } });
     bondAdd(cloudUser.uid, friendUid, BOND_PTS.mail);
+    statCount('svSent');                                                  // Erfolg „Souvenirs verschenkt“
     const log = frLS('sv_' + dayKey()) || {}; log[friendUid] = 1; frLS('sv_' + dayKey(), log);
     closeModal(); toast(`🎁 ${svKind(k).name} an ${name} ist unterwegs`); sfx('deco');
   } catch (e) {

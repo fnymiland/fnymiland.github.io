@@ -17,6 +17,7 @@ function sdAdd(n, key = null, touch = true) {          // touch: als eigene Änd
   if (!state.sdGot) state.sdGot = new Set();
   if (key) { if (state.sdGot.has(key)) return 0; state.sdGot.add(key); }
   state.stardust = (state.stardust || 0) + n;
+  if (typeof statCount === 'function') statCount('sdTotal', n);          // Erfolg „Sternstaub gesammelt“
   if (touch && typeof cloudTouched === 'function') cloudTouched();
   return n;
 }

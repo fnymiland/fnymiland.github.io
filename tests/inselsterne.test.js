@@ -94,3 +94,29 @@ describe('Inselsterne', () => {
     expect(css).toMatch(/\.isle-medal\.t5 \{[^}]*drop-shadow/);
   });
 });
+
+describe('Mehr Erfolge (Nutzer 26.10.2026: „es sollte mehr Erfolge geben“)', () => {
+  it('rund 45 sichtbare Erfolge, alle Stufen aufsteigend, jeder Wert ohne Fehler (auch im leeren Spiel und beim Besuch ohne Zähler)', () => {
+    const list = game('ACHIEVEMENTS.map(a => ({ id: a.id, tiers: a.tiers, v: a.value() }))');
+    expect(list.length).toBeGreaterThanOrEqual(44);
+    expect(new Set(list.map(a => a.id)).size).toBe(list.length);
+    for (const a of list) { expect(typeof a.v).toBe('number'); expect(Number.isFinite(a.v)).toBe(true); for (let i = 1; i < a.tiers.length; i++) expect(a.tiers[i]).toBeGreaterThan(a.tiers[i - 1]); }
+    game("state.stats = { earned: 0 }");                                        // Besuch: Zähler fehlen
+    expect(game('ACHIEVEMENTS.every(a => Number.isFinite(a.value()))')).toBe(true);
+    const total = game('ACHIEVEMENTS.reduce((n, a) => n + a.tiers.length, 0)');
+    expect(total).toBeGreaterThanOrEqual(130);                                    // mit den versteckten rund 150 Sterne: 5 Inselsterne bleiben besonders
+  });
+  it('neue Zähler: Feste, Päckchen, Hilfe bei Wünschen, verschenkte Souvenirs, gesammelter Sternstaub', () => {
+    game("state.stats = { earned: 0 }; sdAdd(25); sdAdd(5)");
+    expect(game('state.stats.sdTotal')).toBe(30);
+    game("statCount('fests'); statCount('fests')");
+    expect(game("ACHIEVEMENTS.find(a => a.id === 'feste').value()")).toBe(2);
+    expect(game("ACHIEVEMENTS.find(a => a.id === 'album').tiers.at(-1)")).toBe(game('ALBUM.length'));
+    for (const id of ['paeckchen', 'wunschhilfe', 'souvenirs_weg', 'sternstaub', 'truhen', 'tageswunsch', 'album', 'natur']) expect(game(`!!ACHIEVEMENTS.find(a => a.id === '${id}')`)).toBe(true);
+  });
+  it('Truhen und Tageswünsche zählen aus dem, was der Spielstand schon kennt (alte Stände bekommen ihren Fortschritt sofort)', () => {
+    game("state.sdGot = new Set(['chest:a', 'chest:b', 'wish:20261020', 'wish:20261021', 'wish:20261022', 'a:taler:1'])");
+    expect(game("ACHIEVEMENTS.find(a => a.id === 'truhen').value()")).toBe(2);
+    expect(game("ACHIEVEMENTS.find(a => a.id === 'tageswunsch').value()")).toBe(3);
+  });
+});

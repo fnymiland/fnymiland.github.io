@@ -420,6 +420,7 @@ async function mailSend(friendUid, name, pick, wish = null) {
     const forWish = !!(wish && items[wish.r] > 0);
     await cloudApi.set(`mail/${friendUid}/m${Date.now().toString(36)}${cloudUser.uid.slice(0, 6)}`, { from: cloudUser.uid, n: myNick(), a, items, at: cloudApi.TS(), ...(forWish ? { wish: true } : {}) });
     bondAdd(cloudUser.uid, friendUid, forWish ? BOND_PTS.wish : BOND_PTS.mail);
+    statCount('mails'); if (forWish) statCount('wishHelp');               // Erfolge (26.10.2026)
     if (forWish) wishSentAdd(friendUid, wish, items[wish.r]);            // „unterwegs“ beim Wunsch (Block 129)
     const log = frLS('mail_' + dayKey()) || {}; log[friendUid] = (log[friendUid] || 0) + 1; frLS('mail_' + dayKey(), log);
     cloudTouched(); save(); closeModal(); toast(`🎁 Päckchen an ${name} ist unterwegs`);
