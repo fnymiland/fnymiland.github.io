@@ -7,7 +7,7 @@
 //   E  drei schlichte Striche, dazu das Wort „Menü“ darunter
 (() => {
   const S = 3;
-  const draw = f => { const c = document.createElement('canvas'); c.width = c.height = 64 * S; const x = c.getContext('2d'); x.scale(S, S); f(x); return c.toDataURL(); };
+  const draw = (f, trim = true) => { const c = document.createElement('canvas'); c.width = c.height = 64 * S; const x = c.getContext('2d'); x.scale(S, S); f(x); return (trim ? uiTrim(c) : c).toDataURL(); };   // zugeschnitten wie die Symbole des Spiels (uiIcon); Striche mit Rand
   const rr = (x, X, Y, W, H, R) => { x.beginPath(); x.roundRect(X, Y, W, H, R); };
   const planks = () => draw(x => {
     x.fillStyle = 'rgba(40,50,70,0.16)'; x.beginPath(); x.ellipse(32, 58, 20, 4, 0, 0, Math.PI * 2); x.fill();
@@ -21,19 +21,17 @@
   const lines = col => draw(x => {
     x.strokeStyle = col; x.lineWidth = 6.5; x.lineCap = 'round';
     for (const y of [18, 32, 46]) { x.beginPath(); x.moveTo(15, y); x.lineTo(49, y); x.stroke(); }
-  });
+  }, false);
   const ink = () => document.body.classList.contains('look-wolke') ? '#3b4763' : '#5a3d24';
   const LABELS = { 'store-btn': 'Lager', 'you-btn': 'Du', 'net-btn': 'Freunde', 'menu-btn': 'Menü' };
-  let orig = null;
   window.MK_APPLY = v => {
     const i = document.querySelector('#menu-btn i.wi');
-    if (orig === null) orig = i.style.backgroundImage;
     let st = document.getElementById('mk-style');
     if (!st) { st = document.createElement('style'); st.id = 'mk-style'; document.head.append(st); }
     st.textContent = `
       #hud .mk-lab { position: relative; }
       #hud .mk-lab::after { content: attr(data-mk); position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); white-space: nowrap;
-        font: 700 11px/1 var(--font); color: #5a3d24; background: #ecd4a3; border-radius: 6px; padding: 3px 6px 2px; box-shadow: 0 1px 0 #b48c5c; pointer-events: none; }
+        font: 700 11px/1 var(--font); color: #5a3d24; background: #ecd4a3; border-radius: 6px; padding: 3px 6px 2px; box-shadow: 0 1px 0 #b48c5c; text-shadow: none; -webkit-text-stroke: 0; pointer-events: none; }
       body.look-wolke #hud .mk-lab::after { color: #3b4763; background: #fff; box-shadow: 0 1px 0 #c7d4e8; }`;
     for (const id of Object.keys(LABELS)) { const b = document.getElementById(id); b.classList.remove('mk-lab'); delete b.dataset.mk; }
     const label = ids => { for (const id of ids) { const b = document.getElementById(id); b.classList.add('mk-lab'); b.dataset.mk = LABELS[id]; } };
@@ -43,7 +41,7 @@
     if (v === 'C') url = uiIcon('zahnrad');
     if (v === 'D') label(Object.keys(LABELS));
     if (v === 'E') label(['menu-btn']);
-    i.style.backgroundImage = url ? `url(${url})` : orig;
+    i.style.backgroundImage = `url(${url || uiIcon('wegweiser')})`;   // heute: der Wegweiser
     return v || 'heute';
   };
 })();
