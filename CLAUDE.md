@@ -550,6 +550,8 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Nacht (Variante C): `uiNightSync` (aus `updateHud`) setzt `uiNightNow` 0–3 aus `nightAt()`; `paintSlab(…, night)` dunkelt nur den Rand
     (Hecke/Wolkenbuckel), die Fläche innen bleibt hell. Neu gemalt nur beim Stufenwechsel (Stufe steht im `slabKey`). „Immer Tag“ → 0.
     Hecke und Wolken sind gleichmäßig (`roundRectRing`: gleicher Abstand, echte Viertelkreis-Ecken) – nie wieder zufällige Größen/Wackeln.
+    Unter den Büschen liegt eine dichte dunkelgrüne Fläche (ganze Form): Papier und Büsche allein ließen an Ecken und zwischen den Büschen
+    durchsichtige Lücken (Nutzer: „kleine Lücke, darf nicht sein“). Prüfen: `paintSlab` malen und Alpha innerhalb der Form zählen (muss 0 sein).
     **Knopf-Familie** (Nutzer: „du solltest gründlicher sein“): Haupt = Terrakotta/Blau (`.btn`), Neben = Sand/Hellblau (`.btn.ghost`),
     Wahl-Chips/Reiter = `--chip` (Hecke Sand, Wolken Hellblau), gewählt = `--chip-on` (Heckengrün/Blau, helle Schrift), reine Anzeigen
     (`.stats span` …) = `--info` ohne Kante. Nie wieder Creme mit brauner Kante oder Gelb für Gewähltes – das sah aus wie vorher.
