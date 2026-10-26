@@ -1504,3 +1504,11 @@ body.look-hecke.phone #goal.slab { padding: 15px 18px 19px; }
 body.look-hecke #panel.slab-in { padding: 37px 37px 47px; }                 /* Büsche bis 29 px vom Rand (Platte 18 + 11) */
 body.look-hecke.phone:not(.phone-land) #panel.slab-in { padding: 37px 37px 45px; }
 body.look-wolke.phone:not(.phone-land) #panel.slab-in { padding: 34px 34px 42px; }
+
+/* Leiste oben: Ziffern gleich breit, damit kurze Zahlen (3,1k · 158k) die Knöpfe daneben nicht schieben (Nutzer 26.10.2026: „die Leiste zuckt“) */
+#hud .pill b, #hud .pill small { font-variant-numeric: tabular-nums; }
+/* Ziel-Fenster unter der Leiste: Büsche bzw. Wolkenbuckel stehen über den Rand hinaus – um so viel tiefer (updateHud setzt top = Leiste + 8)
+   (Nutzer: „bei größerem Fenster sind die Aufgaben zu nah an der Leiste, der Rand ragt fast hinein“) */
+body { --goal-over: 12px; }
+body.look-wolke { --goal-over: 16px; }
+#goal.slab { margin-top: var(--goal-over); }

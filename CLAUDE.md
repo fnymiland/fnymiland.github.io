@@ -577,6 +577,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     zählt, nicht der von `.p-scroll` (dessen negativer Rand hebt sich auf). Prüfen: `await KT_EDGE()` (tools/knopf-text-pruefung.js),
     Rechner und 375 px. Ziel-Fenster klappt beim Antippen; der Pfeil-Knopf rechts in der Überschrift zeigt es (`h4::after` Brett bzw.
     Wölkchen, `::before` Pfeil darüber – die Wolke malt ihre Fläche über den Hintergrund), `aria-expanded` setzt `updateHud`.
+    **Zahlen in der Leiste oben** nur über `hudNum` (bis 999 genau, dann `fmtHud`: 3,1k · 158k · 1,5 Mio., abgerundet; nach Antippen von
+    Taler/Einwohner 5 s die volle Zahl) – lange, ständig wechselnde Zahlen ließen die ganze Leiste zucken. Ziffern `tabular-nums`.
+    Das Ziel-Fenster steht `--goal-over` (Hecke 12, Wolken 16 px) tiefer als `top`, weil Büsche/Buckel über seinen Rand hinausstehen.
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

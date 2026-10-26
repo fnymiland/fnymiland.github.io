@@ -17,6 +17,15 @@ const costText = c => { const { money = 0, ...mat } = c || {}; return [money ? `
 function fmtWhole(n) { return n > 0 && n < 0.5 ? '<1' : fmt(Math.round(n)); }
 // Geld oben: immer glatt, ab 10 Mio. in Millionen (ohne Komma)
 const fmtMoney = n => n < 1e7 ? nf.format(Math.floor(n)) : `${nf.format(Math.floor(n / 1e6))} Mio.`;
+// Zahlen in der Leiste oben (Nutzer 26.10.2026: „die Ideen bewegen sich dauernd, die ganze Leiste zuckt“): bis 999 genau, dann kurz –
+// 3,1k · 15k · 158k · 1,5 Mio. · 77 Mio. · 1,2 Mrd. Abgerundet (nie mehr zeigen, als man hat); die volle Zahl nach Antippen (hudNum)
+const HUD_UNITS = [[1e12, ' Bio.'], [1e9, ' Mrd.'], [1e6, ' Mio.'], [1e3, 'k']];
+function fmtHud(n) {
+  const a = Math.floor(Math.abs(n)), sign = n < 0 ? '-' : '';
+  if (a < 1000) return sign + a;
+  const [u, name] = HUD_UNITS.find(([u]) => a >= u), v = a / u;
+  return sign + nf1.format(v < 10 ? Math.floor(v * 10) / 10 : Math.floor(v)) + name;
+}
 function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
 let toastTimer = 0;
@@ -952,19 +961,20 @@ let goalSmall = null, unlockSig = '';        // null: von selbst – auf dem Han
 // (hudMore, ein paar Sekunden), Rohstoffe, Schönheit und Strom im Lager (📦).
 let hudMoreUntil = 0;
 const hudMore = () => { hudMoreUntil = Date.now() + 5000; updateHud(); };
+const hudNum = n => Date.now() < hudMoreUntil ? nf.format(Math.floor(n)) : fmtHud(n);   // angetippt: ein paar Sekunden die volle Zahl
 // Nur schreiben, was sich geändert hat (Block 52): Safari auf dem iPad schluckt sonst den ersten Tipp auf einen Knopf,
 // in dem sich gerade etwas tut (die Leiste frischt alle 0,2 s auf)
 const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
 const setWiText = (el, v) => { if (el.textContent !== v) el.innerHTML = typeof wiText === 'function' ? wiText(escHtml(v)) : escHtml(v); };   // dasselbe mit Spiel-Symbolen statt Emojis (ui-look.js)
 const fmtMul = m => String(Math.round(m * 100) / 100).replace('.', ',');   // ×3,9 statt ×3.9000000000000004 (Block 84c)
 function updateHud() {
-  setText($('money'), fmtMoney(state.money));
+  setText($('money'), hudNum(state.money));
   const bi = boostMul('inc'), bs = boostMul('sci');                        // Jahrmarkt, Erlass: gerade mehr
   setText($('rate'), '+' + fmtWhole(T.inc * bi + saleRate) + '/s' + (bi > 1 ? ` ×${fmtMul(bi)}` : ''));
-  setText($('pop'), fmt(T.pop));
+  setText($('pop'), hudNum(T.pop));
   setWiText($('jobs'), `💼 ${fmt(T.jobs)}`);                        // Arbeitsplätze
   $('pop-btn').classList.toggle('warn', T.jobs > T.pop);
-  setText($('sci'), fmtMoney(state.science));                    // glatt wie das Geld (vorher „1,2 Mio.“)
+  setText($('sci'), hudNum(state.science));
   if (typeof sdHud === 'function') sdHud();                       // ✨ Sternstaub (Block 161)
   setText($('sci-rate'), T.sci > 0 ? '+' + fmtWhole(T.sci * bs) + '/s' + (bs > 1 ? ` ×${fmtMul(bs)}` : '') : '');
   if ($('sci-dot').hidden !== !canResearch()) $('sci-dot').hidden = !canResearch();
@@ -2829,7 +2839,7 @@ function openResearch(tab = researchTab) {
   let body;
   if (tab === 'wissen') {
     body = `
-      <p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ' – Ideen kommen aus Schulen (Ruineninsel)'}.</p>
+      <p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ' – Ideen kommen aus Schulen (Ruineninsel)'}.</p>
       <div class="tech-cats">${[1, 2, 3].map(tier => {
         const open = tierOpen(tier);
         return `<div class="tech-cat${open ? '' : ' closed'}"><h4>Stufe ${tier} · ${TECH_TIERS[tier].name}${open ? '' : ' 🔒'}</h4>
@@ -2845,7 +2855,7 @@ function openResearch(tab = researchTab) {
           }).join('')}</div>`;
       }).join('')}</div>`;
   } else if (tab === 'stufen') {
-    const have = `<p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ''}. Jede Stufe bringt +${Math.round(MASTERY_STEP * 100)} % und geht endlos weiter – die nächste kostet jeweils das 1,5-Fache.</p>`;
+    const have = `<p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ''}. Jede Stufe bringt +${Math.round(MASTERY_STEP * 100)} % und geht endlos weiter – die nächste kostet jeweils das 1,5-Fache.</p>`;
     body = have + (masteryOpen() ? `<div class="mastery">${MASTERY.map(m => {
       const lvl = masteryLvl(m.id), cost = masteryCost(m.id);
       return `<div class="tech${lvl ? ' done' : ''}"><b>${m.icon} ${m.name}${lvl ? ' ' + roman(lvl) : ''}</b>
@@ -2862,11 +2872,11 @@ function openResearch(tab = researchTab) {
         ${need && !have ? `<span class="muted">${need}</span>` : ''}
         ${!have && open && m.cost ? `<button class="btn" data-vehicle="${kind}:${m.id}" data-sci="${m.cost}" ${state.science < m.cost ? 'disabled' : ''}>Erforschen · 💡 ${fmt(m.cost)}</button>` : ''}</div>`;
     };
-    body = `<p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen. Jedes Verkehrsmittel sieht anders aus, hat mehr Plätze und ist schneller – so schaffen Züge und Schiffe mehr Fahrgäste.</p>
+    body = `<p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen. Jedes Verkehrsmittel sieht anders aus, hat mehr Plätze und ist schneller – so schaffen Züge und Schiffe mehr Fahrgäste.</p>
       <div class="label">🚢 Schiffe (Fähren am Hafen)</div><div class="mastery">${SHIP_MODELS.map(m => card('schiff', m)).join('')}</div>
       <div class="label">🚆 Züge</div><div class="mastery">${TRAIN_MODELS.map(m => card('zug', m)).join('')}</div>`;
   } else if (tab === 'erfindung') {
-    body = `<p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen. Erfindungen gibt es nur für Ideen – besondere Dinge für deine Insel.</p>`
+    body = `<p>Du hast <span class="sci-have">💡 ${nf.format(Math.floor(state.science))}</span> Ideen. Erfindungen gibt es nur für Ideen – besondere Dinge für deine Insel.</p>`
       + (inventionsOpen() ? `<div class="mastery">${INVENTIONS.map(inv => {
         const have = hasInvention(inv.id);
         return `<div class="tech${have ? ' done' : ''}"><b>${have ? '✓ ' : ''}${inv.icon} ${inv.name}</b><span>${inv.text}</span>
@@ -3352,6 +3362,7 @@ const NEWS_HISTORY = [
     '📜 <b>Große Fenster:</b> Rathaus, Forschung, Einstellungen und die anderen Fenster haben jetzt auch Hecke bzw. Wolke als Rand, und alle Knöpfe sind Plättchen. Taler, Lager, Einwohner, Ideen, Schönheit und das Schloss für Gesperrtes erscheinen in Texten als Spiel-Bildchen.',
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
     '🪵 <b>Knöpfe:</b> Bei der Hecke sind alle Knöpfe jetzt kleine Holzbretter mit Maserung und Nägeln, bei den Wolken kleine Schäfchenwolken. Was gewählt ist, ist grün bzw. kräftig blau.',
+    '🔢 <b>Ruhigere Leiste oben:</b> Taler, Einwohner, Ideen und Sternstaub stehen dort jetzt kurz (3,1k · 158k · 1,5 Mio.), damit die Leiste nicht mehr zuckt. Tippst du auf Taler oder Einwohner, siehst du ein paar Sekunden die genauen Zahlen; die genauen Ideen stehen in der Forschung.',
     '🔽 <b>Ziele einklappen:</b> Oben rechts im Ziel-Fenster zeigt ein kleiner Pfeil-Knopf, dass du es antippen und einklappen kannst.',
   ] },
   { id: '2026-10-24-wundergarten', date: '24. Oktober', title: 'Riesenrad und Sternwarte', items: [

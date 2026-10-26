@@ -63,11 +63,16 @@ describe('Natur wird beim Bauen weggeräumt', () => {
 });
 
 describe('Leiste oben', () => {
-  it('Geld glatt – auch bei großen Summen (ab 10 Mio. in Millionen, ohne Komma)', () => {
-    game('state.money = 1234567.8; updateHud()');
-    expect(document.getElementById('money').textContent).toBe('1.234.567');
-    game('state.money = 15.7e6; updateHud()');
-    expect(document.getElementById('money').textContent).toBe('15 Mio.');
+  it('Zahlen kurz, damit die Leiste nicht zuckt: bis 999 genau, dann 3,1k · 158k · 1,2 Mio. (abgerundet); angetippt die volle Zahl', () => {
+    game('hudMoreUntil = 0');
+    expect(game('[0, 999, 1000, 3107, 9999, 15432, 158900, 1234567.8, 15.7e6, 2.36e9].map(fmtHud)'))
+      .toEqual(['0', '999', '1k', '3,1k', '9,9k', '15k', '158k', '1,2 Mio.', '15 Mio.', '2,3 Mrd.']);
+    game('state.money = 1234567.8; state.science = 1587556; updateHud()');
+    expect(['money', 'sci'].map(id => document.getElementById(id).textContent)).toEqual(['1,2 Mio.', '1,5 Mio.']);
+    expect(document.getElementById('pop').textContent).toBe(game('fmtHud(T.pop)'));
+    document.getElementById('money-btn').onclick();                       // antippen: ein paar Sekunden die volle Zahl
+    expect(['money', 'sci'].map(id => document.getElementById(id).textContent)).toEqual(['1.234.567', '1.587.556']);
+    game('hudMoreUntil = 0; updateHud()');
   });
 
   it('schlank: Raten und Arbeitsplätze erst beim Antippen, Lager und Schönheit hinter 📦', () => {

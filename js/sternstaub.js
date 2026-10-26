@@ -199,7 +199,7 @@ function sdHud() {
   if (!b) return;
   const show = !!state && (state.sdSeen || (state.stardust || 0) > 0);
   if (b.hidden === show) b.hidden = !show;
-  if (show) setText($('sd'), fmt(state.stardust || 0));
+  if (show) setText($('sd'), typeof hudNum === 'function' ? hudNum(state.stardust || 0) : fmt(state.stardust || 0));   // kurz wie die anderen Zahlen oben
 }
 if (typeof document !== 'undefined' && $('sd-btn')) $('sd-btn').onclick = () => { if (typeof setTool === 'function') setTool('look'); openStardust(); };
 
