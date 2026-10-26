@@ -1691,3 +1691,10 @@ body.look-wolke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #she
   body.look-hecke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #store) { scrollbar-width: thin; scrollbar-color: #b98446 transparent; }
   body.look-wolke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #store) { scrollbar-width: thin; scrollbar-color: #c7d4e8 transparent; }
 }
+
+/* Luft unter der Bauleiste (Nutzer 26.10.2026: „im Wolkendesign unter der Iconleiste gar keine Luft“): der gemalte Rand reicht unter die
+   Leiste (Hecke 15 px, Wolkenbuckel 29 px) – mit 8 px Abstand lief die Wolke 11 px aus dem Bild. Jetzt bleiben rund 12 px bis zum
+   Rand (#toolbar rechnet den iPhone-Abstand unten schon selbst ein) */
+body.look-hecke .cats-isle { margin-bottom: 17px; }
+body.look-wolke .cats-isle { margin-bottom: 31px; }
+@media (max-width: 600px) { body.look-hecke .cats-isle { margin-bottom: 21px; } body.look-wolke .cats-isle { margin-bottom: 35px; } }

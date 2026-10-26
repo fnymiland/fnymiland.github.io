@@ -169,6 +169,13 @@ describe('Aussehen', () => {
     expect(tail).toMatch(/@media \(max-width: 720px\) \{\s*#hud \.hud-act \{ flex-direction: column/);   // schmal: Knöpfe untereinander
   });
 
+  it('Bauleiste unten: unter dem gemalten Rand bleibt Luft (Nutzer 26.10.2026: „im Wolkendesign unter der Iconleiste gar keine Luft“)', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    const tail = css.slice(css.indexOf('Luft unter der Bauleiste'));
+    expect(tail).toMatch(/body\.look-hecke \.cats-isle \{ margin-bottom: 17px; \}/);
+    expect(tail).toMatch(/body\.look-wolke \.cats-isle \{ margin-bottom: 31px; \}/);
+  });
+
   it('Rathaus „Zu tun“: nichts breiter als das Fenster (Nutzer 26.10.2026: „Buttons größer als der Rand, man muss seitlich scrollen“)', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
     const tail = css.slice(css.indexOf('Nie breiter als das Fenster'));
