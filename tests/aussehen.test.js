@@ -10,15 +10,25 @@ beforeEach(() => {
 });
 
 describe('Aussehen', () => {
-  it('Standard ist Hecke, die Wahl gilt je Gerät und steht nicht im Spielstand', () => {
-    expect(game('uiLookId')).toBe('hecke');
-    expect(game("document.body.classList.contains('look-hecke')")).toBe(true);
-    game("setUiLook('wolke')");
-    expect(game('[uiLookId, localStorage.getItem(UI_LOOK_KEY)]')).toEqual(['wolke', 'wolke']);
-    expect(game("[document.body.classList.contains('look-wolke'), document.body.classList.contains('look-hecke')]")).toEqual([true, false]);
+  it('Standard ist Wolken (Nutzer 26.10.2026), die Wahl gilt je Gerät und steht nicht im Spielstand', () => {
+    expect(game('UI_LOOK_DEFAULT')).toBe('wolke');
+    expect(game("uiLookOf(null)")).toBe('wolke');                               // nie gewählt: Wolken
+    expect(game("uiLookOf('hecke')")).toBe('hecke');                            // wer Hecke gewählt hat, behält sie
+    expect(game("uiLookOf('quatsch')")).toBe('wolke');
+    game("setUiLook('wolke'); setUiLook('hecke')");
+    expect(game('[uiLookId, localStorage.getItem(UI_LOOK_KEY)]')).toEqual(['hecke', 'hecke']);
+    expect(game("[document.body.classList.contains('look-hecke'), document.body.classList.contains('look-wolke')]")).toEqual([true, false]);
     expect(game('/uiLook|aussehen/.test(serialize())')).toBe(false);
     game("setUiLook('quatsch')");
-    expect(game('uiLookId')).toBe('wolke');
+    expect(game('uiLookId')).toBe('hecke');
+  });
+
+  it('Scrollbalken: Holzstab (Hecke) bzw. weiße Wolkenleiste (Nutzer 26.10.2026: „A“), Firefox mit Farbe und Breite', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    const tail = css.slice(css.indexOf('Scrollbalken (Nutzer 26.10.2026'));
+    expect(tail).toMatch(/body\.look-hecke :is\([^)]*\.tab-scroll[^)]*\)::-webkit-scrollbar-thumb \{[^}]*#8a5a34/);
+    expect(tail).toMatch(/body\.look-wolke :is\([^)]*\.tab-scroll[^)]*\)::-webkit-scrollbar-thumb \{[^}]*#a9bde0/);
+    expect(tail).toMatch(/scrollbar-color:/);
   });
 
   it('in den Einstellungen wählbar', () => {

@@ -1674,3 +1674,20 @@ body.look-wolke .isle-goal .isle-bar { background: rgba(59, 71, 99, .14); }
 .hall-btns > .btn:last-child { flex: none; }
 :is(#modal-card, #panel, #sheet) .btn { max-width: 100%; overflow-wrap: anywhere; }
 .row > .btn { min-width: 0; flex-basis: auto !important; flex-shrink: 0 !important; }   /* gegen style="flex:1": Grundbreite = Text, nie kleiner */
+
+/* Scrollbalken (Nutzer 26.10.2026: „der Standard sieht kacke aus“, Entwurf A tools/scrollbalken-entwurf.js): Hecke = Holzstab mit
+   Maserung, Wolken = weiße Leiste mit blauem Rand. Chrome/Safari über ::-webkit-scrollbar, Firefox nur Farbe und Breite */
+body.look-hecke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #sheet .tools, #store, #modal-card .lx-list)::-webkit-scrollbar,
+body.look-wolke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #sheet .tools, #store, #modal-card .lx-list)::-webkit-scrollbar { width: 12px; height: 12px; }
+body.look-hecke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #sheet .tools, #store, #modal-card .lx-list)::-webkit-scrollbar-track,
+body.look-wolke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #sheet .tools, #store, #modal-card .lx-list)::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
+body.look-hecke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #sheet .tools, #store, #modal-card .lx-list)::-webkit-scrollbar-thumb {
+  background: repeating-linear-gradient(90deg, rgba(90, 58, 30, .18) 0 1px, transparent 1px 3px), linear-gradient(90deg, #d9a464, #b98446);
+  border: 2px solid #8a5a34; border-radius: 6px; background-clip: padding-box; min-height: 36px; }
+body.look-wolke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #sheet .tools, #store, #modal-card .lx-list)::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #ffffff, #e3ecf8); border: 2px solid #a9bde0; border-radius: 8px; background-clip: padding-box; min-height: 36px; }
+:is(#modal-card, #panel, #sheet, #store) ::-webkit-scrollbar-corner { background: transparent; }
+@supports not selector(::-webkit-scrollbar) {
+  body.look-hecke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #store) { scrollbar-width: thin; scrollbar-color: #b98446 transparent; }
+  body.look-wolke :is(#modal-card, #modal-card .tab-scroll, #panel .p-scroll, #store) { scrollbar-width: thin; scrollbar-color: #c7d4e8 transparent; }
+}

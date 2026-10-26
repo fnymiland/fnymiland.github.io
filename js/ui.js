@@ -3080,7 +3080,7 @@ function isleUpShow() {
   openModal(`
     <h2>Dein ${n}. Inselstern!</h2>
     <div class="isle-up">${isleMedalHtml(n, 'big')}</div>
-    <p>${escHtml(state.town.name)} hat jetzt ${n} Inselstern${n > 1 ? 'e' : ''}. Besucher sehen ${n > 1 ? 'sie' : 'ihn'} am Rathaus, oben bei deinem Namen und in ihrer Freundesliste.</p>
+    <p>${escHtml(state.town.name)} hat jetzt ${n} Inselstern${n > 1 ? 'e' : ''}. Besucher sehen ${n > 1 ? 'sie' : 'ihn'} oben bei deinem Namen und in ihrer Freundesliste.</p>
     <div class="hall-row"><span>🪙 Taler</span><b>+${Math.round(n * ISLE_STAR_BONUS * 100)} %${n > 1 ? ` (vorher +${Math.round((n - 1) * ISLE_STAR_BONUS * 100)} %)` : ''}</b></div>
     ${n < ISLE_STARS.length ? `<p class="muted">Der nächste Inselstern kommt bei ${ISLE_STARS[n]} Erfolgs-Sternen.</p>` : '<p class="muted">Mehr Inselsterne gibt es nicht. Deine Insel ist legendär!</p>'}
     <div class="row"><button class="btn" id="m-ok" style="flex:1">Schön!</button></div>`);
@@ -3437,8 +3437,8 @@ const NEWS_HISTORY = [
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
     '🪵 <b>Knöpfe:</b> Bei der Hecke sind alle Knöpfe jetzt kleine Holzbretter mit Maserung und Nägeln, bei den Wolken kleine Schäfchenwolken. Was gewählt ist, ist grün bzw. kräftig blau.',
     '💬 <b>Texte überarbeitet:</b> Alle Hinweise, Meldungen und Beschreibungen im Spiel lesen sich jetzt ruhiger und natürlicher. Statt langer Gedankenstriche stehen dort kurze, klare Sätze.',
-    '🖱️ <b>Kleinigkeiten:</b> Rechtsklick auf die Karte schließt das Fenster rechts. Die Aufgabenliste startet eingeklappt. Zahlen oben gehen mit einem zweiten Tippen wieder zu.',
-    '⭐ <b>Inselsterne:</b> Deine Erfolge machen jetzt etwas aus. Ab 10, 25, 45, 70 und 100 Erfolgs-Sternen bekommt deine Insel einen Inselstern: eine Medaille, erst ohne Rahmen, dann in Bronze, Silber, Gold und zuletzt im glitzernden Regenbogen. Jeder Inselstern bringt +5 % Taler. Die Medaille hängt über deinem Rathaus und steht oben neben deiner Flagge.',
+    '🖱️ <b>Kleinigkeiten:</b> Rechtsklick auf die Karte schließt das Fenster rechts. Die Aufgabenliste startet eingeklappt. Zahlen oben gehen mit einem zweiten Tippen wieder zu. Die Scrollbalken passen jetzt zum Aussehen (Holzstab bzw. Wolkenleiste).',
+    '⭐ <b>Inselsterne:</b> Deine Erfolge machen jetzt etwas aus. Ab 10, 25, 45, 70 und 100 Erfolgs-Sternen bekommt deine Insel einen Inselstern: eine Medaille, erst ohne Rahmen, dann in Bronze, Silber, Gold und zuletzt im glitzernden Regenbogen. Jeder Inselstern bringt +5 % Taler. Die Medaille steht oben neben deiner Flagge.',
     '👀 <b>Für Besucher sichtbar:</b> Wer dich besucht, sieht deine Medaille und kann deine Erfolge ansehen. In der Freundesliste steht sie neben jedem Namen, ein Tippen zeigt die Erfolge.',
     '🏆 <b>Viel mehr Erfolge:</b> 26 neue, zum Beispiel für volle Albumseiten, Läden, Brunnen, Feste, Päckchen und Hilfe bei Wünschen. Dazu 12 versteckte Erfolge, die nur einen Rätsel-Hinweis verraten. Viel Spaß beim Suchen!',
     '✨ <b>Neue Symbole:</b> Sternstaub ist jetzt ein Sternsäckchen, oben in der Leiste und bei jeder Sternstaub-Zahl. Der Bereich Gestalten in der Bauleiste hat eine Gießkanne.',

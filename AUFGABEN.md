@@ -2858,6 +2858,6 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] 5q Rathaus „Zu tun“: Kostenknöpfe ragten aus dem Fenster (bis 478/299 px auf dem Handy); Knöpfe nie breiter als das Fenster (v1326)
   - [x] 5r Rechtsklick auf die Karte schließt das Infofenster (nach Planung und Werkzeug); Ziel-Fenster startet eingeklappt; Zahlen oben
         mit zweitem Tippen wieder kurz (v1327)
-  - [ ] 5s Eigene Scrollbalken: Entwürfe zeigen
+  - [x] 5s Scrollbalken A (Holzstab / Wolkenleiste); Wolken ist Standard (gewählt bleibt gewählt); Medaille über dem Rathaus wieder weg (v1331)
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

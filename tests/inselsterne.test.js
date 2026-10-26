@@ -76,7 +76,7 @@ describe('Inselsterne', () => {
     expect(JSON.parse(split.priv).achieved).toEqual(want);
   });
 
-  it('Besuch: im Besuchsband die Medaille der Insel und „Erfolge“; Karte: Medaille über dem Rathaus', () => {
+  it('Besuch: im Besuchsband die Medaille der Insel und „Erfolge“; auf der Karte schwebt nichts (Nutzer: „unschön“)', () => {
     setStars(30);
     game('visitUi()');
     const band = document.getElementById('visit-band');
@@ -85,7 +85,7 @@ describe('Inselsterne', () => {
     expect(document.getElementById('modal-card').textContent).toContain('Erfolge von');
     game('closeModal()');
     band.remove();
-    expect(game('typeof drawIsleMedal')).toBe('function');
+    expect(game('typeof drawIsleMedal')).toBe('undefined');
   });
 
   it('style.css: Medaille als Bild, Schein für Gold und Regenbogen', () => {

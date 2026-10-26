@@ -13,10 +13,12 @@ const UI_LOOKS = {
   hecke: { name: 'Hecke' },
   wolke: { name: 'Wolken' },
 };
+const UI_LOOK_DEFAULT = 'wolke';                                           // Standard (Nutzer 26.10.2026: „Wolken default“); gewählt bleibt gewählt
+const uiLookOf = v => UI_LOOKS[v] ? v : UI_LOOK_DEFAULT;
 let uiLookId = (() => {
   let v = null;
   try { v = localStorage.getItem(UI_LOOK_KEY); } catch (e) { /* privates Fenster */ }
-  return UI_LOOKS[v] ? v : 'hecke';
+  return uiLookOf(v);
 })();
 if (typeof document !== 'undefined' && document.body) document.body.classList.add('look-' + uiLookId);   // schon für den Ladebildschirm
 function setUiLook(id) {
@@ -209,6 +211,7 @@ function cloudKnobImage(top, under, hi) {
   if (!x || !y) return '';
   sil(x, CLOUD_KNOB_DEPTH, under);
   sil(y, 0, hi); y.globalCompositeOperation = 'source-atop'; sil(y, 1.6, top);    // heller Rand oben, folgt den Buckeln
+  y.globalCompositeOperation = 'source-over';                         // zurück (die Test-Leinwand teilt sich ihren Zustand)
   x.drawImage(l, 0, 0, W, H);
   try { return c.toDataURL(); } catch (e) { return ''; }
 }

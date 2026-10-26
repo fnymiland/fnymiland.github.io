@@ -488,7 +488,7 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     **Inselsterne** (26.10.2026): Erfolgs-Sterne → 1–5 Inselsterne ab `ISLE_STARS` (10/25/45/70/100), je +5 % Taler in `boostMul('inc')`.
     Gezeigt wird **nur, was man hat** (Nutzer: „ein 3-Sterne-Restaurant hängt nicht 3/5 an die Tür“) als Medaille `UI_DRAW.medaille1–5`
     (ohne Rahmen, Bronze, Silber, Gold, Regenbogen mit Glitzerstaub; innen immer derselbe Nachthimmel). Oben `#hud-medal`, Ziel-Fenster
-    `isleGoalHtml`, Rathaus auf der Karte `drawIsleMedal`, Aufstieg `isleUpShow`, Erfolge anderer Inseln `openIsleAchv`. `achieved` steht
+    `isleGoalHtml` (nicht auf der Karte – eine schwebende Medaille überm Rathaus fand der Nutzer „unschön“), Aufstieg `isleUpShow`, Erfolge anderer Inseln `openIsleAchv`. `achieved` steht
     in `LIVE_PRIV_ALSO` (öffentlich **und** privat): Besucher und Freunde lesen es aus `worlds/<wid>/rest` (`friendRest`); fremde Daten
     nur über `achvStarsOf` (begrenzt). **Neue Erfolge** möglichst aus dem Spielstand ableiten (alte Stände haben sofort ihren Fortschritt),
     sonst Zähler über `statCount(k)` in `state.stats` (fehlt = 0, beim Besuch nie). **Versteckte** in `HIDDEN_ACHV` (`check`, Hinweis endet
