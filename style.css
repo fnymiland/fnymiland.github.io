@@ -1268,7 +1268,12 @@ body.look-wolke #modal-card:not(.basar-night) { padding: 40px 44px 48px; }
 body.phone #modal-card:not(.basar-night) { padding: 34px 32px 42px; }
 #modal { background: rgba(40, 60, 50, .28); }
 .card h2 { font-family: var(--font); font-weight: 800; font-size: 26px; line-height: 1.1; }
-#modal-card .tab-scroll > .me-edit { background: transparent; }
+/* Mitlaufender Kopf mit der Figur („Du“): in der Papierfarbe, sonst scheint beim Scrollen alles darunter durch (Nutzer 26.10.2026:
+   „wenn man im Charakter-Menü scrollt, glitcht der Text“); unten läuft er weich aus, seitlich deckt er den Innenabstand mit ab */
+#modal-card .tab-scroll > .me-edit { --paper: #f8f0dc; background: var(--paper); box-shadow: 0 -12px 0 var(--paper), -10px 0 0 var(--paper), 10px 0 0 var(--paper); }
+body.look-wolke #modal-card .tab-scroll > .me-edit { --paper: #ffffff; }
+#modal-card .tab-scroll > .me-edit::after { content: ''; position: absolute; left: -10px; right: -10px; top: 100%; height: 12px; pointer-events: none;
+  background: linear-gradient(var(--paper), transparent); }
 /* Emojis in Texten als Spiel-Symbole (wiText): Zeichen bleibt im Text, sichtbar ist das Bild */
 i.wt { display: inline-block; width: 1.35em; height: 1.15em; vertical-align: -.24em; overflow: hidden; text-indent: 300%; white-space: nowrap;
   font-style: normal; background: center bottom / contain no-repeat; }
