@@ -1596,6 +1596,11 @@ body.look-wolke #hud .hud-act .pill { background: radial-gradient(circle at 50% 
 #hud #town-btn .tod { position: relative; top: -1px; }          /* Uhrzeit fürs Auge mittig (kleinere Schrift sitzt sonst gut 1 px tief) */
 /* Knöpfe untereinander: Lager-Meldung (−🪵 3) links neben dem Knopf statt darunter auf dem nächsten Knopf */
 @media (max-width: 720px) { #hud .hud-act .pill .flash { top: 50%; right: calc(100% + 8px); margin-top: -11px; } }
+/* dieselben Stufen, wenn der Inhalt nicht passt, egal wie breit der Bildschirm ist (fitHud in ui.js: Inselname, Sternstaub, große Zahlen) */
+body.hud-noname #hud #town-name { display: none; }
+body.hud-rail #hud .hud-act { flex-direction: column; position: absolute; right: 0; top: calc(100% + 10px); gap: 6px; margin-left: 0; }
+body.hud-rail #hud .hud-act .pill .flash { top: 50%; right: calc(100% + 8px); margin-top: -11px; }
+@media (min-width: 601px) { body.hud-rail #panel.slab-in { right: 58px; } }
 
 /* Schrift „Schulheft“ (Mali, Nutzer 26.10.2026): Mali reicht bis 700 – fett bleibt fett (800/900 werden 700); Fließtext in Fenstern
    etwas leichter (500), sonst wirkt die runde Handschrift schwer – so, wie in der Vorschau (tools/schrift.html) ausgewählt */

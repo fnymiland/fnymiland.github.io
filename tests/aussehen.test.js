@@ -158,4 +158,24 @@ describe('Aussehen', () => {
     expect(tail).toMatch(/#hud \.hud-act \.pill \{[^}]*border-radius: 50%/);
     expect(tail).toMatch(/@media \(max-width: 720px\) \{\s*#hud \.hud-act \{ flex-direction: column/);   // schmal: Knöpfe untereinander
   });
+
+  it('Leiste oben passt sich an ihren Inhalt an: erst Ortsname weg, dann Knöpfe untereinander (Menü-Knopf ragte bei 1000 px hinaus)', () => {
+    // jsdom misst nicht: Breite der Leiste je nach Stufe vorgeben (so breit wäre sie im Browser)
+    const hud = document.getElementById('hud'), body = document.body;
+    const need = { '': 1027, noname: 960, rail: 700 };
+    Object.defineProperty(hud, 'clientWidth', { configurable: true, get: () => 980 });
+    Object.defineProperty(hud, 'scrollWidth', { configurable: true, get: () => need[body.classList.contains('hud-rail') ? 'rail' : body.classList.contains('hud-noname') ? 'noname' : ''] });
+    game('fitHud()');
+    expect([body.classList.contains('hud-noname'), body.classList.contains('hud-rail')]).toEqual([true, false]);
+    need.noname = 990;                                                          // längerer Ortsname, größere Zahlen: auch ohne Namen zu breit
+    game('fitHud()');
+    expect([body.classList.contains('hud-noname'), body.classList.contains('hud-rail')]).toEqual([true, true]);
+    need[''] = 900;                                                              // Fenster breiter gezogen: alles wieder in einer Zeile
+    game('fitHud()');
+    expect([body.classList.contains('hud-noname'), body.classList.contains('hud-rail')]).toEqual([false, false]);
+    delete hud.clientWidth; delete hud.scrollWidth;
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    expect(css).toMatch(/body\.hud-noname #hud #town-name \{ display: none; \}/);
+    expect(css).toMatch(/body\.hud-rail #hud \.hud-act \{ flex-direction: column/);
+  });
 });

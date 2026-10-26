@@ -2846,6 +2846,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] 5j Mehr Luft zum Rand (Nutzer 26.10.2026): alle Fenster 6 px mehr Innenabstand, Ziel-/Infofenster 12 px breiter; Handy: Fenster
         näher an den Bildschirmrand, Figur im Du-Fenster kleiner (sonst „Läuft auf der Insel herum“ zweizeilig); 2 px Querscrollen im
         Du-Fenster und im Infofenster (Hausbild) behoben; neue Prüfung `KT_QUER()` (v1303)
+  - [x] 5j2 Leiste oben ragte bei 1000 px (auch 721–760 px, iPad quer 1024) rechts hinaus: passt sich jetzt am Inhalt an (`fitHud`) (v1304)
   - [ ] 5k Emojis in Menüs abwägen (Einstellungen, „Das ist neu“, Rathaus …) – Vorschlag zeigen
   - [ ] 5l Menü-Knopf oben rechts: Wegweiser zeigt nicht, dass es ins Menü geht – Varianten als Bild zeigen
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,

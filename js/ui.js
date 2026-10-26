@@ -3701,6 +3701,19 @@ function showSaveMenu() {
   };
 }
 $('menu-btn').onclick = showMenu;
+// Leiste oben passt sich an ihren Inhalt an (Nutzer 26.10.2026, beim Menü-Knopf gefunden: bei 1000 px ragte er rechts hinaus – feste
+// Stufen bei 860/720 px reichen nicht, Inselname, Sternstaub und Zahlen sind verschieden lang): zu breit → Ortsname weg (die Flagge
+// und die Uhrzeit bleiben), immer noch zu breit → die vier Knöpfe rechts untereinander, wie schmal (style.css)
+function fitHud() {
+  const hud = $('hud'), b = document.body;
+  if (!hud || !b) return;
+  const over = () => hud.scrollWidth > hud.clientWidth + 1;
+  b.classList.remove('hud-noname', 'hud-rail');
+  if (over()) b.classList.add('hud-noname');
+  if (over()) b.classList.add('hud-rail');
+}
+window.addEventListener('resize', fitHud);
+if (window.ResizeObserver) { const ro = new ResizeObserver(() => fitHud()); for (const el of document.querySelectorAll('#hud .hud-info, #hud .hud-vals')) ro.observe(el); }
 // Knöpfe oben (Block 52): mit dem Finger schon beim Loslassen auslösen – ohne auf Safaris Klick zu warten, der den ersten
 // Tipp manchmal nur als „Finger drüber“ wertet. Der Klick danach wird dann ignoriert; Maus und Tastatur wie gehabt.
 function fastTap(el) {

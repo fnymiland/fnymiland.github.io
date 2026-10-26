@@ -581,6 +581,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     **Zahlen in der Leiste oben** nur über `hudNum` (bis 999 genau, dann `fmtHud`: 3,1k · 158k · 1,5 Mio., abgerundet; nach Antippen von
     Taler/Einwohner 5 s die volle Zahl) – lange, ständig wechselnde Zahlen ließen die ganze Leiste zucken. Ziffern `tabular-nums`.
     Das Ziel-Fenster steht `--goal-over` (Hecke 12, Wolken 16 px) tiefer als `top`, weil Büsche/Buckel über seinen Rand hinausstehen.
+    **Leiste oben passt sich am Inhalt an, nicht nur an der Bildschirmbreite** (`fitHud`, ui.js): zu breit → `body.hud-noname` (Ortsname weg),
+    weiter zu breit → `body.hud-rail` (Knöpfe untereinander). Die festen Stufen (860/720 px) reichten nicht: bei 1000 px ragte der Menü-Knopf
+    hinaus (Inselname, Sternstaub, große Zahlen). Neue Teile der Leiste prüfen mit `LT_CHECK()` bei 640–1366 px.
     **Nichts darf über den Innenabstand eines Scrollbereichs (`.p-scroll`, `.tab-scroll`: 8 px) hinausragen** (negativer Rand, `::after`
     mit `left:-10px`): sonst scrollt er quer und unten erscheint ein grauer Balken. Prüfen: `await KT_QUER()`. Mitlaufende Köpfe (`.me-edit`)
     in Papierfarbe, nie durchsichtig – sonst scheint beim Scrollen alles darunter durch.
