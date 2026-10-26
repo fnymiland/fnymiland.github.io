@@ -167,6 +167,37 @@
         <span style="display:flex;gap:12px;align-items:center;padding:4px 12px;border-radius:8px;background:#fffaf0">Stufe 4 und 5 nebeneinander, Leistengröße: ${tight(30).split('</span>').slice(3, 5).join('</span>')}</span></span></div>`;
     document.body.append(el); return 'C';
   };
+  // Runde 4 (Nutzer: „Stufe 5 gefällt mir noch nicht ganz – diese schrägen Linien im Rahmen sind … hm“): Fassungen für Stufe 5 ohne Schräglinien
+  const DIA = {
+    a: x => r => { for (const [a, s] of [[-2.3, 2.6], [-0.3, 2.1], [2.4, 2.3]]) glint(x, X0 + Math.cos(a) * (r - 2.6), Y0 + Math.sin(a) * (r - 2.6), s); },
+    b: x => r => { for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, cx = X0 + Math.cos(a) * (r - 3), cy = Y0 + Math.sin(a) * (r - 3);
+      x.fillStyle = 'rgba(80,60,120,.35)'; x.beginPath(); x.arc(cx, cy + 0.5, 1.9, 0, 7); x.fill();
+      x.fillStyle = '#ffffff'; x.beginPath(); x.moveTo(cx, cy - 1.9); x.lineTo(cx + 1.9, cy); x.lineTo(cx, cy + 1.9); x.lineTo(cx - 1.9, cy); x.closePath(); x.fill();
+      x.fillStyle = '#d8ecff'; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx + 1.9, cy); x.lineTo(cx, cy + 1.9); x.closePath(); x.fill(); }
+      glint(x, X0 + Math.cos(-2.3) * (r - 3), Y0 + Math.sin(-2.3) * (r - 3), 3); glint(x, X0 + Math.cos(0.5) * (r - 3), Y0 + Math.sin(0.5) * (r - 3), 2.4); },
+    c: x => r => { for (let i = 0; i < 70; i++) { const a = i * 2.39996, d = r - 1 - (i * 7.31 % 5); x.fillStyle = i % 3 ? 'rgba(255,255,255,.9)' : 'rgba(255,245,200,.95)'; x.beginPath(); x.arc(X0 + Math.cos(a) * d, Y0 + Math.sin(a) * d, i % 5 ? 0.4 : 0.75, 0, 7); x.fill(); }
+      glint(x, X0 + Math.cos(-2.3) * (r - 2.6), Y0 + Math.sin(-2.3) * (r - 2.6), 2.4); glint(x, X0 + Math.cos(2.4) * (r - 2.6), Y0 + Math.sin(2.4) * (r - 2.6), 2); },
+    d: x => r => { for (let i = 0; i < 24; i++) { const a0 = i / 24 * Math.PI * 2, a1 = (i + 1) / 24 * Math.PI * 2; x.fillStyle = i % 2 ? 'rgba(255,255,255,.28)' : 'rgba(60,30,100,.12)';
+      x.beginPath(); x.arc(X0, Y0, r, a0, a1); x.arc(X0, Y0, r - 6, a1, a0, true); x.closePath(); x.fill(); }
+      glint(x, X0 + Math.cos(-2.3) * (r - 2.6), Y0 + Math.sin(-2.3) * (r - 2.6), 2.6); glint(x, X0 + Math.cos(0.6) * (r - 2.6), Y0 + Math.sin(0.6) * (r - 2.6), 2.1); },
+    e: x => r => { x.strokeStyle = '#f2c14a'; x.lineWidth = 1.3; x.beginPath(); x.arc(X0, Y0, r - 0.65, 0, 7); x.stroke(); x.beginPath(); x.arc(X0, Y0, r - 5.4, 0, 7); x.stroke();
+      glint(x, X0 + Math.cos(-2.3) * (r - 3), Y0 + Math.sin(-2.3) * (r - 3), 2.6); glint(x, X0 + Math.cos(0.6) * (r - 3), Y0 + Math.sin(0.6) * (r - 3), 2.1); },
+    f: x => r => { for (let i = 0; i < 30; i++) { const a = i / 30 * Math.PI * 2; x.fillStyle = '#fff8ee'; x.beginPath(); x.arc(X0 + Math.cos(a) * (r - 5.2), Y0 + Math.sin(a) * (r - 5.2), 0.95, 0, 7); x.fill(); }
+      glint(x, X0 + Math.cos(-2.3) * (r - 2.4), Y0 + Math.sin(-2.3) * (r - 2.4), 2.6); glint(x, X0 + Math.cos(0.6) * (r - 2.4), Y0 + Math.sin(0.6) * (r - 2.4), 2.1); },
+  };
+  const five = v => mk(x => { x0 = x; halo(x, 47, 'rgba(255,200,240,.85)');
+    medal(x, 5, { r: 26.5, rim: 6, face: ['#25306a', '#0b1030'], faceDeco: night(5, false), outline: rainbowRim(x), rimDeco: DIA[v](x), over: () => sparkle(x, 6) }); });
+  window.MD_FIVE = () => {
+    let el = document.getElementById('md-sheet'); if (el) el.remove();
+    el = document.createElement('div'); el.id = 'md-sheet';
+    el.style.cssText = 'position:fixed;inset:0;z-index:999;background:#f3efe6;padding:10px 16px;overflow:auto;font:700 14px/1.2 var(--font);color:#5a3d24;display:grid;grid-template-columns:repeat(3,1fr);gap:6px 10px';
+    const gold = MD_IMG(K.length - 1, 4), names = { a: 'a glatt, Lichtpunkte', b: 'b eingesetzte Diamanten', c: 'c Glitzerstaub', d: 'd Brillantschliff', e: 'e mit Goldfassung', f: 'f Perlenring innen' };
+    const tight = (u, h) => `<span style="display:inline-block;width:${h}px;height:${h}px;position:relative"><img src="${u}" style="position:absolute;height:${Math.round(h * 1.75)}px;left:50%;top:50%;transform:translate(-50%,-50%)"></span>`;
+    el.innerHTML = Object.keys(DIA).map(v => { const u = five(v); return `<div style="background:#fffaf0;border-radius:12px;padding:6px 8px">${names[v]}
+      <div style="display:flex;align-items:center;justify-content:center"><img src="${u}" style="height:150px"></div>
+      <div style="display:flex;gap:10px;align-items:center;justify-content:center;padding:4px 8px;border-radius:6px;background:#ecd4a3;border:1.5px solid #8a5a34">Leiste: ${tight(gold, 30)} ${tight(u, 30)}</div></div>`; }).join('');
+    document.body.append(el); return 'Stufe 5';
+  };
   // Probe: groß und klein (Leiste ≈ 30 px, Freundesliste ≈ 22 px) auf Holz und Wolke
   window.MD_MIX = () => {
     let el = document.getElementById('md-sheet'); if (el) el.remove();
