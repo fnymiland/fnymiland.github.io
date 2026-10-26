@@ -119,6 +119,8 @@ function paintSlab(w, h, role, seed, look = uiLookId, night = 0) {
     const rect = (path, ox, oy, ww, hh, r) => { path.beginPath(); path.roundRect(ox, oy, ww, hh, r); };
     x.save(); x.filter = 'blur(6px)'; rect(x, 0, L.depth + 6, w, h, rr); x.fillStyle = 'rgba(40,30,20,.2)'; x.fill(); x.restore();
     const B = roundRectRing(w, h, rr, 17);
+    // dichte Hecke darunter: zwischen den Büschen und dem Papier (v. a. an den Ecken) darf nichts durchscheinen (Nutzer 26.10.2026: „kleine Lücke“)
+    rect(x, 0, 0, w, h, rr); x.fillStyle = '#3f7430'; x.fill();
     for (const [px, py] of B) slabDot(x, px, py + 5, BR, '#3f7430');
     for (const [px, py] of B) slabDot(x, px, py, BR, '#5c9c43');
     for (const [px, py] of B) slabDot(x, px - 2, py - 3, BR * .55, '#79b85a');
