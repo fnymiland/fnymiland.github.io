@@ -127,6 +127,46 @@
   });
   K.push({ name: 'A Metallrahmen, Nachthimmel innen gleich', sub: 'Bronze · Silber · Gold · Platin · Opal', f: metalNight(false) },
     { name: 'B Metallrahmen, Nachthimmel wächst mit', sub: 'dazu Mond · Milchstraße · Polarlicht', f: metalNight(true) });
+  // Runde 3 (Nutzer: „A, aber in der Leiste kaum ein Unterschied zwischen 4 und 5 – Regenbogen leicht(!!) kräftiger, etwas glitzernd
+  // diamantig; Stufe 4 Gold, 3 Silber, 2 Bronze, 1 gar kein Rahmen“)
+  const RAINBOW = ['#ff7fa6', '#ffb84a', '#ffe452', '#5fd895', '#5fb0ff', '#a986ff', '#ff7fa6'];
+  const rainbowRim = x => r => {
+    x.fillStyle = '#8a7aa8'; x.beginPath(); x.arc(X0, Y0 + 1.6, r, 0, 7); x.fill();
+    const g = x.createConicGradient(-Math.PI / 2, X0, Y0); RAINBOW.forEach((c, i) => g.addColorStop(i / (RAINBOW.length - 1), c));
+    x.fillStyle = g; x.beginPath(); x.arc(X0, Y0, r, 0, 7); x.fill();
+    x.fillStyle = lin(x, Y0 - r, Y0 + r, ['rgba(255,255,255,.32)', 'rgba(255,255,255,0)', 'rgba(60,30,90,.25)']); x.beginPath(); x.arc(X0, Y0, r, 0, 7); x.fill();
+  };
+  const diamond = x => r => {                                             // Schliff: helle Facettenkanten und funkelnde Punkte auf dem Rand
+    x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 0.6;
+    for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2; x.beginPath(); x.moveTo(X0 + Math.cos(a) * (r - 4.4), Y0 + Math.sin(a) * (r - 4.4)); x.lineTo(X0 + Math.cos(a + 0.2) * r, Y0 + Math.sin(a + 0.2) * r); x.stroke(); }
+    for (const [a, s] of [[-2.3, 2.4], [-0.4, 1.9], [2.4, 2.1]]) glint(x, X0 + Math.cos(a) * (r - 2.2), Y0 + Math.sin(a) * (r - 2.2), s);
+  };
+  const tier3 = n => mk(x => {
+    x0 = x;
+    if (n === 4) halo(x, 44, 'rgba(255,215,120,.55)');
+    if (n === 5) halo(x, 47, 'rgba(255,200,240,.85)');
+    const o = { face: ['#25306a', '#0b1030'], faceDeco: night(n, false) };
+    if (n === 1) Object.assign(o, { rim: 1.4, rimCols: ['#4a578f', '#1a2050'] });
+    else if (n === 5) Object.assign(o, { r: 26.5, rim: 6, outline: rainbowRim(x), rimDeco: diamond(x), over: () => sparkle(x, 6) });
+    else Object.assign(o, { rimCols: [null, ['#f6c9a0', '#c98250', '#8a4a20'], ['#ffffff', '#d9dee8', '#9aa3b5', '#6f7890'], GOLD][n - 1], over: n === 4 ? () => sparkle(x, 2) : null });
+    medal(x, n, o);
+  });
+  K.push({ name: 'C ohne Rahmen · Bronze · Silber · Gold · Regenbogen-Diamant', sub: 'innen Nachthimmel, immer gleich', f: tier3 });
+  window.MD_C = () => {
+    let el = document.getElementById('md-sheet'); if (el) el.remove();
+    el = document.createElement('div'); el.id = 'md-sheet';
+    el.style.cssText = 'position:fixed;inset:0;z-index:999;background:#f3efe6;padding:10px 16px;overflow:auto;font:700 14px/1.2 var(--font);color:#5a3d24';
+    const k = K.length - 1, big = h => [1, 2, 3, 4, 5].map(n => `<img src="${MD_IMG(k, n)}" style="height:${h}px">`).join('');
+    const tight = h => [1, 2, 3, 4, 5].map(n => `<span style="display:inline-block;width:${h}px;height:${h}px;position:relative"><img src="${MD_IMG(k, n)}" style="position:absolute;height:${Math.round(h * 1.75)}px;left:50%;top:50%;transform:translate(-50%,-50%)"></span>`).join('');
+    el.innerHTML = `<div>${K[k].name} <span style="font-weight:500;font-size:12px;color:#8a6a4a">${K[k].sub}</span></div>
+      <div style="display:flex;align-items:center;gap:14px;margin:-4px 0 4px">${big(140)}</div>
+      <div style="display:flex;gap:16px;align-items:center;margin:4px 0 10px">
+        <span style="display:flex;gap:12px;align-items:center;padding:4px 12px;border-radius:6px;background:#ecd4a3;border:1.5px solid #8a5a34">Leiste (Hecke): ${tight(30)}</span>
+        <span style="display:flex;gap:12px;align-items:center;padding:4px 12px;border-radius:12px;background:#fff;border:2px solid #a9bde0;color:#3b4763">Leiste (Wolken): ${tight(30)}</span></div>
+      <div style="display:flex;gap:16px;align-items:center"><span style="display:flex;gap:12px;align-items:center;padding:4px 12px;border-radius:8px;background:#fffaf0">Freundesliste: ${tight(22)}</span>
+        <span style="display:flex;gap:12px;align-items:center;padding:4px 12px;border-radius:8px;background:#fffaf0">Stufe 4 und 5 nebeneinander, Leistengröße: ${tight(30).split('</span>').slice(3, 5).join('</span>')}</span></span></div>`;
+    document.body.append(el); return 'C';
+  };
   // Probe: groß und klein (Leiste ≈ 30 px, Freundesliste ≈ 22 px) auf Holz und Wolke
   window.MD_MIX = () => {
     let el = document.getElementById('md-sheet'); if (el) el.remove();
