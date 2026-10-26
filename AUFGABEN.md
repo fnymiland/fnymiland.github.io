@@ -2854,6 +2854,6 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] 5n Gestalten = Gießkanne, Sternstaub = Sternsäckchen (✨ an einer Zahl im Text, oben in der Leiste; auf der Karte bleibt ✨ Funkeln) (v1315)
   - [x] 5o Inselsterne (Medaille ohne Rahmen/Bronze/Silber/Gold/Regenbogen, +5 % Taler je Stern), oben, Ziel-Fenster, Rathaus, Besuch,
         Freundesliste, Erfolge anderer Inseln; 26 neue Erfolge; 12 versteckte (v1321)
-  - [ ] 5p Datenbank-Regeln prüfen: Freunde lesen `worlds/<wid>/rest` schon für die Flagge, die Erfolge stehen jetzt mit darin (nichts Neues)
+  - [x] 5p Datenbank-Regeln geprüft: `worlds/<wid>` lesen Besucher (offen) und Freunde schon – keine neue Regel nötig
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).
