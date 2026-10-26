@@ -1493,7 +1493,6 @@ body.look-hecke .card.basar .btn.small.basar-try { background: radial-gradient(c
    etwas?“ – auf dem Handy ragte „Schließen“ im Tagebuch aus der Wolke bzw. an die Nägel). Passt die Reihe nicht, rutscht ein Knopf in
    die nächste Zeile; sonst bleiben alle gleich breit */
 .row { flex-wrap: wrap; }
-.row > .btn { min-width: max-content; }
 
 /* Ziel-Fenster: sichtbarer Knopf zum Ein-/Ausklappen (Nutzer 26.10.2026: „sieht nicht aus, als könnte man sie einklappen“) – das
    ganze Fenster klappt beim Antippen, der Knopf zeigt es: offen Pfeil nach oben, eingeklappt nach unten. Brett bzw. Wölkchen wie die Knöpfe */
@@ -1663,3 +1662,15 @@ body.look-wolke .isle-goal .isle-bar { background: rgba(59, 71, 99, .14); }
 .achv-row.found { box-shadow: inset 0 0 0 2px #e0b23a; border-radius: 10px; }
 .achv-row.hidden-q .ai { opacity: .55; }
 .hid-tag { font-size: 10px; font-weight: 800; color: #9a6a12; background: #fff1c4; border-radius: 5px; padding: 1px 5px; margin-left: 6px; }
+
+/* Nie breiter als das Fenster (Nutzer 26.10.2026: „bei ‚Zu tun‘ können Buttons größer als der Rand werden, dann muss man seitlich scrollen
+   – es sollte immer alles in ein Fenster passen“). Zeilen mit Knöpfen (Rathaus, Inseln …) brechen um: reicht der Platz nicht, rutschen
+   die Knöpfe rechtsbündig unter den Text. Knöpfe werden höchstens so breit wie das Fenster, ein zu langer Text (Kosten mit vielen
+   Materialien) bricht im Knopf um. In Knopfreihen bleibt: nie schmaler als der Text (kein Quetschen), sonst in die nächste Zeile */
+.hall-row { flex-wrap: wrap; }
+.hall-row > span:first-child { flex: 1 1 9em; min-width: 0; overflow-wrap: anywhere; }
+.hall-btns { flex: 0 1 auto; flex-wrap: nowrap; justify-content: flex-end; margin-left: auto; max-width: 100%; min-width: 0; }
+.hall-btns > .btn:first-child:not(:last-child) { flex: 0 1 auto; min-width: 0; }   /* „Ausbauen · Kosten“ bricht lieber selbst um, „Hin“ bleibt daneben */
+.hall-btns > .btn:last-child { flex: none; }
+:is(#modal-card, #panel, #sheet) .btn { max-width: 100%; overflow-wrap: anywhere; }
+.row > .btn { min-width: 0; flex-basis: auto !important; flex-shrink: 0 !important; }   /* gegen style="flex:1": Grundbreite = Text, nie kleiner */

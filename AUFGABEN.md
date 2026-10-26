@@ -2855,5 +2855,6 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] 5o Inselsterne (Medaille ohne Rahmen/Bronze/Silber/Gold/Regenbogen, +5 % Taler je Stern), oben, Ziel-Fenster, Rathaus, Besuch,
         Freundesliste, Erfolge anderer Inseln; 26 neue Erfolge; 12 versteckte (v1321)
   - [x] 5p Datenbank-Regeln geprüft: `worlds/<wid>` lesen Besucher (offen) und Freunde schon – keine neue Regel nötig
+  - [x] 5q Rathaus „Zu tun“: Kostenknöpfe ragten aus dem Fenster (bis 478/299 px auf dem Handy); Knöpfe nie breiter als das Fenster (v1326)
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

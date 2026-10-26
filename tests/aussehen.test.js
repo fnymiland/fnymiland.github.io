@@ -159,6 +159,16 @@ describe('Aussehen', () => {
     expect(tail).toMatch(/@media \(max-width: 720px\) \{\s*#hud \.hud-act \{ flex-direction: column/);   // schmal: Knöpfe untereinander
   });
 
+  it('Rathaus „Zu tun“: nichts breiter als das Fenster (Nutzer 26.10.2026: „Buttons größer als der Rand, man muss seitlich scrollen“)', () => {
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    const tail = css.slice(css.indexOf('Nie breiter als das Fenster'));
+    expect(tail).toMatch(/\.hall-row \{ flex-wrap: wrap; \}/);                              // Knöpfe rutschen unter den Text
+    expect(tail).toMatch(/\.hall-btns \{[^}]*margin-left: auto[^}]*max-width: 100%/);
+    expect(tail).toMatch(/\.hall-btns > \.btn:first-child:not\(:last-child\) \{[^}]*min-width: 0/);   // „Ausbauen“ bricht um, „Hin“ bleibt daneben
+    expect(tail).toMatch(/:is\(#modal-card, #panel, #sheet\) \.btn \{[^}]*max-width: 100%/);  // Text bricht im Knopf um
+    expect(tail).toMatch(/\.row > \.btn \{[^}]*min-width: 0[^}]*flex-shrink: 0 !important/);   // nie gequetscht, aber höchstens so breit wie die Reihe
+  });
+
   it('Souvenirs: lange Namen („Freundschaftsbäumchen“) trennen statt über die Kachel zu laufen', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
     expect(css).toMatch(/\.sv-e b, \.sv-e small, \.sv-opt small \{[^}]*hyphens: auto/);

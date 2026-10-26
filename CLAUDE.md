@@ -598,6 +598,10 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     (`span`, `.chip` …). Neue Texte also ohne Sorge mit Emoji schreiben, aber Bilder für Dinge in `span`/`.chip` setzen. Ein schmückendes
     Bildchen nimmt sein Leerzeichen mit. **Menü-Knopf** = drei Striche (`menue`, Farbe je Aussehen: `menueInk`, `uiIconsRelook`); ☰ und 🪧
     in Texten zeigen ihn.
+    **Nichts in einem Fenster breiter als das Fenster** (Nutzer: „bei ‚Zu tun‘ muss man seitlich scrollen“): Knöpfe in `#modal-card`,
+    `#panel`, `#sheet` haben `max-width: 100%`, zu langer Text bricht im Knopf um. `.row > .btn` wird nie gequetscht (Grundbreite = Text,
+    gegen `style="flex:1"` per `!important`), rutscht sonst in die nächste Zeile. `.hall-row` bricht um, `.hall-btns` bleibt eine Zeile
+    („Ausbauen · Kosten“ bricht selbst um, „Hin“ daneben). Testwelt mit langen Kosten: `?welt=bauland` → Rathaus „Zu tun“; `KT_QUER()`.
     **Nichts darf über den Innenabstand eines Scrollbereichs (`.p-scroll`, `.tab-scroll`: 8 px) hinausragen** (negativer Rand, `::after`
     mit `left:-10px`): sonst scrollt er quer und unten erscheint ein grauer Balken. Prüfen: `await KT_QUER()`. Mitlaufende Köpfe (`.me-edit`)
     in Papierfarbe, nie durchsichtig – sonst scheint beim Scrollen alles darunter durch.
