@@ -75,6 +75,24 @@ describe('Füreinander (Block 105)', () => {
     expect(m.wish).toBe(true);
     expect(game('state.res.bretter')).toBe(350);
   });
+  it('Freundesliste zeigt die Inselsterne der Freunde (Medaille aus ihrer öffentlichen Insel), Antippen zeigt ihre Erfolge (26.10.2026)', async () => {
+    const ach = { taler: 5, einwohner: 5, haeuser: 3, villen: 3, glasvillen: 2, bahn: 4, zuege: 3, laternen: 3 };   // 28 Sterne → 2 Inselsterne
+    game(`frList = { f1: { st: 'freund', name: 'Ben', wid: 'w1' } }; frOff = () => {}; frRestCache = {};
+      cloudApi.tree = { fr: { f1: { u1: { st: 'freund' } } }, worlds: { w1: { owner: 'f1', rest: JSON.stringify({ town: { name: 'Fischdorf', color: '#e8604f', symbol: '⚓' }, achieved: ${JSON.stringify(ach)} }) } } }`);
+    await game("openYou('freunde')"); await tick(20);
+    const chip = game("(() => { const b = document.querySelector('[data-frachv=\"f1\"]'); return b && [b.querySelector('.isle-medal.t2') != null, b.getAttribute('aria-label')]; })()");
+    expect(chip).toEqual([true, 'Erfolge von Ben: 2 Inselsterne']);
+    game("document.querySelector('[data-frachv=\"f1\"]').click()");
+    const t = game("document.getElementById('modal-card').textContent");
+    expect(t).toContain('Erfolge von Fischdorf');
+    expect(t).toContain('2 Inselsterne');
+    expect(t).toContain('Wohnhäuser');
+    game("closeModal()");
+    game("openIsleAchv({ taler: -9, einwohner: 'x', haeuser: 1e9, '<b>': 3 }, '<img src=x onerror=alert(1)>')");   // kaputte oder böse Daten: kein Absturz, nichts ausgeführt
+    expect(game("document.querySelector('#modal-card img')")).toBe(null);
+    game("closeModal()");
+  });
+
   it('Wunsch hängt nur 24 Stunden: danach sehen Freunde ihn nicht mehr, Hilfe zählt nicht, der Besitzer nimmt ihn ab (Nutzer, 09.10.2026)', async () => {
     const H = 3600 * 1000, now = Date.now();
     // Freund f1 (frisch, 23 Std. alt) und f2 (25 Std. alt)

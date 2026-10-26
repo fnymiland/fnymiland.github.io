@@ -216,14 +216,17 @@ function visitUi() {
   let el = document.getElementById('visit-band');
   if (!el) {
     const w = document.createElement('div');
-    w.innerHTML = '<div id="visit-band" role="status"><span class="vb-text">🏝️ Zu Besuch …</span><button class="btn small" id="visit-heart" hidden>❤️</button><button class="btn small" id="visit-book" hidden>📖</button><button class="btn small" id="visit-home">🏠 Meine Insel</button></div>';
+    w.innerHTML = '<div id="visit-band" role="status"><span class="vb-text">🏝️ Zu Besuch …</span><button class="btn small" id="visit-heart" hidden>❤️</button><button class="btn small" id="visit-book" hidden>📖</button><span id="visit-medal"></span><button class="btn small" id="visit-achv">Erfolge</button><button class="btn small" id="visit-home">🏠 Meine Insel</button></div>';
     el = w.firstChild; document.body.appendChild(el);
     el.querySelector('#visit-home').onclick = visitLeave;
     el.querySelector('#visit-heart').onclick = () => visitHeart();
     el.querySelector('#visit-book').onclick = () => visitBook();
+    el.querySelector('#visit-achv').onclick = () => openIsleAchv(state.achieved, state.town.name);   // Erfolge dieser Insel (Inselsterne, 26.10.2026)
   }
   const fr = typeof visitFriend !== 'undefined' && visitFriend;                 // Freunde: Herz und Gästebuch (Block 96)
   el.querySelector('#visit-heart').hidden = !fr; el.querySelector('#visit-book').hidden = !fr;
+  const isl = isleStars(), vm = el.querySelector('#visit-medal');                   // Inselsterne der besuchten Insel
+  if (vm.dataset.n !== String(isl)) { vm.dataset.n = String(isl); vm.innerHTML = isl ? isleMedalHtml(isl) : ''; }
   if (liveFollowing()) el.querySelector('.vb-text').textContent = `🏝️ Zu Besuch in ${state.town.name} · 👥 ${fmt(T.pop)}`;
 }
 
@@ -330,14 +333,16 @@ async function openFriends() {
   if (tok !== frRenderTok || youTab !== 'freunde' || !$('fr-box') || $('modal').hidden) return; // inzwischen geschlossen, anderer Reiter oder neuer Aufruf
   const entries = Object.entries(frList), by = st => entries.filter(([, e]) => e.st === st);
   const wishes = {};                                                     // Wunschzettel der Freunde (Block 105)
+  const rests = {};                                                      // öffentlicher Teil ihrer Inseln (Erfolge, Flagge)
   await Promise.all([...by('freund').filter(([, e]) => e.wid).map(async ([id, e]) => { wishes[id] = wishClean(await cloudApi.get(`worlds/${e.wid}/wish`).catch(() => null)); }),
-    onlineRead(by('freund').map(([id]) => id))]);                       // spielt gerade / zuletzt vor … (Block 130)
+    onlineRead(by('freund').map(([id]) => id)),                       // spielt gerade / zuletzt vor … (Block 130)
+    ...by('freund').map(async ([id, e]) => { rests[id] = await friendRest(id, e); })]);   // Inselsterne (26.10.2026)
   if (tok !== frRenderTok || youTab !== 'freunde' || !$('fr-box') || $('modal').hidden) return;
   frPushFlag();
   const row = ([id, e], btns) => `<div class="fr-row"><span>${escHtml(e.name || 'Freund')}</span><span class="fr-btns">${btns(id, e)}</span></div>`;
   const friendRow = ([id, e]) => {
     const w = wishes[id], p = (myBonds[id] || {}).p, partner = state.partner && state.partner.uid === id;
-    return `<div class="fr-friend"><div class="fr-row"><span>${escHtml(e.name || 'Freund')} <small class="bond" title="Freundschaft">${bondHearts(p)}</small>${onlineHtml(id, frOnline[id])}</span><span class="fr-btns">${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small${svSentToday(id) ? ' done' : ''}" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Souvenir schicken">🎁</button><button class="btn ghost small${partner ? ' on' : ''}" data-frpartner="${escHtml(id)}" aria-label="${partner ? 'Partnerstadt entfernen' : 'Als Partnerstadt wählen'}" aria-pressed="${partner}">🚩</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button></span></div>
+    return `<div class="fr-friend"><div class="fr-row"><span>${escHtml(e.name || 'Freund')} <small class="bond" title="Freundschaft">${bondHearts(p)}</small>${isleChipHtml(id, e, rests[id])}${onlineHtml(id, frOnline[id])}</span><span class="fr-btns">${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small${svSentToday(id) ? ' done' : ''}" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Souvenir schicken">🎁</button><button class="btn ghost small${partner ? ' on' : ''}" data-frpartner="${escHtml(id)}" aria-label="${partner ? 'Partnerstadt entfernen' : 'Als Partnerstadt wählen'}" aria-pressed="${partner}">🚩</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button></span></div>
       ${w && w.got < w.n ? (wishCovered(id, w) >= w.n
         ? `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="ok">✓ du hast genug geschickt, es muss nur noch abgeholt werden</small></div>`
         : `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="muted">(${fmt(w.got)} da${wishSent(id, w).n ? `, ${fmt(wishSent(id, w).n)} von dir unterwegs` : ''} · ${wishLeft(w)})</small> <button class="btn small" data-frhelp="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}">🎁 Helfen</button></div>`) : ''}</div>`;
@@ -374,6 +379,7 @@ async function openFriends() {
   for (const b of document.querySelectorAll('[data-frhelp]')) b.onclick = () => mailCompose(b.dataset.frhelp, (b.dataset.frname || 'Freund').split(' · ')[0], wishes[b.dataset.frhelp]);
   for (const b of document.querySelectorAll('[data-frpartner]')) b.onclick = async () => { await togglePartner(b.dataset.frpartner, frList[b.dataset.frpartner] || {}); openFriends(); };
   for (const b of document.querySelectorAll('[data-frvisit]')) b.onclick = () => { save(); location.href = visitLink(b.dataset.frvisit); };
+  for (const b of document.querySelectorAll('[data-frachv]')) b.onclick = () => { const r = rests[b.dataset.frachv] || {}; openIsleAchv(r.achieved, (r.town && r.town.name) || (frList[b.dataset.frachv] || {}).name, () => openYou('freunde')); };
   $('fr-open').onclick = async () => { try { await liveSetOpen(!liveOpen); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };
   if ($('fr-link')) $('fr-link').onclick = () => share(visitLink(wid), true);
   if ($('fr-new')) $('fr-new').onclick = async () => { try { await liveNewLink(); toast('🔗 Neuer Link. Der alte geht nicht mehr.'); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };

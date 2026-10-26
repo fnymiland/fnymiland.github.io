@@ -76,6 +76,18 @@ describe('Inselsterne', () => {
     expect(JSON.parse(split.priv).achieved).toEqual(want);
   });
 
+  it('Besuch: im Besuchsband die Medaille der Insel und „Erfolge“; Karte: Medaille über dem Rathaus', () => {
+    setStars(30);
+    game('visitUi()');
+    const band = document.getElementById('visit-band');
+    expect(band.querySelector('#visit-medal .isle-medal.t2')).not.toBe(null);
+    band.querySelector('#visit-achv').click();
+    expect(document.getElementById('modal-card').textContent).toContain('Erfolge von');
+    game('closeModal()');
+    band.remove();
+    expect(game('typeof drawIsleMedal')).toBe('function');
+  });
+
   it('style.css: Medaille als Bild, Schein für Gold und Regenbogen', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
     expect(css).toMatch(/\.isle-medal \{/);

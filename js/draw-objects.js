@@ -2507,6 +2507,17 @@ function drawHelixTurbine(cx, cy, z, now) {
     circle(cx, cy - (H + 1.2) * z, 1.1 * z, '#ff4a3d'); glowQuad([[cx - 1 * z, cy - (H + 2) * z], [cx + 1 * z, cy - (H + 2) * z], [cx + 1 * z, cy - H * z], [cx - 1 * z, cy - H * z]], 12 * z);
   }
 }
+// Inselsterne (26.10.2026): die Medaille hängt über dem Rathaus (Besucher sehen sie sofort); Gold und Regenbogen mit Schein
+function drawIsleMedal(cx, cy, z, now) {
+  const n = typeof isleStars === 'function' ? isleStars() : 0;
+  if (!n || typeof uiIcon !== 'function' || !uiIcon('medaille' + n)) return;
+  const pic = UI_ICON_CNV.get('medaille' + n);
+  if (!pic) return;
+  const s = 26 * z, x = cx, y = cy - 86 * z + Math.sin(now / 900) * 1.2 * z;
+  if (n >= 4) { const gl = g.createRadialGradient(x, y, s * 0.3, x, y, s * 0.9); gl.addColorStop(0, n === 5 ? 'rgba(255,170,230,.55)' : 'rgba(255,215,120,.5)'); gl.addColorStop(1, 'rgba(255,230,160,0)');
+    g.fillStyle = gl; g.beginPath(); g.arc(x, y, s * 0.9, 0, Math.PI * 2); g.fill(); }
+  g.drawImage(pic, x - s / 2, y - s / 2, s, s);
+}
 const ICON_SPRITES = new Map();               // weit weg (Block 124): ✨/🐌/💭 als fertiges Bildchen je Zoomstufe statt Kreise + Emoji-Schrift
 let iconPaint = false;
 function drawStatusIcon(cx, cy, z, icon, now) {

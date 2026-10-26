@@ -572,14 +572,18 @@ function frPushFlag() {
   for (const [f, e] of Object.entries(frList)) if (e && e.st === 'freund') { upd[`fr/${f}/${uid}/flag`] = myFlag(); upd[`fr/${f}/${uid}/name`] = frMyName(); }
   if (Object.keys(upd).length) cloudApi.update(upd).catch(() => {});
 }
-// Flagge eines Freundes: aus seinem Eintrag, sonst aus seiner Insel (einmal je Sitzung)
-const frFlagCache = {};
+// Öffentlicher Teil einer Freundesinsel (worlds/<wid>/rest: Ort, Erfolge …), einmal je Sitzung gelesen – für Flagge und Inselsterne
+let frRestCache = {};
+async function friendRest(id, e) {
+  if (!e || !e.wid) return null;
+  if (frRestCache[id] !== undefined) return frRestCache[id];
+  try { const rest = await cloudApi.get(`worlds/${e.wid}/rest`); return (frRestCache[id] = rest ? JSON.parse(rest) : null); } catch (err) { return null; }
+}
+// Flagge eines Freundes: aus seinem Eintrag, sonst aus seiner Insel
 async function friendFlag(id, e) {
   if (e && flagOk(e.flag)) return { c: e.flag.c, s: e.flag.s };
-  if (frFlagCache[id]) return frFlagCache[id];
-  if (!e || !e.wid) return null;
-  try { const rest = await cloudApi.get(`worlds/${e.wid}/rest`), town = rest && JSON.parse(rest).town, f = town && { c: town.color, s: town.symbol }; if (flagOk(f)) return (frFlagCache[id] = f); } catch (err) { /* keine */ }
-  return null;
+  const town = ((await friendRest(id, e)) || {}).town, f = town && { c: town.color, s: town.symbol };
+  return flagOk(f) ? f : null;
 }
 async function togglePartner(id, e) {
   if (viewOnly()) { cloudBlocked(); return; }

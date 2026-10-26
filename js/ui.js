@@ -3045,6 +3045,25 @@ function isleMedalSync() {
   wtEnsure('medaille' + n); el.style.backgroundImage = `var(${wtVar('medaille' + n)})`;
   el.setAttribute('aria-label', `${n} Inselstern${n > 1 ? 'e' : ''}`); el.title = el.getAttribute('aria-label');
 }
+// Erfolge einer anderen Insel (Besuch, Freundesliste): nur die erreichten Stufen, ohne Zahlen (die sind privat)
+const achvStarsOf = ach => Object.values(ach && typeof ach === 'object' ? ach : {}).reduce((sum, n) => sum + Math.max(0, Math.min(50, Math.floor(+n) || 0)), 0);   // Daten anderer Inseln: nur kleine ganze Zahlen zählen
+function isleChipHtml(id, e, rest) {
+  const ach = rest && rest.achieved;
+  if (!ach) return '';
+  const n = isleStarsOf(achvStarsOf(ach)), who = escHtml(e.name || 'Freund');
+  return ` <button class="fr-achv" data-frachv="${escHtml(id)}" aria-label="Erfolge von ${who}: ${n ? `${n} Inselstern${n > 1 ? 'e' : ''}` : `${achvStarsOf(ach)} Erfolgs-Sterne`}">${n ? isleMedalHtml(n) : `⭐ ${achvStarsOf(ach)}`}</button>`;
+}
+function openIsleAchv(ach, title, back = null) {
+  ach = ach && typeof ach === 'object' ? ach : {};
+  const stars = achvStarsOf(ach), isl = isleStarsOf(stars);
+  openModal(`
+    <h2>Erfolge von ${escHtml(title || 'dieser Insel')}</h2>
+    <div class="isle-head">${isl ? isleMedalHtml(isl) : ''}<div><b>${isl ? `${isl} Inselstern${isl > 1 ? 'e' : ''}` : 'Noch kein Inselstern'}</b> · ⭐ ${stars}</div></div>
+    ${ACHIEVEMENTS.map(a => { const n = Math.max(0, Math.min(a.tiers.length, Math.floor(+ach[a.id]) || 0));
+      return `<div class="achv-row${n >= a.tiers.length ? ' done' : ''}"><span class="ai">${a.icon}</span><div class="at"><div><b>${a.name}</b> <span class="stars">${'⭐'.repeat(n)}${'<span class="off">⭐</span>'.repeat(a.tiers.length - n)}</span></div></div></div>`; }).join('')}
+    <div class="row"><button class="btn" id="m-ok" style="flex:1">${back ? 'Zurück' : 'Schließen'}</button></div>`);
+  $('m-ok').onclick = back || closeModal;
+}
 function isleUpShow() {
   const n = isleUpPending; isleUpPending = 0;
   if (!n) return;

@@ -1655,3 +1655,7 @@ body.look-wolke .isle-goal .isle-bar { background: rgba(59, 71, 99, .14); }
 .isle-head small { display: block; font-weight: 600; opacity: .8; }
 .isle-up { display: flex; justify-content: center; margin: 4px 0 10px; }
 .isle-medal.big { width: 110px; height: 110px; }
+.fr-achv { border: 0; background: none; padding: 0 2px; margin-left: 4px; cursor: pointer; font: inherit; font-size: 12px; font-weight: 800; color: inherit; vertical-align: middle; }
+.fr-achv .isle-medal { width: 22px; height: 22px; }
+#visit-medal .isle-medal { width: 26px; height: 26px; }
+#visit-medal:empty { display: none; }

@@ -2053,6 +2053,7 @@ function render(now) {
     byTile.get(k).push(m);
   }
   const icons = [];
+  let isleMedalAt = null;                                                  // Inselsterne: Medaille über dem Rathaus (26.10.2026)
   for (const tr of trains) if (!tr.powered) { const f = cars4.find(c => c.train === tr); if (f) { const p = toScreen(f.px, f.py), hk = HILLS && Math.round(f.px) + ',' + Math.round(f.py); icons.push([p.x + 10 * z, p.y + 4 * z - (f.hill ? trainMidUp(f) * z : hk && HALL.has(hk) ? hillLift(...keyXY(hk)) * z : 0), '⚡']); } }   // Zug ohne Strom (auf Anhöhe/Rampe angehoben; in der Halle eines Hbf oben, 157j)
   const labels = [];
   let staleCover = false;
@@ -2287,6 +2288,7 @@ function render(now) {
           if (t.b === 'hbf' && [...GLEIS].some(([gk, G]) => { if (G.hub !== a) return false; const l = lineOf(gk); return l && l.traffic && l.traffic.served < 0.8; })) icons.push([c.x, c.y, '😣']);
           if (t.b === 'hafen' && (t.lvl || 1) >= 2 && state.orders.some(o => o.kind === 'sell' && state.res[o.res] >= o.amount)) icons.push([c.x, c.y, '🚢']);   // Auftrag erfüllbar
           if (t.b === 'truhe') icons.push([c.x, c.y, '🎁']);
+          if (t.b === 'rathaus') isleMedalAt = [c.x, c.y];
           if (t.b === 'schloss' && decreeReady()) icons.push([c.x, c.y, '👑']);   // Erlass wartet
           if (s && s.grow && s.grow.ready && canPay(s.grow.next.cost)) icons.push([c.x, c.y, '✨']);   // nur, wenn man es auch bezahlen kann
           if ((WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) || (monSite(t) && canPay(monCost(t)))) icons.push([c.x, c.y, '🏗️']);
@@ -2457,7 +2459,8 @@ function render(now) {
   drawTunnelView(z);                                                       // Tunnel in der Bauansicht (Block 136), über der Nacht
   // Symbole (✨ bereit, 💭 fast geschafft, 🐌 weit weg) über der Nacht, damit man sie immer sieht
   for (const s of fallenStars) drawFallenStar(s, z, now);
-  if (!(SHOWCASE && SHOWCASE.quiet) && GFX.icons) for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);   // Testwelt „farben“: ohne 🐌 ✨; ⚙️ Symbole aus
+  if (!(SHOWCASE && SHOWCASE.quiet) && GFX.icons) for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);
+  if (isleMedalAt) drawIsleMedal(isleMedalAt[0], isleMedalAt[1], z, now);   // über der Nacht: Besucher sehen sie immer   // Testwelt „farben“: ohne 🐌 ✨; ⚙️ Symbole aus
   drawShowcaseLabels(z);                                                   // Testwelt „tiere“: Namensschilder
   loadingUpdate();                                                       // Ladekreisel: Start, Besuch, „Insel wird gezeichnet …“ (Block 142)
 
