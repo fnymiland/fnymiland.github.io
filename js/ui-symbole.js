@@ -26,6 +26,10 @@ function uiCup(cx, cy, col, drink) {                          // Tasse auf Unter
 function uiStar4(cx, cy, r, col) {                            // Funkel: vierzackiger Stern
   uiPath([[cx, cy - r], [cx + r * 0.26, cy - r * 0.26], [cx + r, cy], [cx + r * 0.26, cy + r * 0.26], [cx, cy + r], [cx - r * 0.26, cy + r * 0.26], [cx - r, cy], [cx - r * 0.26, cy - r * 0.26]], col);
 }
+function uiStar5(cx, cy, R, col, tilt = 0) {                // fünfzackiger Stern (Sternstaub)
+  uiPath(Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + tilt + i * Math.PI / 5, q = i % 2 ? R * 0.46 : R; return [cx + Math.cos(a) * q, cy + Math.sin(a) * q]; }), col);
+}
+function uiGoldStar(cx, cy, R, tilt = 0) { uiStar5(cx, cy + R * 0.13, R, '#c98f1e', tilt); uiStar5(cx, cy, R, '#f2bd3a', tilt); uiStar5(cx - R * 0.1, cy - R * 0.1, R * 0.42, '#fbe39a', tilt); }
 function uiHeart(cx, cy, s, col) {
   g.fillStyle = col; g.beginPath();
   g.moveTo(cx, cy + 12 * s); g.bezierCurveTo(cx - 18 * s, cy, cx - 12 * s, cy - 14 * s, cx, cy - 6 * s);
@@ -316,6 +320,42 @@ Object.assign(UI_DRAW, {
     for (let y = 14; y < 56; y += 8) uiLine([[22, y], [28, y + 6]], '#c98a2a', 1.2);
     uiLine([[12, 9], [56, 9]], '#e0a43a', 4); uiLine([[48, 10], [48, 30]], '#6b4f3a', 1.2);
     uiPath([[44, 30], [52, 30], [52, 37], [44, 37]], '#9aa3ad'); uiBox(14, 14, 4, 2, 6, '#7a7f88');
+  },
+  // Sternstaub (Nutzer 26.10.2026: „eigenes Symbol, das Emoji sieht doof aus“ → Sternsäckchen): Samtbeutel, goldene Schleife, Sterne fallen heraus
+  sternstaub() {
+    uiShadow(32, 58, 18);
+    const glow = g.createRadialGradient(32, 18, 0, 32, 18, 20); glow.addColorStop(0, 'rgba(255,225,130,.75)'); glow.addColorStop(1, 'rgba(255,225,130,0)');
+    g.fillStyle = glow; g.beginPath(); g.arc(32, 18, 20, 0, Math.PI * 2); g.fill();
+    const body = () => { g.beginPath(); g.moveTo(25, 30); g.bezierCurveTo(15, 34, 9, 44, 13, 51); g.bezierCurveTo(17, 58, 47, 58, 51, 51); g.bezierCurveTo(55, 44, 49, 34, 39, 30); g.closePath(); };
+    const cloth = g.createLinearGradient(12, 0, 52, 0); cloth.addColorStop(0, '#b3a7f5'); cloth.addColorStop(0.45, '#8a7be0'); cloth.addColorStop(1, '#5b4db5');
+    g.fillStyle = cloth; body(); g.fill();
+    g.save(); body(); g.clip(); g.fillStyle = 'rgba(60,40,140,.22)'; g.beginPath(); g.ellipse(32, 60, 24, 9, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.28)'; g.beginPath(); g.ellipse(19, 41, 3.5, 8, 0.35, 0, Math.PI * 2); g.fill(); g.restore();
+    for (const [x, y, r] of [[25, 47, 2.6], [38, 50, 2.2], [43, 40, 2], [31, 39, 1.8]]) uiStar5(x, y, r, '#f5cf5a');
+    // Hals: gerafft, oben offen
+    uiPath([[26, 30], [21, 22], [25, 20.5], [28.5, 22], [32, 20], [35.5, 22], [39, 20.5], [43, 22], [38, 30]], '#9a8de8');
+    g.strokeStyle = '#6f61c4'; g.lineWidth = 0.9; for (const x of [27.5, 32, 36.5]) { g.beginPath(); g.moveTo(x, 22.5); g.lineTo(x + (32 - x) * 0.25, 29.5); g.stroke(); }
+    ellipse(32, 21.5, 9.5, 2.6, '#3d3285');
+    uiGoldStar(37, 13, 8, 0.2); uiGoldStar(26, 15.5, 5.6, -0.25);
+    // Schleife
+    g.fillStyle = '#e2ad2e'; g.beginPath(); g.ellipse(26.5, 31, 4.6, 2.6, -0.5, 0, Math.PI * 2); g.ellipse(37.5, 31, 4.6, 2.6, 0.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#f2c94c'; g.beginPath(); g.ellipse(26.8, 30.4, 3, 1.4, -0.5, 0, Math.PI * 2); g.ellipse(37.2, 30.4, 3, 1.4, 0.5, 0, Math.PI * 2); g.fill();
+    uiLine([[31, 32], [28, 39]], '#e2ad2e', 2); uiLine([[33, 32], [36, 38.5]], '#e2ad2e', 2);
+    uiDisc(32, 31.2, 2.4, '#f2c94c');
+    uiStar4(13, 22, 3.4, '#ffe48a'); uiStar4(51, 18, 4.2, '#ffe48a'); uiStar4(45, 5, 2.6, '#fff3c4');
+    for (const [x, y] of [[20, 9], [47, 26], [17, 28]]) uiDisc(x, y, 0.9, '#ffe9a8');
+  },
+  // Gestalten (Nutzer 26.10.2026: „das Beet sieht doof aus, weil es so braun ist“ → Gießkanne)
+  giesskanne() {
+    uiShadow(30, 57, 19);
+    uiLine([[40, 44], [55, 24]], '#3f7fb6', 5); uiLine([[40, 43], [54, 24]], '#6aa7da', 2.2);
+    ellipse(56, 22, 4.2, 3, '#3f7fb6'); ellipse(56, 21.5, 3, 2, '#9cc9ec');
+    cyl(28, 55, 15, 7, 22, '#5d98cf'); ellipse(28, 33, 15, 7, '#7fb4e2'); ellipse(28, 33, 11, 5, '#3f7fb6');
+    g.strokeStyle = '#3f7fb6'; g.lineWidth = 4.5; g.lineCap = 'round'; g.beginPath(); g.arc(28, 33, 13, Math.PI * 1.08, Math.PI * 1.92); g.stroke();
+    g.strokeStyle = '#7fb4e2'; g.lineWidth = 1.6; g.beginPath(); g.arc(28, 32, 13, Math.PI * 1.15, Math.PI * 1.5); g.stroke();
+    g.globalAlpha = 0.3; g.fillStyle = '#ffffff'; g.fillRect(16, 37, 3, 14); g.globalAlpha = 1;
+    for (const [x, y] of [[59, 30], [61, 37], [57, 41]]) ellipse(x, y, 1.7, 2.4, '#7fc2ef');
+    for (const [x, y, c] of [[22, 47, '#f2a0c8'], [30, 49, '#f6d35a'], [36, 46, '#f2a0c8']]) { uiDisc(x, y, 2.6, c); uiDisc(x, y, 1, '#fff6d0'); }
   },
 });
 

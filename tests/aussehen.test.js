@@ -33,11 +33,11 @@ describe('Aussehen', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
     const hud = html.slice(html.indexOf('<div id="hud">'), html.indexOf('<div id="store"'));
     for (const e of ['🪙', '👥', '💡', '✨', '📦', '🌐', '☰']) expect(hud.includes(e)).toBe(false);
-    expect(game("[...document.querySelectorAll('#hud i.wi')].map(e => e.dataset.ic)")).toEqual(['taler', 'haus:2', 'bibliothek', 'kristall', 'kiste', 'freundesbank', 'menue']);
+    expect(game("[...document.querySelectorAll('#hud i.wi')].map(e => e.dataset.ic)")).toEqual(['taler', 'haus:2', 'bibliothek', 'sternstaub', 'kiste', 'freundesbank', 'menue']);
   });
 
   it('jedes Symbol lässt sich zeichnen, ohne dass etwas wirft', () => {
-    for (const n of ['taler', 'kiste', 'menue', 'haus:2', 'bibliothek', 'kristall', 'freundesbank']) {
+    for (const n of ['taler', 'kiste', 'menue', 'haus:2', 'bibliothek', 'sternstaub', 'freundesbank']) {
       expect(game(`(() => { UI_ICON_CACHE.delete(${JSON.stringify(n)}); return typeof uiIcon(${JSON.stringify(n)}); })()`)).toBe('string');
     }
   });
@@ -52,7 +52,7 @@ describe('Aussehen', () => {
     game("setTool('look'); buildToolbar()");
     expect(game("document.getElementById('cats-isle').dataset.slab")).toBe('bar');
     expect(game("[...document.querySelectorAll('#cats .quick:not(.drag), #cats .cat')].map(b => b.querySelector('[data-ic]').dataset.ic)"))
-      .toEqual(['lupe', 'haken', 'undo', 'glaskugel', 'stern', 'haus:3', 'baecker', 'fz_karussell', 'blumen']);
+      .toEqual(['lupe', 'haken', 'undo', 'glaskugel', 'stern', 'haus:3', 'baecker', 'fz_karussell', 'giesskanne']);
     expect(game("[...document.querySelectorAll('#cats .tx')].map(t => t.textContent)"))
       .toEqual(['Ansehen', 'Wege', 'Auswählen', 'Zurück', 'Durchsicht', 'Favoriten', 'Stadt', 'Herstellen', 'Freizeit', 'Gestalten']);
     expect(/\p{Extended_Pictographic}/u.test(game("document.getElementById('cats').textContent"))).toBe(false);

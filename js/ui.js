@@ -3370,6 +3370,7 @@ const NEWS_HISTORY = [
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
     '🪵 <b>Knöpfe:</b> Bei der Hecke sind alle Knöpfe jetzt kleine Holzbretter mit Maserung und Nägeln, bei den Wolken kleine Schäfchenwolken. Was gewählt ist, ist grün bzw. kräftig blau.',
     '💬 <b>Texte überarbeitet:</b> Alle Hinweise, Meldungen und Beschreibungen im Spiel lesen sich jetzt ruhiger und natürlicher. Statt langer Gedankenstriche stehen dort kurze, klare Sätze.',
+    '✨ <b>Neue Symbole:</b> Sternstaub ist jetzt ein Sternsäckchen, oben in der Leiste und bei jeder Sternstaub-Zahl. Der Bereich Gestalten in der Bauleiste hat eine Gießkanne.',
     '☰ <b>Menü-Knopf:</b> Oben rechts zeigen jetzt drei Striche, wo es zu Hilfe, Neuigkeiten, Einstellungen und Spielstand geht.',
     '🧹 <b>Ruhigere Fenster:</b> Bildchen stehen nur noch, wo sie etwas zeigen: an Zahlen, bei Gebäuden, Tieren und Dingen. Vor Überschriften, Knöpfen und am Anfang jeder Zeile sind sie weg.',
     '🌿 <b>Mehr Luft in den Fenstern:</b> Knöpfe und Texte rücken ein Stück von der Hecke und den Wolken weg. Im Fenster „Du“ bleibt der Kopf mit deiner Figur beim Scrollen sauber stehen.',

@@ -413,7 +413,7 @@ function wiFace(b, name, label) {
   b.replaceChildren(wiEl(name), t);
 }
 // Bereiche der Bauleiste und Gruppen im Feld: Bild aus dem Spiel statt Emoji (unbekannt: Emoji bleibt)
-const MENU_ICON = { stadt: 'haus:3', herstellen: 'baecker', freizeit: 'fz_karussell', gestalten: 'blumen',
+const MENU_ICON = { stadt: 'haus:3', herstellen: 'baecker', freizeit: 'fz_karussell', gestalten: 'giesskanne',
   wohnen: 'haus:2', bahn: 'station', untergrund: 'ubahn', wasser: 'bootssteg', einrichtungen: 'schule', taler: 'muehle', rohstoffe: 'holz',
   strom: 'windrad', veredeln: 'schmiede', fzpark: 'fz_ballon', fzfahrt: 'fz_teetassen', fzbahn: 'fz_station', parkbahn: 'pb_station',
   fzschloss: 'fz_schloss', wunder: 'riesenrad', hoehen: 'anhoehe', gruen: 'baum', platz: 'laterne', besonderes: 'statue',
@@ -533,7 +533,8 @@ function wiText(html, outer = null) {
     for (const m of p.matchAll(WI_ANY_RE)) {
       const before = p.slice(last, m.index), e = m[0];
       res += before; if (before.trim()) said(before);
-      const dk = wiDeko(e, stack, top.text, next(i, p.slice(m.index + e.length)), /\d/.test(lastCh)), name = wiTextName(e);
+      const nx = next(i, p.slice(m.index + e.length)), unit = nx === 'zahl' || /\d/.test(lastCh), dk = wiDeko(e, stack, top.text, nx, unit);
+      const name = unit && e.startsWith('✨') ? 'sternstaub' : wiTextName(e);   // ✨ an einer Zahl ist Sternstaub (Säckchen), sonst Funkeln
       const sp = dk && /\s/.test(p[m.index + e.length] || '') ? p[m.index + e.length] : '';   // unsichtbar samt Leerzeichen: „(🏘️ Stadt“ → „(Stadt“
       if (name) { wtEnsure(name); res += `<i class="wt${dk ? ' deko' : ''}" style="background-image:var(${wtVar(name)})">${e}${sp}</i>`; }
       else res += dk ? `<i class="wt deko">${e}${sp}</i>` : e;

@@ -92,3 +92,17 @@ describe('Menü-Knopf: drei Striche statt Wegweiser', () => {
     game("uiLookId = 'hecke'");
   });
 });
+
+describe('Eigene Symbole für Gestalten und Sternstaub', () => {
+  it('Gestalten: Gießkanne statt braunem Beet (Nutzer 26.10.2026)', () => {
+    expect(game('MENU_ICON.gestalten')).toBe('giesskanne');
+    expect(game("typeof UI_DRAW.giesskanne")).toBe('function');
+  });
+  it('Sternstaub: Sternsäckchen oben in der Leiste und bei jeder Sternstaub-Zahl im Text; ✨ ohne Zahl bleibt Funkeln (auf der Karte: „bereit“)', () => {
+    expect(game("document.querySelector('#sd-btn i.wi').dataset.ic")).toBe('sternstaub');
+    expect(game(`wiText('<p>Du hast ✨ 300 Sternstaub.</p>')`)).toContain('--wt-sternstaub');
+    expect(game(`wiText('<b>25 ✨ am Tag</b>')`)).toContain('--wt-sternstaub');
+    expect(game(`wiText('<p>Alles funkelt ✨.</p>')`)).toContain('--wt-funkel');
+    expect(game("wiTextName('✨')")).toBe('funkel');                          // Karte (uiIconCanvas) unverändert
+  });
+});
