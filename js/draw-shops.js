@@ -123,7 +123,7 @@ function hangSign(K, draw, col, { up = 15, a0 = 0.27, b0 = 0.36, back = -0.38 } 
 const ART_SHADOW = {};
 // Aufrechter Text (Schriftzug, Buchstaben) mittig bei (x, y) – Größe in px × z
 function kText(x, y, text, size, col, z, weight = 900) {
-  g.font = `${weight} ${Math.max(1, size * z)}px Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = `${weight} ${Math.max(1, size * z)}px Mali, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillStyle = C(col); g.fillText(text, x, y);
 }
 // Punkt auf einer Seite: t (0 … 1 von P nach Q), in Höhe up (px, schon mit z)

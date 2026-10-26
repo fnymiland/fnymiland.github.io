@@ -122,6 +122,7 @@ if (PROBE) {
   }
 }
 applyUiLook();                                     // Aussehen der Oberfläche (ui-look.js): Symbole, Platten, Hecke/Wolken
+uiFontReady();                                     // Schrift Mali: zwischengespeicherte Bilder mit Text danach neu malen
 
 // Bildrate: Beim Bedienen flüssig (höchstens 60/s – 120-Hz-Bildschirme würden sonst doppelt so viel rechnen),
 // beim Zuschauen 30/s, im Hintergrund oder nach 2 Minuten ohne Eingabe 15/s. Spart Strom, Rechner und iPad bleiben

@@ -61,7 +61,7 @@ function pillSegs(text) {
 }
 const FLOAT_TINT = { '#d9534a': '#ffb8ac', '#3f8f43': '#c9f0b4', '#f2c14e': '#ffe27a' };
 function pill(text, x, y, bg, fg, size, fit, tint) {
-  const segs = pillSegs(text), font = s => `800 ${s * 1.12}px 'Alegreya Sans', Nunito, system-ui, sans-serif`;
+  const segs = pillSegs(text), font = s => `800 ${s * 1.12}px Mali, system-ui, sans-serif`;
   const segW = (sg, s) => sg.pic ? s * 1.5 * Math.min(1.25, sg.pic.width / sg.pic.height) : g.measureText(sg.t).width;
   const widthAt = s => { g.font = font(s); return segs.reduce((a, sg) => a + segW(sg, s), 0); };
   let w = widthAt(size);

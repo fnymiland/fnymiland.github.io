@@ -1,3 +1,4 @@
+:root { --font: Mali, ui-rounded, 'SF Pro Rounded', system-ui, sans-serif; }   /* einzige Schrift (Nutzer 26.10.2026: „Schulheft“) – nur hier ändern */
 :root {
   --cream: #fffaf0;
   --cream2: #f6ecd6;
@@ -18,7 +19,7 @@ html, body {
   overflow: hidden;
   touch-action: pan-x pan-y;          /* kein Seiten-Zoom per Doppeltippen/zwei Fingern (iPad, Block 110) – Wischen in Fenstern geht */
   background: #6cc6e0;
-  font-family: 'Nunito', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
+  font-family: var(--font);
   color: var(--brown);
   -webkit-user-select: none;
   user-select: none;
@@ -1082,7 +1083,7 @@ body:has(#minimap:not([hidden])) #rot-btn { right: calc(14px + 106px - 26px); bo
 /* ⚙️ Einstellungen: Schalter als ruhige Liste – links was, rechts der Wert, zwei Spalten (Handy eine) */
 .set-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 4px 0 10px; }
 .set-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 6px 12px; border: 0;
-  border-radius: 12px; background: var(--cream2); color: var(--brown); font: 700 14px/1.2 Nunito, system-ui, sans-serif; text-align: left;
+  border-radius: 12px; background: var(--cream2); color: var(--brown); font: 700 14px/1.2 var(--font); text-align: left;
   cursor: pointer; box-shadow: 0 2px 0 var(--shadow); }
 .set-btn span { flex: 1 1 auto; min-width: 0; }                       /* der Name bricht um, der Wert nie (sonst ragt „immer Tag“ hinaus) */
 .set-btn b { flex: none; padding: 2px 8px; border-radius: 8px; background: var(--cream); font-weight: 800; font-size: 13px; white-space: nowrap; }
@@ -1108,7 +1109,7 @@ i.wi { display: inline-block; flex: none; width: 34px; height: 30px; background:
 /* Leiste oben: keine Pillen mehr – Symbol + Zahl frei über der Welt */
 #hud { gap: 20px; align-items: center; }
 #hud .pill { background: none; box-shadow: none; border-radius: 0; padding: 2px 1px; gap: 5px; align-items: flex-end;
-  font-family: 'Alegreya Sans', Nunito, system-ui, sans-serif; font-size: 19px; font-weight: 800; color: #fff7e6; text-shadow: var(--ol); }
+  font-family: var(--font); font-size: 19px; font-weight: 800; color: #fff7e6; text-shadow: var(--ol); }
 #hud .pill b { font-weight: 800; }
 #hud .money b { font-size: 21px; }
 #hud .pill small, #hud .pill.warn b { color: #fff7e6; }
@@ -1121,12 +1122,12 @@ i.wi { display: inline-block; flex: none; width: 34px; height: 30px; background:
 @media (hover: hover) { #hud .pill:hover i.wi { transform: translateY(-3px); } }
 #hud .pill:active i.wi { transform: translateY(1px) scale(.96); }
 #hud .town { align-items: center; gap: 8px; }
-#town-name { font-family: Alegreya, Georgia, serif; font-size: 23px; letter-spacing: .01em; }
+#town-name { font-family: var(--font); font-size: 23px; letter-spacing: .01em; }
 #town-btn .tod { color: #fff7e6; opacity: 1; font-size: 14px; }
 #town-btn .flag { text-shadow: none; box-shadow: 0 2px 0 rgba(60, 40, 20, .35), inset 0 -2px 0 rgba(0, 0, 0, .12); }
 #hud #you-face { font-size: 30px; line-height: 1; text-shadow: 0 3px 3px rgba(40, 30, 20, .3); }
 #hud .pill .dot { box-shadow: 0 0 0 2px #fff7e6; text-shadow: none; }
-#hud .pill .flash { text-shadow: none; font-family: Nunito, system-ui, sans-serif; }
+#hud .pill .flash { text-shadow: none; font-family: var(--font); }
 @media (max-width: 900px) { #hud { gap: 8px; } #hud .pill { font-size: 17px; } #hud .money b { font-size: 18px; } #town-name { font-size: 18px; max-width: 20vw; }
   #hud .pill i.wi { width: 32px; height: 29px; } #hud .pill.store i.wi, #hud .pill.net i.wi, #hud #menu-btn i.wi { width: 35px; height: 33px; } }   /* iPad hochkant: eine Zeile */
 @media (max-width: 600px) { #hud { gap: 12px; } #hud .pill { font-size: 16px; } #hud .money b { font-size: 17px; } #town-name { font-size: 19px; }
@@ -1145,7 +1146,7 @@ i.wi { display: inline-block; flex: none; width: 34px; height: 30px; background:
 /* Aussehen wählen (⚙️ Einstellungen) */
 .look-pick { display: flex; gap: 10px; margin: 4px 0 12px; }
 .look-pick button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px 7px; border: 0; border-radius: 12px;
-  background: var(--cream2); color: var(--brown); font: 800 14px/1.2 Nunito, system-ui, sans-serif; cursor: pointer; box-shadow: 0 2px 0 var(--shadow); }
+  background: var(--cream2); color: var(--brown); font: 800 14px/1.2 var(--font); cursor: pointer; box-shadow: 0 2px 0 var(--shadow); }
 .look-pick button.on { background: var(--yellow); box-shadow: inset 0 0 0 3px var(--brown); }
 .look-pick canvas { width: 100%; max-width: 150px; height: 46px; border-radius: 8px; background: #bfe3ee; }   /* Himmel hinter dem Musterstück */
 
@@ -1158,7 +1159,7 @@ body.look-wolke .cats-isle { padding: 7px 14px 5px; }
 #toolbar .cats#cats { gap: 2px; align-items: flex-end; margin: 0; padding: 0; max-width: 100%; }
 #toolbar #cats .quick, #toolbar #cats .cat { position: relative; height: auto; width: auto; min-width: 58px; padding: 2px 3px 0; border-radius: 0;
   display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 1px; background: none; box-shadow: none;
-  color: var(--bar-tx); text-shadow: var(--bar-tx-sh); font: 800 12px/1.1 'Alegreya Sans', Nunito, system-ui, sans-serif; }
+  color: var(--bar-tx); text-shadow: var(--bar-tx-sh); font: 800 12px/1.1 var(--font); }
 #toolbar #cats .cat::after { content: none; }
 #toolbar #cats i.wi, #toolbar #cats .kat-pic { position: relative; z-index: 1; width: 40px; height: 34px; filter: drop-shadow(0 2px 1.5px rgba(30, 40, 20, .3));
   transition: transform .18s cubic-bezier(.3, 1.6, .5, 1); }
@@ -1176,7 +1177,7 @@ body.look-wolke #toolbar #cats .quick.active::before, body.look-wolke #toolbar #
 #toolbar #cats .quick.undo:disabled { opacity: .35; }
 #toolbar #cats .quick.drop { background: none; box-shadow: none; }
 #toolbar #cats .quick.drop .x { width: 32px; height: 32px; margin-bottom: 2px; border-radius: 50%; display: grid; place-items: center; background: var(--red);
-  color: #fff; text-shadow: none; font: 900 17px/1 Nunito, system-ui, sans-serif; box-shadow: 0 3px 0 #a8443a; }
+  color: #fff; text-shadow: none; font: 900 17px/1 var(--font); box-shadow: 0 3px 0 #a8443a; }
 #toolbar #cats .quick.drag-ball { min-width: 0; width: 30px; height: 30px; margin: 0 14px 15px; padding: 0; border-radius: 0; align-self: flex-end; }   /* Platz so breit wie der große Knopf (30 + 2 × 14) – nichts rückt */
 #toolbar #cats .quick.drag-ball .kat-pic { width: 26px !important; height: 26px !important; }
 #toolbar #cats .quick-sep { width: 2px; align-self: stretch; margin: 6px 6px; border-radius: 1px; background: var(--bar-sep); }
@@ -1219,8 +1220,8 @@ body.look-wolke #panel, body.look-wolke #goal, body.look-wolke #sheet, body.look
 body.look-wolke #panel.slab-in { padding: 36px 38px 46px; }
 #panel .p-hero { float: right; width: 108px; height: 92px; margin: -14px -10px 2px 8px; background: var(--hero) center bottom / contain no-repeat;
   filter: drop-shadow(0 4px 3px rgba(40, 30, 20, .25)); }
-#panel h3 { font-family: Alegreya, Georgia, serif; font-size: 23px; font-weight: 800; line-height: 1.05; flex-wrap: wrap; }
-#panel h3 .lvl { order: -1; width: 100%; background: none; padding: 0; border-radius: 0; font: 800 11.5px/1.2 'Alegreya Sans', Nunito, sans-serif;
+#panel h3 { font-family: var(--font); font-size: 23px; font-weight: 800; line-height: 1.05; flex-wrap: wrap; }
+#panel h3 .lvl { order: -1; width: 100%; background: none; padding: 0; border-radius: 0; font: 800 11.5px/1.2 var(--font);
   letter-spacing: .12em; text-transform: uppercase; color: #a0603a; }
 body.look-wolke #panel h3 .lvl { color: #5b86c9; }
 #panel .stats span, #goal .task-chips .chip { border-radius: 7px; box-shadow: none; }
@@ -1239,7 +1240,7 @@ body.look-wolke .btn:disabled { background: #dfe5ee; color: #8b95aa; box-shadow:
 
 /* Ziel-Fenster: Aufgaben als Zeilen statt weißer Karten */
 #goal.slab { background: transparent; box-shadow: none; border-radius: 0; left: 22px; padding: 12px 14px 12px; }
-#goal h4 { font-family: Alegreya, Georgia, serif; font-size: 15px; font-weight: 800; }
+#goal h4 { font-family: var(--font); font-size: 15px; font-weight: 800; }
 #goal .task { background: none; box-shadow: none; border-radius: 0; margin-top: 0; padding: 6px 1px; border-top: 1.5px dotted rgba(138, 106, 72, .35); }
 body.look-wolke #goal .task { border-top-color: rgba(90, 110, 150, .25); }
 #goal .task.ready { background: none; }
@@ -1266,7 +1267,7 @@ body.look-wolke #modal-card:not(.basar-night) { padding: 40px 44px 48px; }
 #modal-card.tabbed:not(.basar-night) > .tab-scroll { margin: 0 -8px; padding: 2px 8px 4px; }
 body.phone #modal-card:not(.basar-night) { padding: 34px 32px 42px; }
 #modal { background: rgba(40, 60, 50, .28); }
-.card h2 { font-family: Alegreya, Georgia, serif; font-weight: 800; font-size: 26px; line-height: 1.1; }
+.card h2 { font-family: var(--font); font-weight: 800; font-size: 26px; line-height: 1.1; }
 #modal-card .tab-scroll > .me-edit { background: transparent; }
 /* Emojis in Texten als Spiel-Symbole (wiText): Zeichen bleibt im Text, sichtbar ist das Bild */
 i.wt { display: inline-block; width: 1.35em; height: 1.15em; vertical-align: -.24em; overflow: hidden; text-indent: 300%; white-space: nowrap;
@@ -1282,7 +1283,7 @@ body { --cut: 11px 14px 12px 13px / 13px 11px 14px 12px; --plate: #f8f0dc; --pla
 body.look-wolke { --cut: 16px; --plate: #ffffff; --plate-side: #c7d4e8; --plate-dark: #3b4763; --plate-dark-side: #262f47; --plate-hi: #d6e4fa; --plate-hi-side: #9bb5df; }
 body.look-wolke #hint, body.look-wolke #bubble, body.look-wolke #store, body.look-wolke #style-bar, body.look-wolke #sel-bar { --brown: #3b4763; --brown2: #74819c; --cream2: #eaf0f9; --shadow: #c6d2e6; --yellow: #d6e4fa; }
 #toast, #lead-band, #card-name { background: var(--plate-dark); border-radius: var(--cut); box-shadow: 0 4px 0 var(--plate-dark-side), 0 8px 18px rgba(40, 30, 20, .2); }
-#toast { font-family: 'Alegreya Sans', Nunito, system-ui, sans-serif; font-size: 15px; }
+#toast { font-family: var(--font); font-size: 15px; }
 #achv { background: var(--plate-hi); border-radius: var(--cut); box-shadow: 0 4px 0 var(--plate-hi-side), 0 10px 24px rgba(60, 40, 20, .2); }
 #hint, #bubble, #store, .wpop { background: var(--plate); border-radius: var(--cut); box-shadow: 0 4px 0 var(--plate-side), 0 8px 18px rgba(60, 40, 20, .14); }
 .style-chip, .kat-item { border-radius: var(--cut); background: var(--plate); box-shadow: 0 3px 0 var(--plate-side); }
@@ -1325,8 +1326,8 @@ body.look-wolke .album-page { background: rgba(120, 160, 230, .08); }
 /* Ladebildschirm im neuen Stil: drehende Sonne, Umriss-Schrift; klein (Insel wird gezeichnet …) als Plättchen */
 .ld-spin.drawn { border: 0 !important; border-radius: 0; background: center / contain no-repeat; animation-duration: 2.6s; }
 #loading.big .ld-spin.drawn { width: 64px; height: 64px; filter: drop-shadow(0 3px 3px rgba(40, 60, 80, .25)); }
-#loading.big { color: #fff7e6; font-family: Alegreya, Georgia, serif; font-size: 26px; font-weight: 800; text-shadow: var(--ol); }
-#loading:not(.big) { background: var(--plate); box-shadow: 0 4px 0 var(--plate-side); font-family: 'Alegreya Sans', Nunito, system-ui, sans-serif; }
+#loading.big { color: #fff7e6; font-family: var(--font); font-size: 26px; font-weight: 800; text-shadow: var(--ol); }
+#loading:not(.big) { background: var(--plate); box-shadow: 0 4px 0 var(--plate-side); font-family: var(--font); }
 /* Favoriten-Sterne (Baumenü, Infofenster): gezeichneter Goldstern statt Textzeichen; Zeichen bleibt im Text (Tests, Vorlesen) */
 #tools .tool .fav, #panel h3 .fav-head { font-size: 0; opacity: 1; background: var(--wt-stern) no-repeat; filter: grayscale(1) opacity(.4); }
 #tools .tool .fav { background-size: 15px 15px; background-position: right 5px top 4px; }
@@ -1390,7 +1391,7 @@ body.look-wolke { --chip: #e3ecf8; --chip-side: #b3c3dd; --chip-on: #6b95d8; --c
 /* reine Anzeigen: flach, ohne Kante */
 .stats span, #panel .stats span, .tod-box, .sd-wish, .sv-e, .fr-friend { background: var(--info); box-shadow: none; border-radius: 8px; }
 /* „Los“ und kleine Knöpfe: schlicht abgerundet (die unregelmäßige Kante wirkt klein wie ein Klecks) */
-#goal .task.ready .t-go { border-radius: 8px; padding: 4px 11px 5px; font: 800 13px/1.1 'Alegreya Sans', Nunito, system-ui, sans-serif; }
+#goal .task.ready .t-go { border-radius: 8px; padding: 4px 11px 5px; font: 800 13px/1.1 var(--font); }
 .btn.small { border-radius: 8px; }
 body.look-wolke #goal .task.ready .t-go, body.look-wolke .btn.small { border-radius: 10px; }
 /* Drehknopf: gezeichneter Holzpfeil um ein Häuschen, frei über der Welt (kein gelbes Kissen) */
@@ -1590,3 +1591,14 @@ body.look-wolke #hud .hud-act .pill { background: radial-gradient(circle at 50% 
 #hud #town-btn .tod { position: relative; top: -1px; }          /* Uhrzeit fürs Auge mittig (kleinere Schrift sitzt sonst gut 1 px tief) */
 /* Knöpfe untereinander: Lager-Meldung (−🪵 3) links neben dem Knopf statt darunter auf dem nächsten Knopf */
 @media (max-width: 720px) { #hud .hud-act .pill .flash { top: 50%; right: calc(100% + 8px); margin-top: -11px; } }
+
+/* Schrift „Schulheft“ (Mali, Nutzer 26.10.2026): Mali reicht bis 700 – fett bleibt fett (800/900 werden 700); Fließtext in Fenstern
+   etwas leichter (500), sonst wirkt die runde Handschrift schwer – so, wie in der Vorschau (tools/schrift.html) ausgewählt */
+#modal-card p, #modal-card li, #panel p, #goal .t-sub, .muted { font-weight: 500; }
+/* Einstellungen: zwei gleich breite Spalten, die nie breiter als das Fenster werden; lange Namen trennen statt hinauszuragen
+   (mit Mali ragte „Namensschilder an“ rechts in die Hecke bzw. über die Wolke) */
+.set-grid { grid-template-columns: repeat(auto-fit, minmax(min(190px, 100%), 1fr)); }   /* zwei Spalten nur, wenn jede ≥ 190 px hat */
+body.phone .set-grid, .set-grid.set-one { grid-template-columns: minmax(0, 1fr); }
+.set-btn span { overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
+/* Kacheln nur mit Bildchen (Tiere, Rohstoffe): Bild mittig statt auf der Grundlinie – Malis höhere Zeile schob es sonst nach unten */
+:is(.look, .btn):has(> i.wt:only-child) { display: flex; align-items: center; justify-content: center; }

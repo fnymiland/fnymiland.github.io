@@ -309,7 +309,7 @@ function walkerHead(w, z) {
 function drawBubble(z) {
   if (!bubble || bubble.w.gone || bubble.w.inside > 0) return;
   const [hx, hy] = walkerHead(bubble.w, z), size = Math.max(11, Math.min(15, 11 * z));
-  g.font = `800 ${size}px Nunito, system-ui, sans-serif`;
+  g.font = `800 ${size}px Mali, system-ui, sans-serif`;
   // lange Sätze umbrechen (Tipps der eigenen Figur, Block 97)
   const maxW = Math.min(W - 40, 280), lines = [];
   for (const word of String(bubble.text).split(' ')) {
@@ -429,7 +429,7 @@ function drawFigure(w, z, now) {
   }
   } finally { g.restore(); }
   if (w.label && GFX.labels) {                                           // Besucher (Block 96): Namensschild über dem Kopf – in voller Größe (⚙️ abschaltbar)
-    g.font = `800 ${Math.max(9, 5 * z)}px Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.font = `800 ${Math.max(9, 5 * z)}px Mali, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const tw = g.measureText(w.label).width + 8 * z, ly = footY + (hy - footY) * S - labelOff(w) * z * S;   // über Hut und Ballon
     g.beginPath(); g.roundRect(x - tw / 2, ly - 4 * z, tw, 8 * z, 4 * z); g.fillStyle = 'rgba(255,250,240,0.92)'; g.fill();
     g.fillStyle = C('#6b4f3a'); g.fillText(w.label, x, ly + 0.3 * z);

@@ -259,7 +259,7 @@ Object.assign(UI_DRAW, {
   frage() {                                                // unbekannt / Hilfe: Holzschild mit Fragezeichen
     uiShadow(32, 57, 13); cyl(32, 57, 2.6, 1.3, 18, '#8a5e38');
     uiPath([[13, 14], [51, 10], [53, 40], [15, 44]], '#b8864f'); uiPath([[13, 12], [51, 8], [51, 38], [13, 42]], '#e0b47a');
-    g.fillStyle = '#6b4a2a'; g.font = "800 30px Alegreya, Georgia, serif"; g.textBaseline = 'middle'; g.textAlign = 'left';
+    g.fillStyle = '#6b4a2a'; g.font = "700 30px Mali, system-ui, sans-serif"; g.textBaseline = 'middle'; g.textAlign = 'left';
     const w = g.measureText('?').width; g.fillText('?', 32 - w / 2, 26);
   },
   drehen() {                                               // Drehknopf: Holzpfeil im Kreis um ein kleines Haus

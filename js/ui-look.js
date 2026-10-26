@@ -535,6 +535,20 @@ function heldPicPaint(x, tool) {
 }
 
 // ---------- anwenden ----------
+// Die Schrift (Mali, Google Fonts) kommt erst nach dem Start: Bilder, die vorher schon mit Text gemalt und aufgehoben wurden
+// (Ladenschilder an Gebäuden, Fragezeichen-Symbol, Bilder im Baumenü), einmal neu malen, sobald sie da ist
+let uiFontDone = false;
+function uiFontReady() {
+  if (uiFontDone || typeof document === 'undefined' || !document.fonts || !document.fonts.load) return;
+  uiFontDone = true;
+  document.fonts.load('700 16px Mali').then(faces => {
+    if (!faces || !faces.length) return;                                  // ohne Netz: Ersatzschrift, nichts neu zu malen
+    if (typeof resetDrawCaches === 'function') resetDrawCaches();
+    if (typeof katPicCache !== 'undefined') katPicCache.clear();
+    for (const m of [UI_ICON_CACHE, UI_ICON_CNV]) m.delete('frage');
+    if (WT_SET.has('frage')) { WT_SET.delete('frage'); wtEnsure('frage'); }   // ❓ in Texten
+  }).catch(() => {});
+}
 function applyUiLook() {
   const b = document.body;
   if (!b) return;

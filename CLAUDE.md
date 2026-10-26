@@ -587,6 +587,12 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Zeilenhöhe; ≤ 1,5 px). Schrift auf den Platten dunkel; was darunter erscheint (Raten nach Antippen, Lager-Meldung), hell mit Umriss.
     ≤ 860 px ohne Ortsnamen, ≤ 720 px Knöpfe rechts untereinander (das Infofenster rückt 601–720 px daneben, die Lager-Klappe öffnet links
     neben dem Knopf). Breiten 1280 … 360 px und Handy quer nachmessen. Roter Punkt auf Werten sitzt am Bildchen, nicht an der Zahl.
+    **Schrift** (Nutzer 26.10.2026, aus 12 Vorschlägen gewählt: „Schulheft“): nur **Mali** (Google Fonts, 500–700), in CSS immer
+    `var(--font)` (steht einmal oben in style.css), auf Leinwänden `… px Mali, system-ui, sans-serif`. Keine zweite Schrift dazunehmen.
+    Mali hat höchstens 700 (800/900 werden 700); Fließtext in Fenstern 500. Bilder mit Text, die zwischengespeichert werden
+    (Ladenschilder, Fragezeichen-Symbol, Baumenü-Bilder), malt `uiFontReady` nach dem Laden der Schrift neu. Mali ist breiter als die
+    alten Schriften: neue Raster mit `minmax(0, 1fr)` bzw. `auto-fit` bauen, lange Wörter trennen (`hyphens: auto`, lang="de").
+    Ausprobieren weiterer Schriften: tools/schrift.html (echtes Spiel, Testwelt, Umschalter).
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).
