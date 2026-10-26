@@ -1071,7 +1071,13 @@ function storeHtml() {
 function toggleStore(open = $('store').hidden) {
   const el = $('store');
   el.hidden = !open;
-  if (open) { const b = $('store-btn').getBoundingClientRect(); el.style.top = (b.bottom + 8) + 'px'; el.style.right = Math.max(10, window.innerWidth - b.right) + 'px'; setHtml(el, storeHtml()); }
+  if (!open) return;
+  const b = $('store-btn').getBoundingClientRect(), rail = getComputedStyle($('store-btn').parentElement).flexDirection === 'column';
+  // Knöpfe untereinander (Handy): links neben dem Knopf aufklappen, sonst darunter – die anderen Knöpfe bleiben frei
+  el.style.top = (rail ? b.top : b.bottom + 8) + 'px';
+  el.style.right = Math.max(10, window.innerWidth - (rail ? b.left - 8 : b.right)) + 'px';
+  el.style.maxWidth = rail ? `${Math.round(b.left - 18)}px` : '';                    // links 10 px Rand lassen
+  setHtml(el, storeHtml());
 }
 $('store-btn').onclick = e => { e.stopPropagation(); toggleStore(); };
 // Vorrat je Ware umschalten (das Lager wird laufend neu gezeichnet – daher am Rahmen lauschen)
@@ -3362,6 +3368,7 @@ const NEWS_HISTORY = [
     '📜 <b>Große Fenster:</b> Rathaus, Forschung, Einstellungen und die anderen Fenster haben jetzt auch Hecke bzw. Wolke als Rand, und alle Knöpfe sind Plättchen. Taler, Lager, Einwohner, Ideen, Schönheit und das Schloss für Gesperrtes erscheinen in Texten als Spiel-Bildchen.',
     '🪴 <b>Bauleiste:</b> Sie steht jetzt in einem Beet mit Hecke (bzw. auf einer Wolke). Jeder Knopf zeigt ein Bild aus dem Spiel mit einem Wort darunter, das Gewählte steht auf einer hellen Raute. Auch das Feld, das sich darüber öffnet, hat die Hecke bzw. die Wolke als Rand.',
     '🪵 <b>Knöpfe:</b> Bei der Hecke sind alle Knöpfe jetzt kleine Holzbretter mit Maserung und Nägeln, bei den Wolken kleine Schäfchenwolken. Was gewählt ist, ist grün bzw. kräftig blau.',
+    '🪧 <b>Neue Leiste oben:</b> Ortsname und Werte stehen jetzt auf einem Holzbrett (Hecke) bzw. einer Wolke, ordentlich mittig. Lager, Du, Freunde und Menü sind runde Knöpfe rechts, damit man sie nicht mehr für Dinge aus dem Spiel hält. Auf dem Handy stehen die Knöpfe rechts untereinander.',
     '🔢 <b>Ruhigere Leiste oben:</b> Taler, Einwohner, Ideen und Sternstaub stehen dort jetzt kurz (3,1k · 158k · 1,5 Mio.), damit die Leiste nicht mehr zuckt. Tippst du auf Taler oder Einwohner, siehst du ein paar Sekunden die genauen Zahlen; die genauen Ideen stehen in der Forschung.',
     '🔽 <b>Ziele einklappen:</b> Oben rechts im Ziel-Fenster zeigt ein kleiner Pfeil-Knopf, dass du es antippen und einklappen kannst.',
   ] },

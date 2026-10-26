@@ -1512,3 +1512,81 @@ body.look-wolke.phone:not(.phone-land) #panel.slab-in { padding: 34px 34px 42px;
 body { --goal-over: 12px; }
 body.look-wolke { --goal-over: 16px; }
 #goal.slab { margin-top: var(--goal-over); }
+
+/* ===== Leiste oben, Konzept A (Nutzer 26.10.2026: „unübersichtlich und vollgepackt“, „die zwei Symbole am Schluss sehen aus wie Dinge im
+   Spiel“, gewählt: A; „der Text soll nicht unten sitzen, sondern auf der Y-Achse zentriert“). Drei Gruppen in index.html: Ort · Werte auf einem
+   Brett bzw. einer Wolke · Knöpfe als runde Scheiben. Inhalt senkrecht mittig (früher unten bündig, als alles frei über der Welt stand).
+   Auf dem Handy (≤ 600 px) stehen die Knöpfe rechts untereinander. Stehen zuletzt: gelten vor allen früheren #hud-Regeln ===== */
+#hud { gap: 12px; flex-wrap: nowrap; align-items: center; }
+#hud .hud-grp { display: flex; align-items: center; pointer-events: none; }
+#hud .hud-act { margin-left: auto; gap: 10px; }
+#hud #menu-btn { margin-left: 0; padding-left: 0; }
+#hud .pill { align-items: center; }
+#hud .pill i.wi { margin-bottom: 0; }
+#hud #you-face.drawn { margin-bottom: 0; }
+#hud .pill b { white-space: nowrap; line-height: 1.1; }
+/* Platten: Hecke = helles Brett mit Maserung, Wolken = weiße Wolke (unten 3 px Dicke – Inhalt mittig auf der Fläche darüber) */
+body.look-hecke #hud :is(.hud-info, .hud-vals) { background: var(--grain), #ecd4a3; border: 1.5px solid #8a5a34; border-radius: 6px;
+  box-shadow: 0 3px 0 #8a5a34, 0 7px 12px rgba(40, 30, 20, .2); }
+body.look-wolke #hud :is(.hud-info, .hud-vals) { border: 0 solid transparent; border-image: var(--cloud-w) 32 32 38 32 fill / 16px 16px 19px 16px round;
+  background: linear-gradient(#fff, #fff) 9px 9px / calc(100% - 18px) calc(100% - 21px) no-repeat; filter: drop-shadow(0 5px 7px rgba(50, 70, 110, .2)); }
+#hud .hud-info { padding: 6px 14px; }
+#hud .hud-vals { padding: 5px 6px; }
+body.look-wolke #hud .hud-info { padding: 6px 16px 9px; }
+body.look-wolke #hud .hud-vals { padding: 5px 8px 8px; }
+#hud .hud-vals .pill { padding: 0 10px; }
+#hud .hud-vals .pill + .pill:not([hidden]) { border-left: 1.5px dotted rgba(90, 61, 36, .35); }
+body.look-wolke #hud .hud-vals .pill + .pill:not([hidden]) { border-left-color: rgba(59, 71, 99, .25); }
+/* Schrift auf den Platten dunkel statt weiß mit Umriss; was unter der Platte erscheint (Raten, Lager-Meldung), bleibt hell mit Umriss */
+#hud :is(.hud-info, .hud-vals) .pill, #hud :is(.hud-info, .hud-vals) .pill b, #hud :is(.hud-info, .hud-vals) .pill small:not(.more),
+#hud #town-name, #hud #town-btn .tod { color: #5a3d24; text-shadow: none; }
+body.look-wolke #hud :is(.hud-info, .hud-vals) .pill, body.look-wolke #hud :is(.hud-info, .hud-vals) .pill b,
+body.look-wolke #hud :is(.hud-info, .hud-vals) .pill small:not(.more), body.look-wolke #hud #town-name, body.look-wolke #hud #town-btn .tod { color: #3b4763; }
+#hud .pill.warn b { color: #c0392b; }
+#hud .pill small.more { color: #fff7e6; text-shadow: var(--ol); top: calc(100% + 12px); }
+/* roter Punkt (neue Idee) auf das Bildchen statt an den Zahlenrand */
+#hud .hud-vals .pill .dot { left: 4px; right: auto; top: -3px; }
+/* Knöpfe: runde Scheiben – Holz bzw. weiß mit blauem Ring */
+#hud .hud-act .pill { width: 46px; height: 46px; padding: 0; justify-content: center; border-radius: 50%; }
+body.look-hecke #hud .hud-act .pill { background: radial-gradient(circle at 50% 35%, #f3dcae, #d7a868 72%); border: 2px solid #8a5a34;
+  box-shadow: 0 3px 0 #8a5a34, 0 6px 10px rgba(40, 30, 20, .22); }
+body.look-wolke #hud .hud-act .pill { background: radial-gradient(circle at 50% 35%, #ffffff, #e9f0fa 72%); border: 2.5px solid #a9bde0;
+  box-shadow: 0 3px 0 #a9bde0, 0 6px 10px rgba(50, 70, 110, .2); }
+#hud .hud-act .pill:active { transform: translateY(2px); }
+#hud .hud-act .pill i.wi, #hud .hud-act .pill.store i.wi, #hud .hud-act .pill.net i.wi, #hud .hud-act #menu-btn i.wi { width: 31px; height: 29px; }
+#hud .hud-act #you-face { font-size: 24px; }
+#hud .hud-act #you-face.drawn { width: 22px; height: 29px; }
+@media (max-width: 900px) {
+  #hud { gap: 8px; }
+  #hud .hud-info { padding: 5px 10px; } body.look-wolke #hud .hud-info { padding: 5px 13px 8px; }
+  #hud .hud-vals .pill { padding: 0 7px; }
+  #hud .hud-act { gap: 7px; }
+  #hud .hud-act .pill { width: 40px; height: 40px; }
+  #hud .hud-act .pill i.wi, #hud .hud-act .pill.store i.wi, #hud .hud-act .pill.net i.wi, #hud .hud-act #menu-btn i.wi { width: 27px; height: 25px; }
+  #hud .hud-act #you-face.drawn { width: 19px; height: 25px; }
+}
+/* schmaler: Ortsname weg (Flagge und Uhrzeit bleiben; der Name steht im Rathaus) */
+@media (max-width: 860px) { #hud #town-name { display: none; } }
+/* noch schmaler und Handy: Knöpfe rechts untereinander (Ort, Werte und vier Knöpfe passen nicht in eine Zeile); das Infofenster rückt
+   neben die Knöpfe (auf dem Handy liegt es unten) */
+@media (max-width: 720px) {
+  #hud .hud-act { flex-direction: column; position: absolute; right: 0; top: calc(100% + 10px); gap: 6px; margin-left: 0; }
+}
+@media (min-width: 601px) and (max-width: 720px) { #panel.slab-in { right: 58px; } }
+@media (max-width: 600px) {
+  #hud { gap: 6px; }
+  #hud .hud-info { padding: 4px 7px; } body.look-wolke #hud .hud-info { padding: 4px 10px 7px; }
+  #hud .hud-vals { padding: 4px 3px; } body.look-wolke #hud .hud-vals { padding: 4px 6px 7px; }
+  #hud .hud-vals .pill { padding: 0 6px; }
+  #hud .hud-act .pill { width: 38px; height: 38px; }
+  #hud .hud-act .pill i.wi, #hud .hud-act .pill.store i.wi, #hud .hud-act .pill.net i.wi, #hud .hud-act #menu-btn i.wi { width: 25px; height: 23px; }
+  #hud .hud-act #you-face.drawn { width: 18px; height: 23px; }
+  #hud .pill small.more { top: calc(100% + 9px); }
+}
+@media (max-width: 400px) {
+  #hud .hud-vals .pill { padding: 0 4px; }
+  #hud .hud-info { padding: 4px 6px; } body.look-wolke #hud .hud-info { padding: 4px 8px 7px; }
+}
+#hud #town-btn .tod { position: relative; top: -1px; }          /* Uhrzeit fürs Auge mittig (kleinere Schrift sitzt sonst gut 1 px tief) */
+/* Knöpfe untereinander: Lager-Meldung (−🪵 3) links neben dem Knopf statt darunter auf dem nächsten Knopf */
+@media (max-width: 720px) { #hud .hud-act .pill .flash { top: 50%; right: calc(100% + 8px); margin-top: -11px; } }

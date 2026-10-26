@@ -521,7 +521,7 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Pillen** in neuer Oberfläche (Nutzer: „sieht KI-generiert aus“): Symbole zeichnet das Spiel selbst – `<i class="wi" data-ic="…">`
     (eigene Zeichnung aus `UI_DRAW` oder ein Ding ohne Bodenkachel, `'haus:2'`), gefüllt von `fillUiIcons`. Fenster/Leisten bekommen
     gemalte Platten über `lookSlab(el, 'paper'|'btn'|'btn2'|'bar')` (Bild in `--slab`, gezeigt von `.slab::before`, übersteht innerHTML;
-    neu gemalt nur bei Größenwechsel). Leiste oben: Zahlen frei mit Umriss (`--ol`), auf dem Handy Raten unter der Zahl. Klasse `.ic`
+    neu gemalt nur bei Größenwechsel). Leiste oben: siehe „Leiste oben (Konzept A)“ weiter unten. Klasse `.ic`
     ist schon vergeben (Bereichsknöpfe) – Welt-Symbole heißen `wi`. Bauleiste: `#cats` steht in `#cats-isle` (Platte 'bar'; `.cats` scrollt
     selbst, eine Platte darin würde abgeschnitten), Knöpfe über `wiFace(b, symbol, wort)`, Bereiche/Gruppen über `menuIcon(el, id)`
     (`MENU_ICON`; ohne Bild bleibt das Emoji). Das Feld `#sheet` scrollt selbst → Platte als Hintergrund (`lookSlab(el, rolle, true)`,
@@ -580,6 +580,13 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     **Zahlen in der Leiste oben** nur über `hudNum` (bis 999 genau, dann `fmtHud`: 3,1k · 158k · 1,5 Mio., abgerundet; nach Antippen von
     Taler/Einwohner 5 s die volle Zahl) – lange, ständig wechselnde Zahlen ließen die ganze Leiste zucken. Ziffern `tabular-nums`.
     Das Ziel-Fenster steht `--goal-over` (Hecke 12, Wolken 16 px) tiefer als `top`, weil Büsche/Buckel über seinen Rand hinausstehen.
+    **Leiste oben (Konzept A, Nutzer 26.10.2026)**: drei Gruppen in index.html – `.hud-info` (Ort), `.hud-vals` (Taler, Einwohner, Ideen,
+    Sternstaub auf einem Brett bzw. einer weißen Wolke `--cloud-w`), `.hud-act` (Lager, Du, Online, Menü als runde Scheiben). Neue Werte gehören
+    in `.hud-vals`, neue Knöpfe in `.hud-act`. Inhalt senkrecht mittig (`align-items: center`, Bildchen ohne negativen Rand; Wolke: unten 3 px
+    mehr Innenabstand für ihre Dicke) – prüfen mit tools/leiste-pruefung.js (`LT_CHECK()`: Mitte von Ziffern/Großbuchstaben, nicht der
+    Zeilenhöhe; ≤ 1,5 px). Schrift auf den Platten dunkel; was darunter erscheint (Raten nach Antippen, Lager-Meldung), hell mit Umriss.
+    ≤ 860 px ohne Ortsnamen, ≤ 720 px Knöpfe rechts untereinander (das Infofenster rückt 601–720 px daneben, die Lager-Klappe öffnet links
+    neben dem Knopf). Breiten 1280 … 360 px und Handy quer nachmessen. Roter Punkt auf Werten sitzt am Bildchen, nicht an der Zahl.
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

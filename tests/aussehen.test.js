@@ -141,6 +141,21 @@ describe('Aussehen', () => {
     expect(css).toContain(`border-image: var(--ck) ${c} ${c} ${b} ${c} fill / ${c / 2}px ${c / 2}px ${b / 2}px ${c / 2}px round`);
     for (const id of game('Object.keys(CLOUD_KNOB)')) expect(css).toContain(`var(--cloud-${id})`);
     game("setUiLook('wolke')");
-    expect(game("Object.keys(CLOUD_KNOB).map(id => document.body.style.getPropertyValue('--cloud-' + id).startsWith('url('))")).toEqual([true, true, true, true, true]);
+    expect(game("Object.keys(CLOUD_KNOB).every(id => document.body.style.getPropertyValue('--cloud-' + id).startsWith('url('))")).toBe(true);
+  });
+
+  it('Leiste oben (Konzept A): Ort · Werte · Knöpfe als Gruppen, Werte auf Platte, Knöpfe rund, Inhalt senkrecht mittig', () => {
+    const grp = cls => game(`[...document.querySelectorAll('#hud .${cls} .pill')].map(p => p.id)`);
+    expect(grp('hud-info')).toEqual(['town-btn']);
+    expect(grp('hud-vals')).toEqual(['money-btn', 'pop-btn', 'sci-btn', 'sd-btn']);
+    expect(grp('hud-act')).toEqual(['store-btn', 'you-btn', 'net-btn', 'menu-btn']);
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    const tail = css.slice(css.indexOf('Leiste oben, Konzept A'));
+    expect(tail).toMatch(/#hud \.pill \{ align-items: center; \}/);                       // nicht mehr unten bündig
+    expect(tail).toMatch(/#hud \.pill i\.wi \{ margin-bottom: 0; \}/);
+    expect(tail).toMatch(/body\.look-hecke #hud :is\(\.hud-info, \.hud-vals\) \{[^}]*var\(--grain\)/);
+    expect(tail).toMatch(/body\.look-wolke #hud :is\(\.hud-info, \.hud-vals\) \{[^}]*var\(--cloud-w\)/);
+    expect(tail).toMatch(/#hud \.hud-act \.pill \{[^}]*border-radius: 50%/);
+    expect(tail).toMatch(/@media \(max-width: 720px\) \{\s*#hud \.hud-act \{ flex-direction: column/);   // schmal: Knöpfe untereinander
   });
 });

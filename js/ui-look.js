@@ -191,6 +191,7 @@ const CLOUD_KNOB = {
   s:   ['#e3ecf8', '#b3c3dd', '#ffffff'],                      // Neben-Knöpfe, Wahl-Chips
   x:   ['#d9655a', '#a8443a', '#ec8c82'],                      // Abreißen & Co.
   off: ['#e6ebf2', '#c8d0dc', '#f4f6fa'],                      // gesperrt
+  w:   ['#ffffff', '#c7d4e8', '#ffffff'],                      // Platten der Leiste oben (Ort, Werte)
 };
 // ganze Pixel (Ecke 16, unten 19; style.css: border-image 32 32 38 32 / 16px …) – halbe Pixel gaben feine Nähte zwischen den 9 Teilen
 const CLOUD_KNOB_R = 9, CLOUD_KNOB_P = 14, CLOUD_KNOB_DEPTH = 3;
