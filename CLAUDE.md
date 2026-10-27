@@ -435,6 +435,10 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Seltene. **Baumenü zeigt nur Gekauftes** (Nutzer 21.10.2026, wie Animal Crossing): Gruppen ✨ Sternenbasar und 🏛️ Monumente sind Getter,
     leere Gruppen blendet renderTools aus; Schaufenster ist der Basar, Ziele zeigt das Sammelbuch („???“). Ein Kommentar `//` mitten in einer Zeile mit weiteren Einträgen verschluckt sie – drawObject fängt Fehler, darum prüft der Test
     `typeof MON_ART[…]`.
+29e2. **Basar-Stücke aus dem Verkauf nehmen** (Basar-Durchsicht 27.10.2026): nie aus SD_SHOP/ITEMS löschen (Spielstände!), sondern in
+    `SD_NICHT_MEHR` eintragen. Angebot, Katalog, Kaufen, Ausprobieren und „n von allen“ gehen über `sdForSale`; Gekauftes bleibt auf der Insel,
+    im Baumenü und im Sammelbuch. Bewegte Basar-Stücke (Zeichnung nutzt `now`) gehören in `ANIM_ITEMS` (sonst stehen sie als Bildchen still).
+    Prüfbilder: `tools/basar-blatt.js` (groß, Tag) und `tools/basar-schau.js` (im Spiel, Tag/Nacht); Übersicht für den Nutzer tools/basar-schau.html.
 29f. **🎭 Opernhaus** (Prachtbau, Block 161f, js/oper.js): Bild `OPER_ART(K, stufe)` aus tools/prachtbauten-entwurf.js (`semper`, Änderungen
     zuerst dort zeigen). Einmal im Spiel über `ITEMS[b].unique` + `the` (placeError, kein Kopieren); Stufe = `t.lvl` (1–3), Ausbau per
     `operUpgrade` (nur Taler, `OPER_STAGES`), Schönheit ×Stufe, Abriss gibt alles zurück (`operPaidUp`). Wirkung: **Lied** (`OPER_LIED`,

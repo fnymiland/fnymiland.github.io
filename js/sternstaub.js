@@ -265,6 +265,10 @@ BIG_ART.sternenbasar = (cx, cy, z, now, x, y, lvl, t) => {
 // Waren: { id: ITEMS-Schlüssel, price ✨, rare?: im Tagesangebot das seltene, katalog?: nur im Katalog (immer da) }
 const SD_SHOP = [];
 const sdShopItem = id => SD_SHOP.find(s => s.id === id);
+// Nicht mehr im Verkauf (Basar-Durchsicht, Nutzer 27.10.2026): Wer sie gekauft hat, behält sie (Insel, Baumenü, Sammelbuch);
+// Angebot, Katalog, Kaufen, Ausprobieren und die Zählung „n von allen“ kennen nur, was es noch gibt
+const SD_NICHT_MEHR = new Set(['sd_pagode', 'sd_leseecke', 'sd_wandbild', 'sd_apfelbaum', 'sd_glockenbaum', 'sd_huehnerhaus']);
+const sdForSale = s => !!s && !SD_NICHT_MEHR.has(s.id);
 // Kalenderwoche ab Montag (Tageszahl seit 1970, der 1.1.1970 war ein Donnerstag) und Tage bis zum Wechsel
 const sdFuture = (day, today = sdDay()) => sdDayNum(day) > sdDayNum(today) + 1;   // falsche Uhr auf einem Gerät: übermorgen und später gilt nicht (Prüfung 19.10.)
 const sdDayNum = day => Math.round(Date.UTC(Math.floor(day / 10000), Math.floor(day / 100) % 100 - 1, day % 100) / 864e5);
@@ -277,21 +281,21 @@ const sdWeekLeft = day => 7 - ((sdDayNum(day) + 3) % 7);
 function basarOffers(today = sdDay()) {
   const pick = (list, n, key) => list.map(s => ({ s, h: sdHash(key + ':' + state.seed + ':' + s.id), have: state.sdItems.has(s.id) }))
     .sort((p, q) => p.have - q.have || p.h - q.h).slice(0, n).map(p => p.s);
-  const pool = SD_SHOP.filter(s => !s.katalog && !s.mon), wk = sdWeek(today), o = state.sdOffers;   // mon: Wahrzeichen nur im Reiter Monumente
-  const known = ids => ids.length && ids.every(id => sdShopItem(id));
+  const pool = SD_SHOP.filter(s => !s.katalog && !s.mon && sdForSale(s)), wk = sdWeek(today), o = state.sdOffers;   // mon: Wahrzeichen nur im Reiter Monumente
+  const known = ids => ids.length && ids.every(id => sdForSale(sdShopItem(id)));   // gemerktes Angebot mit Entferntem: neu rechnen
   const day = o && o.day === today && known(o.ids) ? o.ids.map(sdShopItem) : pick(pool.filter(s => !s.rare), 3, today);
-  const rare = o && o.week === wk && o.rare && sdShopItem(o.rare) ? [sdShopItem(o.rare)] : pick(pool.filter(s => s.rare), 1, 'w' + wk);
+  const rare = o && o.week === wk && o.rare && sdForSale(sdShopItem(o.rare)) ? [sdShopItem(o.rare)] : pick(pool.filter(s => s.rare), 1, 'w' + wk);
   if (!o || today > o.day || sdFuture(o.day, today)) state.sdOffers = { day: today, ids: day.map(s => s.id), week: wk, rare: rare[0] ? rare[0].id : null };
   return [...day, ...rare];
 }
 // 📖 Katalog (Animal-Crossing-Art, entschieden 18.10.2026): was der Basar schon einmal angeboten hat, gibt es jederzeit nach – zum
 // anderthalbfachen Preis; Seltenes nur in seiner Woche. Gesehen = state.sdShown (beim Öffnen des Basars gemerkt)
 const sdKatalogPrice = s => Math.ceil(s.price * 1.5 / 10) * 10;
-const sdKatalog = () => SD_SHOP.filter(s => !s.rare && !s.mon && state.sdShown && state.sdShown.has(s.id) && !state.sdItems.has(s.id));
+const sdKatalog = () => SD_SHOP.filter(s => !s.rare && !s.mon && sdForSale(s) && state.sdShown && state.sdShown.has(s.id) && !state.sdItems.has(s.id));
 function sdBuyItem(id, fromKatalog = false) {
   if (typeof viewOnly === 'function' && viewOnly()) { if (typeof cloudBlocked === 'function') cloudBlocked(); return false; }
   const s = sdShopItem(id);
-  if (!s || state.sdItems.has(id)) return false;
+  if (!sdForSale(s) || state.sdItems.has(id)) return false;
   if (fromKatalog && (s.rare || s.mon || !state.sdShown || !state.sdShown.has(id))) return false;
   if (s.mon && !fromKatalog && monOfMonth() !== id) { fail('Diesen Bauplan gibt es diesen Monat nicht'); return false; }   // Wahrzeichen des Monats (Block 162)
   if (!s.mon && !fromKatalog && !basarOffers().some(o => o.id === id)) { fail('Das gibt es heute nicht im Basar. Schau im Katalog nach.'); return false; }   // Prüfung 19.10.
@@ -318,7 +322,7 @@ const SD_SAMMLUNGEN = [['Sternengarten', '🌸', 'Sternengarten'], ['Eiszauber',
   ['Prinzessinnen & Märchen', '👑', 'Märchen'], ['Inselleben', '🍃', 'Inselleben']];
 const sdSammlung = id => (ITEMS[id] && ITEMS[id].sammlung) || 'Sternengarten';
 const sdSmlg = key => SD_SAMMLUNGEN.find(s => s[0] === key) || [key, '✨', key];
-const sdSmlgCount = key => { const all = SD_SHOP.filter(s => sdSammlung(s.id) === key); return [all.filter(s => state.sdItems.has(s.id)).length, all.length]; };
+const sdSmlgCount = key => { const all = SD_SHOP.filter(s => sdSammlung(s.id) === key && sdForSale(s)); return [all.filter(s => state.sdItems.has(s.id)).length, all.length]; };
 // NEU: heute zum ersten Mal im Angebot (bleibt den ganzen Tag NEU); Herzchen: gemerkt, Hinweis einmal am Tag, wenn es da ist
 const sdIsNew = (id, today = sdDay()) => !!(state.sdNew && state.sdNew.day === today && state.sdNew.ids.includes(id));
 function sdToggleWish(id) {
@@ -374,7 +378,7 @@ function sdHareSay(offers, today = sdDay()) {
   if (rare && left === 7) return `Ganz neu diese Woche: ${nm(rare)}! Es bleibt sieben Tage.`;
   const neu = offers.find(s => sdIsNew(s.id, today) && !state.sdItems.has(s.id));
   if (neu && state.sdShown && state.sdShown.size > offers.length) return `Das hatte ich noch nie dabei: ${nm(neu)}!`;
-  if (SD_SHOP.length && SD_SHOP.every(s => state.sdItems.has(s.id))) return 'Du hast wirklich alles! Ich bin beeindruckt.';
+  if (SD_SHOP.length && SD_SHOP.every(s => !sdForSale(s) || state.sdItems.has(s.id))) return 'Du hast wirklich alles! Ich bin beeindruckt.';
   return SD_HARE_SAYS[sdHash('hase:' + today + ':' + state.seed) % SD_HARE_SAYS.length];
 }
 // Mondhase (Sage vom Hasen im Mond, Entwurf tools/haendlerin-entwurf.js): auf der Mondsichel, Zipfelmütze, Laterne am Stab
@@ -439,7 +443,7 @@ function basarMonuments() {
 // 📖 Sammelbuch: alle Waren je Sammlung – gekauft bunt, gesehen als Umriss mit Namen, nie gesehen als Umriss mit „???“
 function basarBook() {
   return SD_SAMMLUNGEN.map(([key, ic, short]) => {
-    const list = SD_SHOP.filter(s => sdSammlung(s.id) === key);
+    const list = SD_SHOP.filter(s => sdSammlung(s.id) === key && (sdForSale(s) || state.sdItems.has(s.id)));   // Entferntes nur, wenn gekauft
     if (!list.length) return '';
     const [n, all] = sdSmlgCount(key);
     return `<div class="book-sec"><div class="book-head"><b>${ic} ${escHtml(key)}</b><span>${n}/${all}</span></div>
@@ -452,7 +456,7 @@ function basarBook() {
 // gebaut wird nie (available/tap kennen sdTry). „Kaufen“ kauft und stellt sie dorthin, wo die Vorschau steht; jedes andere Werkzeug beendet es
 let sdTry = null, sdTryKat = false;                                   // sdTryKat: aus dem Katalog (Katalogpreis, Prüfung 19.10.)
 function sdTryStart(id, kat = false) {
-  if (!sdShopItem(id) || state.sdItems.has(id)) return;
+  if (!sdForSale(sdShopItem(id)) || state.sdItems.has(id)) return;
   if (typeof viewOnly === 'function' && viewOnly()) { if (typeof cloudBlocked === 'function') cloudBlocked(); return; }
   closeModal(); setTool('look'); sdTry = id; sdTryKat = !!kat; setTool(id); sdTryBar();
   toast('👁 Probe: Tipp auf deine Insel, gebaut wird nichts');
@@ -568,10 +572,15 @@ const SD_ART = {
     sdShadow(cx, cy, 10, z);
     sdTrunk(cx, cy, z, 15, 2, '#6e4a3a');
     sdBlob(cx, cy, z, SD_CROWN, '#3f8f4a', '#5fb35a');
-    for (const [dx, dy, c] of [[-8, -15, '#ff8a3d'], [7, -16, '#ffd23f'], [-2, -19, '#ff5d8f'], [10, -22, '#ff8a3d'], [-10, -22, '#ffd23f']]) {
-      sdLine('#5a4636', 0.5, z, [[cx + dx * z, cy + (dy - 4) * z], [cx + dx * z, cy + (dy - 1.5) * z]]);
-      ellipse(cx + dx * z, cy + dy * z, 1.8 * z, 2.2 * z, lit ? '#ffe9a0' : C(c));
-      if (lit) sdGlow(cx + dx * z, cy + dy * z, 10 * z, z);
+    // Laternen hängen an hellen Fäden unter dem Kronenrand, nicht mitten im Laub (Basar-Durchsicht 27.10.2026: „schwarze Zipfel“)
+    for (const [dx, top, len, c] of [[-8, -12.5, 2, '#ff8a3d'], [8, -12.5, 2.6, '#ffd23f'], [-12.6, -20.5, 1.8, '#ff5d8f'], [12.4, -20.5, 2.4, '#ff8a3d']]) {
+      const x = cx + dx * z, y = cy + (top + len + 2) * z;
+      sdLine('#e8d7b0', 0.25, z, [[x, cy + top * z], [x, y - 2 * z]]);
+      ellipse(x, y, 1.7 * z, 2 * z, lit ? '#ffe9a0' : C(c));
+      ellipse(x - 0.5 * z, y - 0.4 * z, 0.6 * z, 1.2 * z, lit ? '#fff6cf' : 'rgba(255,255,255,0.35)');
+      poly([[x - 0.9 * z, y - 2.2 * z], [x + 0.9 * z, y - 2.2 * z], [x + 0.7 * z, y - 1.6 * z], [x - 0.7 * z, y - 1.6 * z]], C('#c9962a'));
+      poly([[x - 0.7 * z, y + 1.6 * z], [x + 0.7 * z, y + 1.6 * z], [x + 0.9 * z, y + 2.2 * z], [x - 0.9 * z, y + 2.2 * z]], C('#c9962a'));
+      if (lit) sdGlow(x, y, 10 * z, z);
     }
   },
   sd_nachtblumen(cx, cy, z) {
@@ -610,9 +619,13 @@ const SD_ART = {
     sdShadow(cx, cy, 10, z);
     for (const s of [-1, 1]) sdLine('#6b4f3a', 1.4, z, [[cx + s * 9 * z, cy], [cx + s * 9 * z, cy - 18 * z]]);
     sdLine('#5a4636', 0.5, z, [[cx - 9 * z, cy - 17 * z], [cx + 9 * z, cy - 17 * z]], [cx, cy - 11 * z]);
-    ['#ff5d8f', '#ffd23f', '#58b3e8', '#ff8a3d', '#b57bff'].forEach((c, k) => { const t = (k + 0.5) / 5, x0 = cx + (-9 + 18 * t) * z, y0 = cy + (-17 + 6 * 4 * t * (1 - t)) * z;
-      ellipse(x0, y0 + 2.4 * z, 2 * z, 2.4 * z, lit ? '#ffe9a0' : C(c)); poly([[x0 - 1.2 * z, y0 + 0.2 * z], [x0 + 1.2 * z, y0 + 0.2 * z], [x0 + 1.2 * z, y0 + 0.8 * z], [x0 - 1.2 * z, y0 + 0.8 * z]], C('#5a4636'));
-      if (lit) sdGlow(x0, y0 + 2.4 * z, 9 * z, z); });
+    // Lampions hängen am Seil: y0 liegt genau auf der Kurve (vorher doppelt so tief → schwebten darunter, Basar-Durchsicht 27.10.2026)
+    ['#ff5d8f', '#ffd23f', '#58b3e8', '#ff8a3d', '#b57bff'].forEach((c, k) => { const t = (k + 1) / 6, x0 = cx + (-9 + 18 * t) * z, y0 = cy + (-17 + 12 * t * (1 - t)) * z;
+      sdLine('#5a4636', 0.3, z, [[x0, y0], [x0, y0 + 0.8 * z]]);
+      poly([[x0 - 0.9 * z, y0 + 0.7 * z], [x0 + 0.9 * z, y0 + 0.7 * z], [x0 + 0.9 * z, y0 + 1.2 * z], [x0 - 0.9 * z, y0 + 1.2 * z]], C('#5a4636'));
+      ellipse(x0, y0 + 3.2 * z, 1.6 * z, 2.1 * z, lit ? '#ffe9a0' : C(c));
+      ellipse(x0 - 0.5 * z, y0 + 2.8 * z, 0.5 * z, 1.2 * z, lit ? '#fff6cf' : 'rgba(255,255,255,0.35)');
+      if (lit) sdGlow(x0, y0 + 3.2 * z, 9 * z, z); });
   },
   sd_sonnenuhr(cx, cy, z) {
     sdShadow(cx, cy, 6, z);

@@ -36,7 +36,9 @@ SD_WAREN.EISZAUBER = (() => {
       poly([[L[0], L[1] - 6 * z], [L[0] + 3.4 * z, L[1] - 1 * z], [L[0] + 2 * z, L[1] + 4 * z], [L[0] - 2 * z, L[1] + 4 * z], [L[0] - 3.4 * z, L[1] - 1 * z]], lit ? '#e6f6ff' : C(ICE));
       poly([[L[0], L[1] - 6 * z], [L[0] + 3.4 * z, L[1] - 1 * z], [L[0], L[1] + 1 * z]], lit ? '#ffffff' : C(ICE_L));
       if (lit) glowAt(L[0], L[1], 24 * z, z, 'blue');
-      flake(L[0], L[1] - 9 * z, 2 * z, C('#ffffff'), Math.max(0.5, 0.6 * z));
+      sdLine('#9fc3d8', 0.5, z, [[L[0], L[1] - 6 * z], [L[0], L[1] - 7.4 * z]]);                       // Flocke sitzt auf der Spitze (schwebte)
+      flake(L[0], L[1] - 9 * z, 2 * z, lit ? '#ffffff' : C('#ffffff'), Math.max(0.5, 0.6 * z));
+      if (lit) circle(L[0], L[1] + 0.6 * z, 1.4 * z, '#ffffff');                                       // Licht im Kristall
     }],
     ['Verschneite Tanne', (cx, cy, z) => {
       snow(cx, cy, 9, z);
@@ -93,9 +95,11 @@ SD_WAREN.EISZAUBER = (() => {
       snow(cx, cy, 10, z);
       g.strokeStyle = C(ICE_D); g.lineWidth = Math.max(0.7, 1.6 * z); g.lineCap = 'round';
       g.beginPath(); g.moveTo(cx - 9 * z, cy); g.quadraticCurveTo(cx - 9 * z, cy - 26 * z, cx, cy - 26 * z); g.quadraticCurveTo(cx + 9 * z, cy - 26 * z, cx + 9 * z, cy); g.stroke();
-      for (const [dx, dy] of [[-6, -18], [-2, -23], [3, -22], [7, -15], [0, -14]]) {
-        const p = [cx + dx * z, cy + dy * z];
-        sdLine('#cfe6f2', 0.3, z, [[p[0], p[1] - 3 * z], p]);
+      // Flocken hängen an Fäden, die oben am Bogen beginnen (vorher frei in der Luft, Basar-Durchsicht 27.10.2026)
+      const archY = dx => { const t = Math.sqrt(Math.min(1, (9 - Math.abs(dx)) / 9)); return -26 * (2 * t - t * t); };
+      for (const [dx, len] of [[-4.8, 2.6], [-2.2, 5], [2.2, 3.4], [4.8, 4.6], [0, 8]]) {
+        const top = [cx + dx * z, cy + (archY(dx) + 0.8) * z], p = [top[0], top[1] + len * z];
+        sdLine('#cfe6f2', 0.3, z, [top, p]);
         flake(p[0], p[1] + 1.4 * z, 1.6 * z, lit ? '#ffffff' : C('#9fd3ee'), Math.max(0.5, 0.55 * z));
         if (lit) glowAt(p[0], p[1] + 1.4 * z, 7 * z, z, 'blue');
       }
@@ -125,8 +129,15 @@ SD_WAREN.EISZAUBER = (() => {
         circle(x, cy - H * z, 2.4 * s * z, C('#2f3440')); circle(x + 0.9 * s * z, cy - H * z, 0.4 * z, C('#ffffff'));
         poly([[x + 2 * s * z, cy - H * z], [x + 3.6 * s * z, cy - (H - 0.6) * z], [x + 2 * s * z, cy - (H - 1) * z]], C('#f0a24a'));
         ellipse(x, cy - 0.3 * z, 1.8 * s * z, 0.7 * z, C('#f0a24a'));
+        if (s === 1) {                                     // Schal um den Hals, das Ende hängt vorn herunter (vorher quer übers Gesicht)
+          const ny = cy - 8.9 * z;
+          ellipse(x, ny + 0.25 * z, 2.9 * z, 1.05 * z, C('#b8443c'));
+          ellipse(x, ny, 2.8 * z, 0.85 * z, C('#d9534a'));
+          poly([[x + 0.6 * z, ny + 0.3 * z], [x + 1.9 * z, ny + 0.1 * z], [x + 2.3 * z, ny + 4.2 * z], [x + 1.1 * z, ny + 4.4 * z]], C('#d9534a'));
+          for (const k of [0, 1, 2]) sdLine('#f3d6d2', 0.25, z, [[x + (1.2 + k * 0.4) * z, ny + (4.3 - k * 0.07) * z], [x + (1.2 + k * 0.4) * z, ny + (5 - k * 0.07) * z]]);
+          sdLine('#f3d6d2', 0.3, z, [[x - 2.2 * z, ny], [x + 2.2 * z, ny]], [x, ny + 1 * z]);
+        }
       }
-      ellipse(cx - 4 * z, cy - 9.6 * z, 3 * z, 0.9 * z, C('#d9534a'));                                    // Mützchen-Schal
     }],
     ['Schneekugel', (cx, cy, z) => {
       const lit = sdLit();
@@ -183,6 +194,19 @@ SD_WAREN.EISZAUBER = (() => {
   const glowAt = (x, y, r, z, tint) => { const q = 0.35 * z; glowQuad([[x - q, y + q], [x + q, y + q], [x + q, y - q], [x - q, y - q]], r, tint); };
   const rose = (x, y, r, col) => { circle(x, y, r, C(col)); circle(x - r * 0.2, y - r * 0.2, r * 0.55, C(shade(col, 0.18))); };
   const heart = (x, y, r, col) => { g.beginPath(); g.moveTo(x, y + r * 0.9); g.bezierCurveTo(x - r * 1.4, y - r * 0.1, x - r * 0.7, y - r * 1.1, x, y - r * 0.35); g.bezierCurveTo(x + r * 0.7, y - r * 1.1, x + r * 1.4, y - r * 0.1, x, y + r * 0.9); g.fillStyle = col; g.fill(); };
+  // Himmelslaterne aus Papier (x, y = Öffnung unten): unten schmal, oben breit und rund, rechte Seite im Schatten, Rippen, Flämmchen
+  const paperLantern = (x, y, w, z, lit, fly) => {
+    const W = w * z, H = w * 2.5 * z;
+    const body = () => { g.beginPath(); g.moveTo(x - 0.6 * W, y); g.lineTo(x + 0.6 * W, y); g.lineTo(x + W, y - H * 0.75); g.quadraticCurveTo(x + W, y - H, x, y - H); g.quadraticCurveTo(x - W, y - H, x - W, y - H * 0.75); g.lineTo(x - 0.6 * W, y); g.closePath(); };
+    body(); g.fillStyle = lit ? '#ffd98a' : C('#f8cf8c'); g.fill();
+    g.beginPath(); g.moveTo(x + 0.2 * W, y); g.lineTo(x + 0.6 * W, y); g.lineTo(x + W, y - H * 0.75); g.quadraticCurveTo(x + W, y - H, x + 0.25 * W, y - H * 0.99); g.closePath();
+    g.fillStyle = lit ? '#ffc25a' : C('#eeb064'); g.fill();
+    for (const k of [-0.45, 0.05, 0.55]) sdLine(lit ? '#f0a848' : '#dc9a52', 0.16, z, [[x + k * 0.6 * W, y], [x + k * W, y - H * 0.8]]);
+    sdLine(lit ? '#f0a848' : '#dc9a52', 0.16, z, [[x - 0.85 * W, y - H * 0.5], [x + 0.85 * W, y - H * 0.5]], [x, y - H * 0.46]);
+    ellipse(x, y, 0.6 * W, 0.18 * W, C('#a8642e'));
+    if (fly || lit) { circle(x, y - 0.15 * W, 0.24 * W, lit ? '#fff3b0' : C('#ffb23a')); circle(x, y - 0.15 * W, 0.12 * W, lit ? '#ffffff' : C('#ffe08a')); }
+    if (lit) glowAt(x, y - 0.15 * W, w * 8 * z, z);                    // Lichtquelle = Flämmchen in der Öffnung
+  };
   const skyLantern = (x, y, w, z, lit) => { poly([[x - w * z, y], [x + w * z, y], [x + w * 0.8 * z, y - w * 2 * z], [x - w * 0.8 * z, y - w * 2 * z]], lit ? '#ffcf6a' : C('#ffb347')); ellipse(x, y - w * 2 * z, w * 0.8 * z, w * 0.3 * z, lit ? '#ffe39a' : C('#ffc76a')); if (lit) glowAt(x, y - w * z, w * 7 * z, z); };
 
   SD_WAREN.TURM = [
@@ -205,12 +229,15 @@ SD_WAREN.EISZAUBER = (() => {
       poly([[cx - R * 1.35, top], [cx + R * 1.35, top], [cx, top - 16 * z]], C('#7b5ea7')); poly([[cx, top], [cx + R * 1.35, top], [cx, top - 16 * z]], C('#664b8f'));
       sdLine('#6b4f3a', 0.6, z, [[cx, top - 16 * z], [cx, top - 21 * z]]); poly([[cx, top - 21 * z], [cx + 4 * z, top - 20 * z], [cx, top - 19 * z]], C('#ffd23f'));
     }, true],
-    ['Himmelslaternen', (cx, cy, z) => {
-      const lit = sdLit();
-      sdShadow(cx, cy, 6, z);
-      for (const [dx, dy, w] of [[-4, -16, 1.8], [3, -24, 2.2], [-1, -31, 1.6], [6, -14, 1.4]]) skyLantern(cx + dx * z, cy + dy * z, w, z, lit);
-      for (const [dx] of [[-4], [3]]) sdLine('#d8c3a0', 0.25, z, [[cx + dx * z, cy - 6 * z], [cx + dx * z, cy - 13 * z]]);
-      poly([[cx - 4 * z, cy], [cx + 4 * z, cy], [cx + 3 * z, cy - 5 * z], [cx - 3 * z, cy - 5 * z]], C('#8a5a3c'));   // Kiste, aus der sie steigen
+    // Neu (Basar-Durchsicht 27.10.2026: „komplett broken“): Papierlaternen, unten schmal mit Flämmchen, oben rund; eine steht noch im Gras,
+    // drei steigen auf und wiegen sich sanft (bewegt: ANIM_ITEMS)
+    ['Himmelslaternen', (cx, cy, z, now = 0) => {
+      const lit = sdLit(), t = (now || 0) / 1000;
+      sdShadow(cx - 2 * z, cy, 5.5, z);
+      paperLantern(cx - 2 * z, cy - 0.4 * z, 3.6, z, lit, false);
+      for (const [dx, dy, w, ph] of [[5, -19, 2.9, 0], [-5.5, -29, 2.4, 2.1], [2.5, -38, 1.9, 4.2]]) {
+        paperLantern(cx + dx * z + Math.sin(t * 0.7 + ph) * 0.8 * z, cy + dy * z + Math.sin(t * 1.3 + ph) * 1.1 * z, w, z, lit, true);
+      }
     }],
     ['Blumenranken-Tor', (cx, cy, z) => {
       sdShadow(cx, cy, 10, z);
@@ -622,3 +649,4 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
     SD_SHOP.push({ id: m.id, price: m.price, ...(m.rare ? { rare: true } : {}) });
     if (!ITEM_TIPS[m.id]) ITEM_TIPS[m.id] = tile ? 'Aus dem Sternenbasar ✨, braucht ein ganzes Feld Wiese.' : 'Aus dem Sternenbasar ✨. Kleine Deko für eine Ecke, bis zu 4 pro Feld.';
   }
+ANIM_ITEMS.add('sd_himmelslaternen');                               // schwebende Laternen wiegen sich (Basar-Durchsicht 27.10.2026)
