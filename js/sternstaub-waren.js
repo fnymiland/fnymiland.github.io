@@ -404,15 +404,12 @@ SD_WAREN.EISZAUBER = (() => {
       circle(cx + 6 * z, cy - 1 * z, 1.6 * z, C(GOLD)); circle(cx + 5.6 * z, cy - 1.4 * z, 0.6 * z, C('#fff3a0'));   // goldene Kugel
       for (const s of [-1, 1]) { g.strokeStyle = 'rgba(184,236,246,0.9)'; g.lineWidth = Math.max(0.5, 0.7 * z); g.beginPath(); g.moveTo(cx + s * 1 * z, cy - 9 * z); g.quadraticCurveTo(cx + s * 5 * z, cy - 11 * z, cx + s * 6.5 * z, cy - 2 * z); g.stroke(); }
     }],
-    ['Rosenhecke mit Spinnrad', (cx, cy, z) => {
-      sdShadow(cx, cy, 11, z);
-      sdBlob(cx, cy, z, [[-6, -6, 5], [0, -7, 5.4], [6, -6, 5], [-3, -10, 4], [3, -11, 4]], '#3f7f3a', '#5a9e4a');
-      for (const [dx, dy] of [[-7, -7], [-2, -11], [3, -9], [7, -5], [0, -5], [-4, -3], [5, -12]]) rose(cx + dx * z, cy + dy * z, 1.3 * z, ROSE);
-      const W = [cx + 3 * z, cy - 1 * z];                                                                   // Spinnrad davor
-      circle(W[0] + 4 * z, W[1] - 5 * z, 4 * z, C('#8a5a3c')); circle(W[0] + 4 * z, W[1] - 5 * z, 3.2 * z, C('#3f7f3a'));
-      for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; sdLine('#a8794e', 0.35, z, [[W[0] + 4 * z, W[1] - 5 * z], [W[0] + (4 + Math.cos(a) * 3.4) * z, W[1] - (5 + Math.sin(a) * 3.4) * z]]); }
-      sdLine('#8a5a3c', 0.9, z, [[W[0] + 1 * z, W[1]], [W[0] + 4 * z, W[1] - 5 * z]]); sdLine('#8a5a3c', 0.9, z, [[W[0] + 7 * z, W[1]], [W[0] + 4 * z, W[1] - 5 * z]]);
-      circle(W[0] + 8.4 * z, W[1] - 8 * z, 0.9 * z, C('#fff3d6'));
+    // nur Rosenhecke (Basar-Durchsicht 28.10.2026: Spinnrad weg), dafür breiter und voller, Rosen in zwei Rottönen und Weiß
+    ['Rosenhecke', (cx, cy, z) => {
+      sdShadow(cx, cy, 13, z);
+      sdBlob(cx, cy, z, [[-9, -5, 4.6], [-4, -7, 5.4], [2, -7.4, 5.6], [8, -5.4, 4.8], [-6, -11, 4.2], [0, -12.4, 4.6], [6, -10.6, 4.2], [11, -3.4, 3.4], [-12, -3, 3.4]], '#3f7f3a', '#5a9e4a');
+      for (const [dx, dy, c] of [[-10, -5, 0], [-5, -9, 1], [-1, -13, 0], [4, -11, 2], [9, -7, 0], [1, -6, 1], [-6, -3.4, 2], [6, -3.6, 1], [11, -3, 0], [-2, -9, 2], [7, -13, 1], [-12, -2, 1]])
+        rose(cx + dx * z, cy + dy * z, 1.35 * z, [ROSE, '#e8364f', '#fff3f0'][c]);
     }],
     ['Apfelbaum mit Bank', (cx, cy, z) => {
       sdShadow(cx, cy, 11, z);
@@ -642,7 +639,7 @@ const SD_WAREN_META = {
   'Kürbiskutsche ✦': { id: 'sd_kuerbiskutsche', price: 450, rare: true, beauty: 26, cost: 2500 },
   'Glasschuh auf Kissen': { id: 'sd_glasschuh', price: 140, rare: false, beauty: 5, cost: 150 },
   'Froschkönig-Brunnen': { id: 'sd_froschbrunnen', price: 170, rare: false, beauty: 8, cost: 300, mat: {'quader': 2} },
-  'Rosenhecke mit Spinnrad': { id: 'sd_spinnrad', price: 150, rare: false, beauty: 7, cost: 200 },
+  'Rosenhecke': { id: 'sd_spinnrad', price: 150, rare: false, beauty: 7, cost: 200 },
   'Apfelbaum mit Bank': { id: 'sd_apfelbaum', price: 120, rare: false, beauty: 6, cost: 150 },
   'Zwergenhäuschen ✦': { id: 'sd_zwergenhaus', price: 400, rare: true, beauty: 24, cost: 2000, mat: {'bretter': 6} },
   'Zauberspiegel': { id: 'sd_zauberspiegel', price: 150, rare: false, beauty: 6, cost: 200 },
