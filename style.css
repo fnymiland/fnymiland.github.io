@@ -1706,6 +1706,6 @@ body.look-wolke #hud .hud-act .pill { background: var(--cloud-disc, radial-gradi
 
 /* Nachts auch innen dunkler (Nutzer 26.10.2026: „mit abdunkeln“): die gemalte Fläche bekommt eine Abendfarbe (UI_NIGHT_INNER, ui-look.js),
    Kästchen, Zeilen und Bilder im Fenster dunkeln je Nachtstufe leicht mit; Text bleibt lesbar */
-body[data-night="1"] :is(#modal-card:not(.basar-night), #panel .p-scroll, #goal, #sheet .tools) > * { filter: brightness(.97); }
-body[data-night="2"] :is(#modal-card:not(.basar-night), #panel .p-scroll, #goal, #sheet .tools) > * { filter: brightness(.94); }
-body[data-night="3"] :is(#modal-card:not(.basar-night), #panel .p-scroll, #goal, #sheet .tools) > * { filter: brightness(.9); }
+body[data-night="1"] :is(#modal-card:not(.basar-night), #panel .p-scroll, #goal, #sheet .tools) > * { filter: brightness(.94); }
+body[data-night="2"] :is(#modal-card:not(.basar-night), #panel .p-scroll, #goal, #sheet .tools) > * { filter: brightness(.88); }
+body[data-night="3"] :is(#modal-card:not(.basar-night), #panel .p-scroll, #goal, #sheet .tools) > * { filter: brightness(.82); }

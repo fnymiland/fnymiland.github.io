@@ -53,7 +53,7 @@ const uiNightStep = () => {
 let uiNightNow = 0;
 // nachts auch innen etwas dunkler (Nutzer 26.10.2026: „der Wolkenrand wird dunkel, aber der Inhalt bleibt hell“ → „mit abdunkeln“):
 // Fläche ein Viertel so stark wie der Rand (Hecke warmer Dämmerton, Wolken Abendblau); Kästchen und Bilder im Fenster über body[data-night]
-const UI_NIGHT_INNER = { hecke: '70,50,40', wolke: '40,55,110', a: 0.12 };
+const UI_NIGHT_INNER = { hecke: '70,50,40', wolke: '40,55,110', a: 0.22 };   // Nutzer: 0,12 „noch zu hell“
 // fester Zufall je Platte (sieht bei jedem Neumalen gleich aus)
 const slabRnd = s => () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
 // Umriss eines abgerundeten Rechtecks, alle `step` px ein Punkt, leicht verschoben – von Hand geschnitten statt border-radius
