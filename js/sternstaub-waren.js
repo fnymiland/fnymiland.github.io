@@ -157,7 +157,8 @@ SD_WAREN.EISZAUBER = (() => {
       ellipse(cx - 3 * z, cy - 14 * z, 1.6 * z, 2.6 * z, 'rgba(255,255,255,0.55)');
       if (lit) glowAt(cx, cy - 9 * z, 14 * z, z);
     }],
-    ['Schlittschuh-Teich', (cx, cy, z) => {
+    // Bewohner fahren Schlittschuh (Basar-Durchsicht 28.10.2026): zwei gleiten auf Ellipsen über das Eis, mit Mütze und Schal, Kufenspur dahinter
+    ['Schlittschuh-Teich', (cx, cy, z, now = 0, x = 0, y = 0) => {
       snow(cx, cy, 24, z);
       ellipse(cx, cy, 20 * z, 9.6 * z, C('#a9d8ef')); ellipse(cx - 3 * z, cy - 1.5 * z, 13 * z, 5 * z, C('#c9ebfa'));
       g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = Math.max(0.5, 0.5 * z);
@@ -165,6 +166,16 @@ SD_WAREN.EISZAUBER = (() => {
       g.beginPath(); g.ellipse(cx - 5 * z, cy - 1 * z, 5 * z, 2 * z, -0.3, 0.4, Math.PI * 2); g.stroke();
       for (const [dx, dy] of [[14, -4], [-16, 2], [10, 6]]) { ellipse(cx + dx * z, cy + dy * z, 2.4 * z, 1.4 * z, C(SNOW)); }
       sdLine('#6b4f3a', 0.9, z, [[cx + 16 * z, cy + 1 * z], [cx + 16 * z, cy - 9 * z]]); poly([[cx + 16 * z, cy - 9 * z], [cx + 21 * z, cy - 8 * z], [cx + 16 * z, cy - 6.6 * z]], C('#d9534a'));
+      const t = (now || 0) / 1000, sk = [0, 1].map(i => { const a = t * (0.45 + i * 0.1) * (i ? -1 : 1) + i * 2.4, rx = 12 - i * 4.5, ry = 4.8 - i * 1.8;
+        return { i, a, rx, ry, px: cx - 2 * z + Math.cos(a) * rx * z, py: cy - 0.5 * z + Math.sin(a) * ry * z }; }).sort((p, q) => p.py - q.py);
+      for (const k of sk) {
+        g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = Math.max(0.4, 0.3 * z); g.beginPath();
+        g.ellipse(cx - 2 * z, cy - 0.5 * z, k.rx * z, k.ry * z, 0, k.i ? k.a : k.a - 0.7, k.i ? k.a + 0.7 : k.a); g.stroke();
+        ellipse(k.px, k.py, 2.2 * z, 0.8 * z, 'rgba(60,110,150,0.2)');
+        for (const d of [-0.9, 0.9]) sdLine('#c9d3dc', 0.35, z, [[k.px + (d - 1) * z, k.py - 0.2 * z], [k.px + (d + 1.1) * z, k.py - 0.6 * z]]);   // Kufen
+        if (typeof drawFigure === 'function') drawFigure({ seat: true, sx: k.px - 6 * z, sy: k.py, wait: 1, speed: 1, kind: [0, 2, 1][Math.floor(hash(x, y, 31 + k.i) * 3)],
+          fur: FUR[Math.floor(hash(x, y, 33 + k.i) * FUR.length)], shirt: SHIRTS[(Math.floor(hash(x, y, 35) * SHIRTS.length) + k.i * 3) % SHIRTS.length], hat: 'muetze', body: 'schal', figS: 0.5 }, z, now);
+      }
     }, true],
     ['Eispalast-Pavillon ✦', (cx, cy, z) => {
       const lit = sdLit();
@@ -661,11 +672,12 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
     SD_SHOP.push({ id: m.id, price: m.price, ...(m.rare ? { rare: true } : {}) });
     if (!ITEM_TIPS[m.id]) ITEM_TIPS[m.id] = tile ? 'Aus dem Sternenbasar ✨, braucht ein ganzes Feld Wiese.' : 'Aus dem Sternenbasar ✨. Kleine Deko für eine Ecke, bis zu 4 pro Feld.';
   }
-ANIM_ITEMS.add('sd_himmelslaternen');
+// bewegt (Basar-Durchsicht 27./28.10.2026): Himmelslaternen wiegen sich, Kanu schaukelt, auf dem Teich fahren Bewohner Schlittschuh;
+// in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js vergleicht die Liste)
+for (const id of Object.keys(ITEMS)) if (['sd_eisteich', 'sd_himmelslaternen', 'sd_kanu'].includes(id)) ANIM_ITEMS.add(id);
 ITEMS.sd_kanu.water = true;                                          // Kanu nur aufs Wasser (smallError), schaukelt
 ITEMS.sd_kanu.desc = 'Aus der Sammlung „Inselleben“ im Sternenbasar. Schwimmt: Stell es aufs Wasser.';
 ITEM_TIPS.sd_kanu = 'Aus dem Sternenbasar ✨. Schwimmt: nur aufs Wasser, bis zu 4 pro Feld.';
-ANIM_ITEMS.add('sd_kanu');
 // Durchgänge (sdArch, archRot): mitten auf ein gerades Wegstück, quer zum Weg; am Feldrand längs der Kante; auf der Wiese drehbar
 for (const id of ['sd_lampions', 'sd_flockenbogen', 'sd_rankentor']) {
   ITEMS[id].arch = true; ROTATABLE.add(id);

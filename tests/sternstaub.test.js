@@ -273,6 +273,10 @@ describe('Basar-Durchsicht: neue Regeln (Nutzer 28.10.2026)', () => {
     game("setTool('look')");
     for (const n of [0, 1]) for (const r of [0, 1, 2, 3]) for (const sl of [game('CSLOT'), 0, 4]) game(`(() => { const nv = night; night = ${n} ? NIGHT_MAX : 0; try { for (const id of ['sd_lampions', 'sd_flockenbogen', 'sd_rankentor']) drawObject(id, 400, 300, 2, 1e6, 4, 5, 1, { rot: ${r}, slot: ${sl} }); } finally { night = nv; } })()`);
   });
+  it('Schlittschuh-Teich: bewegt (ANIM_ITEMS), Bewohner fahren im Kreis, zeichnet Tag und Nacht', () => {
+    expect(game("ANIM_ITEMS.has('sd_eisteich')")).toBe(true);
+    for (const n of [0, 1]) for (const now of [0, 5000]) game(`(() => { const nv = night; night = ${n} ? NIGHT_MAX : 0; try { drawObject('sd_eisteich', 400, 300, 2, ${now}, 4, 4, 1, { b: 'sd_eisteich' }); } finally { night = nv; } })()`);
+  });
   it('ein altes Kanu auf der Wiese bleibt stehen und lässt sich weiter zeichnen', () => {
     game(place + "; state.decos.set('4,4', [{ b: 'sd_kanu', rot: 0 }, null, null, null, null, null, null, null, null, null]); adoptState(parseSave(JSON.parse(JSON.stringify(serialize())))); recalc()");
     expect(game("decosAt('4,4')[0].b")).toBe('sd_kanu');

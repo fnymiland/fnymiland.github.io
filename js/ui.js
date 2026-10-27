@@ -3427,6 +3427,14 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-28-basar', date: '28. Oktober', title: 'Sternenbasar aufgeräumt', items: [
+    '🏮 <b>Durchgänge:</b> Lampion-Bogen, Schneeflocken-Bogen und Blumenranken-Tor stellst du jetzt auf ein gerades Wegstück. Sie drehen sich von selbst quer zum Weg, und alle laufen hindurch. Am Feldrand stehen sie längs der Kante.',
+    '🌸 <b>Neue Beete:</b> Wer Nachtblumen oder Eisblumen aus dem Basar hat, findet unter Beete das passende Beet. Nebeneinander wachsen die Beete ohne Lücke zu einem großen Feld zusammen.',
+    '🛶 <b>Kanu:</b> Das Kanu schwimmt jetzt und gehört aufs Wasser. Kanus, die schon auf der Wiese stehen, bleiben dort.',
+    '⛸️ <b>Schlittschuh-Teich:</b> Auf dem Eis drehen jetzt zwei Bewohner mit Mütze und Schal ihre Runden.',
+    '✨ <b>Schöner gezeichnet:</b> Die Himmelslaternen schweben sanft und leuchten nachts von innen. Lampions und Schneeflocken hängen an ihren Leinen, der Pinguin trägt seinen Schal um den Hals, und am Laternenbaum hängen die Laternen unter der Krone.',
+    '🧺 <b>Nicht mehr im Basar:</b> Pagode, Leseecke, Wandgemälde, Apfelbaum mit Bank, Glockenbaum und Hühnerhaus gibt es nicht mehr zu kaufen. Wer sie schon hat, behält sie.',
+  ] },
   { id: '2026-10-25-aussehen', date: '25. Oktober', title: 'Neues Aussehen', items: [
     '🌿 <b>Aussehen:</b> Die Oberfläche kommt jetzt aus deiner Welt. Unter ☰ → Einstellungen → Aussehen wählst du zwischen <b>Hecke</b> (Standard) und <b>Wolken</b>.',
     '🏠 <b>Leiste oben:</b> Statt Emojis in Pillen stehen dort jetzt Bildchen, die das Spiel selbst zeichnet: Münzstapel, Haus, Bibliothek, Kristall, Kiste, Freundesbank und ein Wegweiser fürs Menü.',
