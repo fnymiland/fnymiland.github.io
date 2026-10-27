@@ -2862,5 +2862,18 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] 5t Wolken: runde Knöpfe oben als Wölkchen mit zwölf Buckeln (Entwurf E, tools/wolkenknopf-entwurf.js) (v1335)
   - [x] 5u Nachts auch innen dunkler (Nutzer 26.10.2026: „der Rand wird dunkel, aber der Inhalt bleibt hell“ → „mit abdunkeln“, zweimal
         verstärkt, „jetzt passt es“): Fläche 22 % Abendfarbe, Inhalt bis 82 % Helligkeit (v1338)
+- [ ] 6 Basar-Durchsicht (Nutzer 27.10.2026, tools/basar-schau.html: 72 Stücke, 26 passt, 48 ändern). Wortlaut des Nutzers in Kurzform:
+  - [ ] 6a Aus dem Verkauf nehmen: 13 Pagode (es gibt die große Pagode), 35 Leseecke, 39 Wandgemälde, 46 Apfelbaum mit Bank, 61 Glockenbaum, 65 Hühnerhaus
+  - [ ] 6b Fehler: 30 Himmelslaternen „komplett broken“; 8 Lampion-Bogen und 21 Schneeflocken-Bogen: Lampen/Flocken schweben; 24 Pinguine: Schal
+        des linken falsch; 4 Laternenbaum: Laternen hängen komisch, schwarze Zipfel; 15 Eiskristall-Laterne: leuchtet sie?; 29 Turm mit Zopf: Ebenen prüfen
+  - [ ] 6c Neue Regeln: 8, 21, 31 als Durchgang (auf den Weg stellen, Bewohner laufen drunter durch, oder seitlich am Weg); 5 Nachtblumen und
+        20 Eisblumen als Beet über ein ganzes Feld ohne Lücke; 63 Kanu nur aufs Wasser; 26 Schlittschuh-Teich: Bewohner fahren Schlittschuh (falls machbar)
+  - [ ] 6d Umbauen: 45 nur Rosenhecke (ohne Spinnrad); 47 Zwergenhäuschen als Pilz; 9 Sonnenuhr: klein und nutzlos → Idee nötig
+  - [ ] 6e Neu zeichnen/schöner: 6 Pfau („sieht scheiße aus“), 7 Katze, 11 Koi-Teich (Fische wirken tot), 12 Sternbrunnen („da geht mehr“),
+        14 Schneemann (Schal), 17 Schlitten (mehr 3D), 18 Rentier, 19 Iglu (mehr 3D), 22 Eisbank (nicht als Bank erkennbar), 25 Schneekugel
+        (innen beweglich), 27 Eispalast-Pavillon (kein Pavillon), 28 Schneeflocken-Brunnen (Details, Bewegung), 29 Turm mit Zopf (höher, Details),
+        33 Laternenboot (Laternen schweben sichtbar, mehr), 37 Blumenkranz-Bank (nicht als Bank erkennbar), 40 Glühwürmchen-Glas, 41 Sonnenpavillon
+        (Details), 43 Glasschuh (Schuh nicht erkennbar), 44 Froschkönig-Brunnen (Details, Bewegung), 48 Zauberspiegel, 49 Einhorn, 50 Herzchen-Laube
+        („was soll das sein?“), 51 Krönchen-Laterne, 52 Tanzpavillon, 54 Hängematte, 55 Picknickdecke, 57 Fossil, 58 Strandkorb
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).
