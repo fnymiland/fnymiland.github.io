@@ -2864,7 +2864,8 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         verstärkt, „jetzt passt es“): Fläche 22 % Abendfarbe, Inhalt bis 82 % Helligkeit (v1338)
 - [ ] 6 Basar-Durchsicht (Nutzer 27.10.2026, tools/basar-schau.html: 72 Stücke, 26 passt, 48 ändern). Wortlaut des Nutzers in Kurzform:
   - [x] 6a Aus dem Verkauf nehmen (`SD_NICHT_MEHR`, Gekauftes bleibt, v1342): 13 Pagode (es gibt die große Pagode), 35 Leseecke, 39 Wandgemälde, 46 Apfelbaum mit Bank, 61 Glockenbaum, 65 Hühnerhaus
-  - [x] 6b Fehler (v1342; Himmelslaternen neu gezeichnet und bewegt, Lampions hängen am Seil, Flocken an Fäden vom Bogen, Pinguin-Schal um den Hals,
+  - [x] 6b Fehler (v1342, nachgebessert v1343 nach „Schal immer noch falsch, Laternen komisch“: Entwürfe tools/basar-entwurf-pl.js, gewählt beide A =
+        Strickschal um den Hals mit Knoten und Fransen, Ballon-Laternen, alle fliegen; Lampions hängen am Seil, Flocken an Fäden vom Bogen,
         Laternenbaum: Laternen an hellen Fäden unter dem Kronenrand, Eiskristall-Laterne leuchtet (Licht im Kristall, Flocke sitzt auf); Zopfturm-Ebenen → 6e): 30 Himmelslaternen „komplett broken“; 8 Lampion-Bogen und 21 Schneeflocken-Bogen: Lampen/Flocken schweben; 24 Pinguine: Schal
         des linken falsch; 4 Laternenbaum: Laternen hängen komisch, schwarze Zipfel; 15 Eiskristall-Laterne: leuchtet sie?; 29 Turm mit Zopf: Ebenen prüfen
   - [ ] 6c Neue Regeln: 8, 21, 31 als Durchgang (auf den Weg stellen, Bewohner laufen drunter durch, oder seitlich am Weg); 5 Nachtblumen und
