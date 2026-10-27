@@ -442,6 +442,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Beet-Formen aus dem Basar (`sd` in DECO_LOOKS.blumen.forms) sind frei, sobald das Stück gekauft ist (lookOk), nie in der Kunstakademie
     (lookMore). `drawStarBed` lässt gleiche 1×1-Beete zusammenwachsen; Beete werden verkleinert gezeichnet (DECO_SCALE.blumen) – wer bis an
     die Feldkante will, rechnet durch `decoScale`. `ITEMS[b].water`: kleine Deko nur aufs Wasser (Kanu, smallError).
+    Durchgänge (`ITEMS[b].arch`: Lampion-Bogen, Schneeflocken-Bogen, Blumenranken-Tor): in die Feldmitte (CSLOT) gerader Wegstücke
+    (`wegAxis`, centerTileErr mit `b`), Drehung über `archRot` (Weg: quer, Seitenmitte: längs der Kante, sonst wie gedreht); `smallRot`
+    bekommt dafür x, y. Gezeichnet in der Ebene a = 0 über `sdArch` (Q(s, h)); auf dem Wegstück trifft jedes Tippen die Mitte (slotAt).
 29f. **🎭 Opernhaus** (Prachtbau, Block 161f, js/oper.js): Bild `OPER_ART(K, stufe)` aus tools/prachtbauten-entwurf.js (`semper`, Änderungen
     zuerst dort zeigen). Einmal im Spiel über `ITEMS[b].unique` + `the` (placeError, kein Kopieren); Stufe = `t.lvl` (1–3), Ausbau per
     `operUpgrade` (nur Taler, `OPER_STAGES`), Schönheit ×Stufe, Abriss gibt alles zurück (`operPaidUp`). Wirkung: **Lied** (`OPER_LIED`,

@@ -2314,7 +2314,7 @@ function render(now) {
       if (PLAN_WB_LAST && PLAN_WB_LAST.has(k)) { wbDrawGhost(PLAN_WB_LAST.get(k), z, k); PLAN_WB_LAST.delete(k); }   // Geist übers Wasser: je Brücke ganz bei ihrem letzten Feld (160c D3h)
       if (bkDone && !bc && PLAN_GHOST && PLAN_GHOST.has(k)) { const gc = PLAN_GHOST.get(k); if (gc.i === gc.b.n - 1) bkDrawGhost(gc, z); else PLAN_GHOST_DONE.set(gc.k, PLAN_GHOST_DONE.get(gc.k) || false); }   // Brücke, die die Linie mitbaut (160c C9): ganz beim letzten Feld
       if (preview && preview.small && !preview.top && hover.x === x && hover.y === y) {
-        const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
+        const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot, x, y);   // wie abgelegt wird (actions.js)
         const gCol = tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0;   // wie es gesetzt wird (Block 69)
         const gForm = tool === 'verschieben' ? moving.d.form || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).form || 0 : 0;
         const [u, v] = slotPos(x, y, preview.slot, { b: ghostType, rot: gRot, form: gForm }), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
@@ -2390,7 +2390,7 @@ function render(now) {
           if (rw) drawRoofers(rw, x, y, z, now, false);                    // oben auf dem Dach
           if (topGhost) {
             const mv = tool === 'verschieben' && moving && moving.kind === 'deco';   // getragene Deko: so, wie sie abgelegt wird
-            const gRot = mv ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot), L = mv ? moving.d : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}, gCol = !mv && ghostType === 'busch' ? bushColNew('busch').col || 0 : L.col || 0;
+            const gRot = mv ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot, x, y), L = mv ? moving.d : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}, gCol = !mv && ghostType === 'busch' ? bushColNew('busch').col || 0 : L.col || 0;
             const [u, v] = roofTopSpot(x, y, preview.slot, { b: ghostType, rot: gRot, form: L.form || 0 });
             g.globalAlpha = 0.65;
             drawSmallOne(ghostType, gRot, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - ROOF_H * z, z, now, x, y, 1, ROOF_TOP_SLOT0 + preview.slot, gCol, L.form || 0);

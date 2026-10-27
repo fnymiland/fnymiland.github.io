@@ -103,16 +103,15 @@ SD_WAREN.EISZAUBER = (() => {
         if (lit) glowAt(p[0], p[1], 7 * z, z, 'blue');
       }
     }],
-    ['Schneeflocken-Bogen', (cx, cy, z) => {
-      const lit = sdLit();
-      snow(cx, cy, 10, z);
-      g.strokeStyle = C(ICE_D); g.lineWidth = Math.max(0.7, 1.6 * z); g.lineCap = 'round';
-      g.beginPath(); g.moveTo(cx - 9 * z, cy); g.quadraticCurveTo(cx - 9 * z, cy - 26 * z, cx, cy - 26 * z); g.quadraticCurveTo(cx + 9 * z, cy - 26 * z, cx + 9 * z, cy); g.stroke();
-      // Flocken hängen an Fäden, die oben am Bogen beginnen (vorher frei in der Luft, Basar-Durchsicht 27.10.2026)
-      const archY = dx => { const t = Math.sqrt(Math.min(1, (9 - Math.abs(dx)) / 9)); return -26 * (2 * t - t * t); };
-      for (const [dx, len] of [[-4.8, 2.6], [-2.2, 5], [2.2, 3.4], [4.8, 4.6], [0, 8]]) {
-        const top = [cx + dx * z, cy + (archY(dx) + 0.8) * z], p = [top[0], top[1] + len * z];
-        sdLine('#cfe6f2', 0.3, z, [top, p]);
+    ['Schneeflocken-Bogen', (cx, cy, z, now, x, y, t) => {                // Durchgang (sdArch): Eisbogen, Flocken an Fäden
+      const lit = sdLit(), { Q } = sdArch(cx, cy, z, t), top = sd => 16 + 11 * Math.sqrt(Math.max(0, 1 - sd * sd));
+      for (const sd of [-1, 1]) { const f = Q(sd); ellipse(f[0], f[1] + 0.5 * z, 3.2 * z, 1.4 * z, C(SNOW_S)); ellipse(f[0] - 0.3 * z, f[1], 2.7 * z, 1.1 * z, C(SNOW)); }
+      const arch = (col, w) => { g.strokeStyle = col; g.lineWidth = Math.max(0.6, w * z); g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath();
+        g.moveTo(...Q(-1)); g.lineTo(...Q(-1, 16)); for (let i = 1; i <= 24; i++) { const sd = -1 + i / 12; g.lineTo(...Q(sd, top(sd))); } g.lineTo(...Q(1)); g.stroke(); };
+      arch(C(ICE_D), 1.9); arch(lit ? '#ffffff' : C(ICE_L), 0.6);
+      for (const [sd, len] of [[-0.62, 3], [-0.28, 5.2], [0.28, 3.6], [0.62, 4.6], [0, 7.5]]) {
+        const a = Q(sd, top(sd) - 0.9), p = [a[0], a[1] + len * z];
+        sdLine('#cfe6f2', 0.3, z, [a, p]);
         flake(p[0], p[1] + 1.4 * z, 1.6 * z, lit ? '#ffffff' : C('#9fd3ee'), Math.max(0.5, 0.55 * z));
         if (lit) glowAt(p[0], p[1] + 1.4 * z, 7 * z, z, 'blue');
       }
@@ -247,12 +246,14 @@ SD_WAREN.EISZAUBER = (() => {
         balloonLantern(cx + (dx + Math.sin(t * 0.7 + ph) * 0.8) * z, cy + (dy + Math.sin(t * 1.3 + ph) * 1.1) * z, w, z, lit);
       }
     }],
-    ['Blumenranken-Tor', (cx, cy, z) => {
-      sdShadow(cx, cy, 10, z);
-      g.strokeStyle = C('#5a8f3a'); g.lineWidth = Math.max(0.8, 2 * z); g.lineCap = 'round';
-      g.beginPath(); g.moveTo(cx - 9 * z, cy); g.lineTo(cx - 9 * z, cy - 16 * z); g.quadraticCurveTo(cx, cy - 30 * z, cx + 9 * z, cy - 16 * z); g.lineTo(cx + 9 * z, cy); g.stroke();
-      const along = t => { if (t < 0.33) return [cx - 9 * z, cy - t / 0.33 * 16 * z]; if (t > 0.67) return [cx + 9 * z, cy - (1 - t) / 0.33 * 16 * z]; const u = (t - 0.33) / 0.34, a = 1 - u; return [a * a * (cx - 9 * z) + 2 * a * u * cx + u * u * (cx + 9 * z), a * a * (cy - 16 * z) + 2 * a * u * (cy - 30 * z) + u * u * (cy - 16 * z)]; };
-      for (let k = 0; k <= 16; k++) { const p = along(k / 16); circle(p[0] + (k & 1 ? 1 : -1) * z, p[1], 1.8 * z, C('#6fb04a')); if (k % 2 === 0) rose(p[0] + (k & 2 ? 1.2 : -1.2) * z, p[1] - 0.6 * z, 1.3 * z, [PINK, '#ffffff', LILA, '#ffd23f'][k % 4]); }
+    ['Blumenranken-Tor', (cx, cy, z, now, x, y, t) => {                  // Durchgang (sdArch): Ranken mit Rosen über den Weg
+      const { Q } = sdArch(cx, cy, z, t);
+      for (const sd of [-1, 1]) { const f = Q(sd); ellipse(f[0], f[1] + 0.4 * z, 2.6 * z, 1.1 * z, 'rgba(40,60,20,0.18)'); }
+      const along = u => { if (u < 0.3) return Q(-1, u / 0.3 * 16); if (u > 0.7) return Q(1, (1 - u) / 0.3 * 16); const sd = -1 + (u - 0.3) / 0.4 * 2; return Q(sd, 16 + 10 * Math.sqrt(Math.max(0, 1 - sd * sd))); };
+      g.strokeStyle = C('#4f7f33'); g.lineWidth = Math.max(0.8, 1.6 * z); g.lineCap = 'round'; g.lineJoin = 'round';
+      g.beginPath(); for (let i = 0; i <= 40; i++) { const p = along(i / 40); i ? g.lineTo(...p) : g.moveTo(...p); } g.stroke();
+      for (let k = 0; k <= 22; k++) { const p = along(k / 22); circle(p[0] + (k & 1 ? 1 : -1) * z, p[1], 1.8 * z, C(k % 3 ? '#6fb04a' : '#5a9a3c')); }
+      for (let k = 1; k <= 21; k += 2) { const p = along(k / 22); rose(p[0] + (k & 2 ? 1.1 : -1.1) * z, p[1] - 0.6 * z, 1.25 * z, [PINK, '#ffffff', LILA, '#ffd23f'][(k >> 1) % 4]); }
     }],
     ['Malstaffelei', (cx, cy, z) => {
       sdShadow(cx, cy, 7, z);
@@ -665,6 +666,11 @@ ITEMS.sd_kanu.water = true;                                          // Kanu nur
 ITEMS.sd_kanu.desc = 'Aus der Sammlung „Inselleben“ im Sternenbasar. Schwimmt: Stell es aufs Wasser.';
 ITEM_TIPS.sd_kanu = 'Aus dem Sternenbasar ✨. Schwimmt: nur aufs Wasser, bis zu 4 pro Feld.';
 ANIM_ITEMS.add('sd_kanu');
+// Durchgänge (sdArch, archRot): mitten auf ein gerades Wegstück, quer zum Weg; am Feldrand längs der Kante; auf der Wiese drehbar
+for (const id of ['sd_lampions', 'sd_flockenbogen', 'sd_rankentor']) {
+  ITEMS[id].arch = true; ROTATABLE.add(id);
+  ITEM_TIPS[id] = 'Aus dem Sternenbasar ✨. Ein Durchgang: Stell ihn auf ein gerades Wegstück, dann stellt er sich quer und alle laufen hindurch. Am Feldrand steht er längs der Kante, auf der Wiese drehst du ihn mit ⟳.';
+}
 // Beet aus dem Basar (Basar-Durchsicht 28.10.2026: „ein ganzes Feld voll, ohne Unterbrechung, wie ein Beet“): Wer das Stück hat, findet
 // unter Beete die gleichnamige Form (DECO_LOOKS.blumen, `sd`), gleiche Beete nebeneinander wachsen zusammen (drawStarBed)
 for (const [id, name] of [['sd_nachtblumen', 'Nachtblumen'], ['sd_eisblumen', 'Eisblumen']]) ITEM_TIPS[id] = `Aus dem Sternenbasar ✨. Ein Büschel für eine Ecke. Unter Beete gibt es jetzt auch das ${name}-Beet: ein ganzes Feld voll, nebeneinander ohne Lücke.`;                               // schwebende Laternen wiegen sich (Basar-Durchsicht 27.10.2026)

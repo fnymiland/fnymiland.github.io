@@ -1177,6 +1177,7 @@ const decosAt = k => state.decos.get(k);
 function slotAt(sx, sy) {
   const [a, b] = pickFrac(sx, sy);                               // Anhöhe (Block 157): auf der getroffenen Höhe (ohne Anhöhen wie tileFrac)
   const x = Math.round(a), y = Math.round(b), du = a - x, dv = b - y;
+  if (typeof tool !== 'undefined' && ITEMS[tool] && ITEMS[tool].arch && plainWeg(x + ',' + y) && centerOk(tool, x, y)) return { x, y, slot: CSLOT };   // Durchgang: überall auf dem Wegstück
   let slot = 0, best = Infinity;                                 // der nächste der 8 Plätze
   for (let i = 0; i < 8; i++) { const [u, v] = slotPos(x, y, i), d = (u - du) ** 2 + (v - dv) ** 2; if (d < best) { best = d; slot = i; } }   // wo die Plätze wirklich liegen (Kurve, Linien)
   // nah an einer Feldecke: der Eckpunkt (Block 65) – mit schmaler Deko in der Hand oder wenn dort schon etwas steht
@@ -1186,13 +1187,28 @@ function slotAt(sx, sy) {
   return { x, y, slot };
 }
 // Feldmitte: darf das Feld sie haben? null = ja, sonst warum nicht (schmaler Weg, Gebäude)
-function centerTileErr(x, y) {
+function centerTileErr(x, y, b) {
   const t = objAt(x, y);
   if (!t) return null;
+  if (b && ITEMS[b] && ITEMS[b].arch && t.b === 'weg') {              // Durchgang (Basar-Durchsicht 28.10.2026): auf gerade Wegstücke, quer zum Weg
+    if (t.bridge || t.cross) return 'Nicht auf Brücken und Übergänge';
+    return wegAxis(x, y) == null ? 'Durchgänge nur auf gerade Wegstücke, nicht in Kurven und Kreuzungen' : null;
+  }
   if (t.b === 'weg' && !t.bridge && (t.wide || pathQuads(x, y).length)) return null;   // Platz oder breiter Weg
   return t.b === 'weg' ? 'Nicht mitten auf den Weg. Die Mitte geht auf Plätzen und breiten Wegen.' : 'Auf Gebäudefeldern nur an die Ecken';
 }
-const centerOk = (b, x, y) => baseOf(b) !== 'stuetze' && !centerTileErr(x, y);
+const centerOk = (b, x, y) => baseOf(b) !== 'stuetze' && !centerTileErr(x, y, b);
+// Richtung eines Wegstücks: 0 = längs x, 1 = längs y, null = Kurve/Kreuzung; einzelnes Stück ohne Nachbarn: wie gedreht
+function wegAxis(x, y) {
+  const has = (dx, dy) => wegAt(x + dx, y + dy) != null, ex = has(-1, 0) || has(1, 0), ey = has(0, -1) || has(0, 1);
+  return ex && ey ? null : ex ? 0 : ey ? 1 : (typeof buildRot === 'number' ? buildRot & 1 : 0);
+}
+// Drehung eines Durchgangs: auf dem Weg (Feldmitte) quer zum Weg, an einer Seitenmitte längs der Feldseite, sonst wie gedreht
+function archRot(slot, x, y) {
+  if (slot === CSLOT && x != null && plainWeg(x + ',' + y)) { const a = wegAxis(x, y); if (a != null) return a; }
+  if (isSide(slot)) return MID_FACE[slot];
+  return typeof buildRot === 'number' ? buildRot : 0;
+}
 function centerWanted(x, y) {
   const ds = decosAt(x + ',' + y), has = !!(ds && ds[CSLOT]);
   if (typeof tool === 'undefined') return has;
@@ -1718,7 +1734,7 @@ function smallError(b, x, y, slot, opts = {}) {
   if (slot < 4 && postAt(...cornerVertex(x, y, slot))) return 'An dieser Ecke steht schon etwas';
   if (slot === CSLOT) {                                          // Feldmitte (Block 156)
     if (baseOf(b) === 'stuetze') return 'Stützen an Ecken, Seitenmitten oder zwischen vier Felder';
-    const ce = centerTileErr(x, y);
+    const ce = centerTileErr(x, y, b);
     if (ce) return ce;
     const ds = decosAt(k);
     if (ds && [4, 5, 6, 7].some(i => ds[i])) return 'An den Seiten steht schon etwas, die Mitte ist zu eng';
@@ -1749,7 +1765,7 @@ const MID_FACE = { 4: 0, 5: 3, 6: 2, 7: 1 }, MID_TURN = new Set(['bank', 'strass
 const midRot = slot => MID_FACE[slot];
 // Drehung kleiner Deko beim Setzen – Vorschau und Bauen nutzen dieselbe (Block 69): Bank in einer Seitenmitte von selbst längs
 // zur Seite, außer man hat selbst gedreht (⟳/Mausrad/R) – dann bleibt die eigene Drehung
-const smallRot = (b, slot) => slot >= 4 && slot < 8 && MID_TURN.has(b) && !rotManual ? midRot(slot) : ROTATABLE.has(b) ? buildRot : 0;
+const smallRot = (b, slot, x, y) => ITEMS[b] && ITEMS[b].arch ? archRot(slot, x, y) : slot >= 4 && slot < 8 && MID_TURN.has(b) && !rotManual ? midRot(slot) : ROTATABLE.has(b) ? buildRot : 0;
 function buildSmall(b, x, y, slot) {
   if (typeof sdTry !== 'undefined' && sdTry && b === sdTry) return false;   // 👁 Ausprobieren: nur Vorschau, nie bauen (Prüfung 19.10.)
   const err = smallError(b, x, y, slot);
@@ -1759,7 +1775,7 @@ function buildSmall(b, x, y, slot) {
   state.money -= ITEMS[b].cost;
   payMat(ITEMS[b].mat);
   if (!state.decos.has(k)) state.decos.set(k, newSlots());
-  state.decos.get(k)[slot] = { b, rot: smallRot(b, slot), born: performance.now(), ...(b === 'busch' ? bushColNew('busch') : {}), ...(DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)) : {}), ...(ITEMS[b].gift ? { sv: svPick } : {}) };
+  state.decos.get(k)[slot] = { b, rot: smallRot(b, slot, x, y), born: performance.now(), ...(b === 'busch' ? bushColNew('busch') : {}), ...(DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)) : {}), ...(ITEMS[b].gift ? { sv: svPick } : {}) };
   if (!operTone(x, y)) sfx('deco');                                    // Opernhaus: Ton aus dem Lied der Insel (oper.js)
   recalc(); checkStars(); save();
   if (ITEMS[b].gift) svPutDone();                                // jedes Souvenir steht nur einmal (Block 129)

@@ -545,6 +545,13 @@ const sdTrunk = (cx, cy, z, h, w = 2, col = '#8a5a3c') => poly([[cx - w * z, cy]
 const sdBlob = (cx, cy, z, pts, base, hi) => { for (const [dx, dy, r] of pts) circle(cx + dx * z, cy + dy * z, r * z, C(base)); for (const [dx, dy, r] of pts) circle(cx + (dx - r * 0.25) * z, cy + (dy - r * 0.3) * z, r * 0.55 * z, C(hi)); };
 const SD_CROWN = [[0, -22, 8], [-7, -18, 6.5], [7, -18, 6.5], [-4, -26, 6], [5, -26, 6], [0, -30, 5.5], [-9, -24, 4.5], [9, -24, 4.5]];
 const sdLine = (col, w, z, pts, curve = null) => { g.strokeStyle = C(col); g.lineWidth = Math.max(0.5, w * z); g.lineCap = 'round'; g.beginPath(); g.moveTo(...pts[0]); if (curve) g.quadraticCurveTo(...curve, ...pts[1]); else for (const p of pts.slice(1)) g.lineTo(...p); g.stroke(); };
+// Durchgang (Basar-Durchsicht 28.10.2026: „als Durchgang verkaufen … auf einen Weg stellen und man kann drunter durchlaufen“): der Bogen steht
+// in der Ebene a = 0 des Felds (quer über b), ein Weg längs a führt hindurch; Drehung aus archRot. Q(s, h): Punkt im Bogen, s −1…1 quer, h Höhe.
+// Auf dem Weg (Feldmitte) fast feldbreit; kleine Deko kommt um decoScale × 0,9 verkleinert an, darum durch 0,9 geteilt
+const sdArch = (cx, cy, z, t) => {
+  const K = kit(cx, cy, z, t && t.rot), W = (t && t.slot === CSLOT ? 0.44 : 0.3) / 0.9;
+  return { K, W, Q: (s, h = 0) => K.P(0, s * W, h), back: K.depth(0, -1) < K.depth(0, 1) ? -1 : 1 };
+};
 const SD_ART = {
   sd_kirschbaum(cx, cy, z) {
     sdShadow(cx, cy, 10, z);
@@ -614,18 +621,22 @@ const SD_ART = {
     sdLine('#e08a2e', 1.4, z, [[cx - 4 * z, cy - 4 * z], [cx - 2 * z, cy - 7.5 * z]], [cx - 6 * z, cy - 7 * z]);
     for (const dx of [2.6, 4.2]) sdLine('#5a3a2a', 0.5, z, [[cx + (dx - 0.5) * z, cy - 7.2 * z], [cx + (dx + 0.5) * z, cy - 7.2 * z]]);
   },
-  sd_lampions(cx, cy, z) {
-    const lit = sdLit();
-    sdShadow(cx, cy, 10, z);
-    for (const s of [-1, 1]) sdLine('#6b4f3a', 1.4, z, [[cx + s * 9 * z, cy], [cx + s * 9 * z, cy - 18 * z]]);
-    sdLine('#5a4636', 0.5, z, [[cx - 9 * z, cy - 17 * z], [cx + 9 * z, cy - 17 * z]], [cx, cy - 11 * z]);
-    // Lampions hängen am Seil: y0 liegt genau auf der Kurve (vorher doppelt so tief → schwebten darunter, Basar-Durchsicht 27.10.2026)
-    ['#ff5d8f', '#ffd23f', '#58b3e8', '#ff8a3d', '#b57bff'].forEach((c, k) => { const t = (k + 1) / 6, x0 = cx + (-9 + 18 * t) * z, y0 = cy + (-17 + 12 * t * (1 - t)) * z;
+  sd_lampions(cx, cy, z, now, x, y, t) {                               // Durchgang: zwei Pfosten, Leine, Lampions hängen daran
+    const lit = sdLit(), { Q, back } = sdArch(cx, cy, z, t), H = 25;
+    for (const sd of [-1, 1]) { const f = Q(sd); ellipse(f[0], f[1] + 0.4 * z, 2.4 * z, 1.1 * z, 'rgba(40,60,20,0.18)'); }
+    const post = sd => { const f = Q(sd), tp = Q(sd, H); sdLine('#6b4f3a', 1.5, z, [f, tp]); circle(tp[0], tp[1], 0.95 * z, C('#8a6a4a')); };
+    post(back);
+    const A = Q(-1, H - 1.2), B = Q(1, H - 1.2), M = Q(0, H - 1.2), Cc = [M[0], M[1] + 7 * z];
+    sdLine('#5a4636', 0.45, z, [A, B], Cc);
+    ['#ff5d8f', '#ffd23f', '#58b3e8', '#ff8a3d', '#b57bff'].forEach((c, k) => {
+      const u = (k + 1) / 6, x0 = (1 - u) ** 2 * A[0] + 2 * u * (1 - u) * Cc[0] + u * u * B[0], y0 = (1 - u) ** 2 * A[1] + 2 * u * (1 - u) * Cc[1] + u * u * B[1];
       sdLine('#5a4636', 0.3, z, [[x0, y0], [x0, y0 + 0.8 * z]]);
       poly([[x0 - 0.9 * z, y0 + 0.7 * z], [x0 + 0.9 * z, y0 + 0.7 * z], [x0 + 0.9 * z, y0 + 1.2 * z], [x0 - 0.9 * z, y0 + 1.2 * z]], C('#5a4636'));
       ellipse(x0, y0 + 3.2 * z, 1.6 * z, 2.1 * z, lit ? '#ffe9a0' : C(c));
       ellipse(x0 - 0.5 * z, y0 + 2.8 * z, 0.5 * z, 1.2 * z, lit ? '#fff6cf' : 'rgba(255,255,255,0.35)');
-      if (lit) sdGlow(x0, y0 + 3.2 * z, 9 * z, z); });
+      if (lit) sdGlow(x0, y0 + 3.2 * z, 9 * z, z);
+    });
+    post(-back);
   },
   sd_sonnenuhr(cx, cy, z) {
     sdShadow(cx, cy, 6, z);

@@ -257,6 +257,22 @@ describe('Basar-Durchsicht: neue Regeln (Nutzer 28.10.2026)', () => {
     expect(width()).toBe(alone);                                          // anderes Beet: kein Zusammenwachsen
     for (const n of [0, 1]) game(`(() => { const nv = night; night = ${n} ? NIGHT_MAX : 0; try { drawObject('blumen', 400, 300, 2, 0, 4, 4, 1, { b: 'blumen', lvl: 1, form: ${ei} }); drawObject('blumen_l', 400, 300, 2, 0, 4, 4, 1, { b: 'blumen_l', lvl: 1, form: ${fi} }); } finally { night = nv; } })()`);
   });
+  it('Durchgänge: auf gerade Wegstücke quer zum Weg (beide Richtungen), nicht in Kurven/Kreuzungen; am Feldrand längs der Kante; Tippen aufs Wegstück trifft die Mitte', () => {
+    game(place.replace("x === 5 ? 'water' : 'grass'", "'grass'") + "; state.sdItems = new Set(['sd_lampions', 'sd_flockenbogen', 'sd_rankentor']); setTool('weg'); for (let x = 3; x <= 7; x++) build('weg', x, 5, true); for (let y = 6; y <= 8; y++) build('weg', 7, y, true); setTool('look'); recalc()");
+    expect(game("['sd_lampions', 'sd_flockenbogen', 'sd_rankentor'].every(id => ITEMS[id].arch && ROTATABLE.has(id))")).toBe(true);
+    expect(game('smallError("sd_lampions", 4, 5, CSLOT)')).toBe(null);               // längs x
+    expect(game('smallError("sd_lampions", 7, 7, CSLOT)')).toBe(null);               // längs y
+    expect(game('smallError("sd_lampions", 7, 5, CSLOT)')).toMatch(/gerade Wegstücke/);   // Kurve
+    expect(game('smallError("baum", 4, 5, CSLOT)')).toMatch(/Nicht mitten auf den Weg/);   // andere Deko wie bisher
+    expect(game('buildSmall("sd_lampions", 4, 5, CSLOT) && buildSmall("sd_rankentor", 7, 7, CSLOT)')).toBe(true);
+    expect(game("[decosAt('4,5')[CSLOT].rot, decosAt('7,7')[CSLOT].rot]")).toEqual([0, 1]);
+    expect(game('buildSmall("sd_flockenbogen", 4, 6, 4)')).toBe(true);
+    expect(game("decosAt('4,6')[4].rot")).toBe(game('MID_FACE[4]'));
+    game("setTool('sd_flockenbogen')");
+    expect(game("(() => { cam = state.cam; cam.z = 2; const p = toScreen(5.3, 4.8); const r = slotAt(p.x, p.y); return [r.x, r.y, r.slot === CSLOT]; })()")).toEqual([5, 5, true]);   // nicht nur nah an der Mitte
+    game("setTool('look')");
+    for (const n of [0, 1]) for (const r of [0, 1, 2, 3]) for (const sl of [game('CSLOT'), 0, 4]) game(`(() => { const nv = night; night = ${n} ? NIGHT_MAX : 0; try { for (const id of ['sd_lampions', 'sd_flockenbogen', 'sd_rankentor']) drawObject(id, 400, 300, 2, 1e6, 4, 5, 1, { rot: ${r}, slot: ${sl} }); } finally { night = nv; } })()`);
+  });
   it('ein altes Kanu auf der Wiese bleibt stehen und lässt sich weiter zeichnen', () => {
     game(place + "; state.decos.set('4,4', [{ b: 'sd_kanu', rot: 0 }, null, null, null, null, null, null, null, null, null]); adoptState(parseSave(JSON.parse(JSON.stringify(serialize())))); recalc()");
     expect(game("decosAt('4,4')[0].b")).toBe('sd_kanu');
