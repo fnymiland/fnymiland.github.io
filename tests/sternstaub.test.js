@@ -236,6 +236,27 @@ describe('Basar-Durchsicht: neue Regeln (Nutzer 28.10.2026)', () => {
     expect(game('smallError("sd_kanu", 5, 4, 0)')).toBe('Dieser Platz ist schon belegt');
     expect(game("ANIM_ITEMS.has('sd_kanu')")).toBe(true);
   });
+  it('Nachtblumen-/Eisblumen-Beet: frei erst mit dem Basar-Stück, nicht in der Kunstakademie; gleiche Beete nebeneinander ohne Lücke', () => {
+    game(place);
+    const fi = game("DECO_LOOKS.blumen.forms.findIndex(f => f.id === 'nachtblumen')"), ei = game("DECO_LOOKS.blumen.forms.findIndex(f => f.id === 'eisblumen')");
+    game('state.sdItems = new Set()');
+    expect(game(`[lookOk('blumen', 'form', ${fi}), lookOk('blumen', 'form', ${ei})]`)).toEqual([false, false]);
+    expect(game("DESIGN.some(d => /nachtblumen|eisblumen/.test(d.id))")).toBe(false);
+    const more0 = game("lookMore('blumen')");
+    game("state.sdItems = new Set(['sd_nachtblumen'])");
+    expect(game(`[lookOk('blumen', 'form', ${fi}), lookOk('blumen', 'form', ${ei})]`)).toEqual([true, false]);
+    expect(game("lookMore('blumen')")).toBe(more0);
+    // Breite der Fläche: allein mit Rand, mit gleichem Nachbarn rechts bis an die Feldkante
+    const width = () => game(`(() => { const pp = poly; let w = 0; poly = (pts, col) => { if (!w) w = Math.max(...pts.map(q => q[0])) - Math.min(...pts.map(q => q[0])); return pp(pts, col); };
+      try { drawObject('blumen', 400, 300, 2, 0, 4, 4, 1, state.tiles.get('4,4')); } finally { poly = pp; } return Math.round(w); })()`);
+    game(`state.tiles.set('4,4', { b: 'blumen', lvl: 1, form: ${fi} }); state.tiles.delete('5,4'); state.tiles.delete('4,5'); recalc()`);
+    const alone = width();
+    game(`state.terra.set('5,4', 'grass'); state.tiles.set('5,4', { b: 'blumen', lvl: 1, form: ${fi} }); recalc()`);
+    expect(width()).toBeGreaterThan(alone);
+    game(`state.tiles.set('5,4', { b: 'blumen', lvl: 1, form: 0 }); recalc()`);
+    expect(width()).toBe(alone);                                          // anderes Beet: kein Zusammenwachsen
+    for (const n of [0, 1]) game(`(() => { const nv = night; night = ${n} ? NIGHT_MAX : 0; try { drawObject('blumen', 400, 300, 2, 0, 4, 4, 1, { b: 'blumen', lvl: 1, form: ${ei} }); drawObject('blumen_l', 400, 300, 2, 0, 4, 4, 1, { b: 'blumen_l', lvl: 1, form: ${fi} }); } finally { night = nv; } })()`);
+  });
   it('ein altes Kanu auf der Wiese bleibt stehen und lässt sich weiter zeichnen', () => {
     game(place + "; state.decos.set('4,4', [{ b: 'sd_kanu', rot: 0 }, null, null, null, null, null, null, null, null, null]); adoptState(parseSave(JSON.parse(JSON.stringify(serialize())))); recalc()");
     expect(game("decosAt('4,4')[0].b")).toBe('sd_kanu');

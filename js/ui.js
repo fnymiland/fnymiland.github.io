@@ -1762,7 +1762,7 @@ function lookThumb(b, form, col) {
   return url;
 }
 const lookFree = (b, kind) => (kind === 'form' ? DECO_LOOKS[b].forms : DECO_LOOKS[b].cols || []).map((e, i) => [e, i]).filter(([, i]) => lookOk(b, kind, i));
-const lookMore = (b) => DECO_LOOKS[b].forms.filter((e, i) => !lookOk(b, 'form', i)).length + (DECO_LOOKS[b].cols || []).filter((e, i) => !lookOk(b, 'col', i)).length;
+const lookMore = (b) => DECO_LOOKS[b].forms.filter((e, i) => !e.sd && !lookOk(b, 'form', i)).length + (DECO_LOOKS[b].cols || []).filter((e, i) => !lookOk(b, 'col', i)).length;
 // Leiste (Nutzer, 08.10.2026: „überladen, 5 Felder übereinander“): wie beim Weg je ein Knopf für Form und Farbe/Boden – die Auswahl
 // klappt als Raster darüber auf (lookPop), eine Wahl klappt sie wieder zu. So bleibt es eine Reihe, egal wie viele Formen es gibt
 let lookPop = null;

@@ -439,6 +439,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     `SD_NICHT_MEHR` eintragen. Angebot, Katalog, Kaufen, Ausprobieren und „n von allen“ gehen über `sdForSale`; Gekauftes bleibt auf der Insel,
     im Baumenü und im Sammelbuch. Bewegte Basar-Stücke (Zeichnung nutzt `now`) gehören in `ANIM_ITEMS` (sonst stehen sie als Bildchen still).
     Prüfbilder: `tools/basar-blatt.js` (groß, Tag) und `tools/basar-schau.js` (im Spiel, Tag/Nacht); Übersicht für den Nutzer tools/basar-schau.html.
+    Beet-Formen aus dem Basar (`sd` in DECO_LOOKS.blumen.forms) sind frei, sobald das Stück gekauft ist (lookOk), nie in der Kunstakademie
+    (lookMore). `drawStarBed` lässt gleiche 1×1-Beete zusammenwachsen; Beete werden verkleinert gezeichnet (DECO_SCALE.blumen) – wer bis an
+    die Feldkante will, rechnet durch `decoScale`. `ITEMS[b].water`: kleine Deko nur aufs Wasser (Kanu, smallError).
 29f. **🎭 Opernhaus** (Prachtbau, Block 161f, js/oper.js): Bild `OPER_ART(K, stufe)` aus tools/prachtbauten-entwurf.js (`semper`, Änderungen
     zuerst dort zeigen). Einmal im Spiel über `ITEMS[b].unique` + `the` (placeError, kein Kopieren); Stufe = `t.lvl` (1–3), Ausbau per
     `operUpgrade` (nur Taler, `OPER_STAGES`), Schönheit ×Stufe, Abriss gibt alles zurück (`operPaidUp`). Wirkung: **Lied** (`OPER_LIED`,

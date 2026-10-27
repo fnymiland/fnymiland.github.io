@@ -1201,7 +1201,8 @@ const DECO_LOOKS = {
   blumen: { group: 'Beete', icon: '#ff8fb1', colLabel: 'Boden', cols: BED_SOILS, forms: [{ id: 'feld', name: 'Blumenfeld' }, { id: 'stein', name: 'Steinrand' },
     { id: 'rund', name: 'Rundbeet', design: 120 }, { id: 'rosen', name: 'Rosenbeet', design: 150 }, { id: 'tulpen', name: 'Tulpenbeet', design: 120 },
     { id: 'lavendel', name: 'Lavendel', design: 150 }, { id: 'hochbeet', name: 'Hochbeet', design: 180 }, { id: 'sonnen', name: 'Sonnenblumen', design: 150 },
-    { id: 'wild', name: 'Wildblumen', design: 120 }] },   // Block 152: Formen und Boden nach Vorschauen mit dem Nutzer
+    { id: 'wild', name: 'Wildblumen', design: 120 },
+    { id: 'nachtblumen', name: 'Nachtblumen', sd: 'sd_nachtblumen' }, { id: 'eisblumen', name: 'Eisblumen', sd: 'sd_eisblumen' }] },   // Block 152; sd: frei mit dem Basar-Stück (Basar-Durchsicht 28.10.2026): Formen und Boden nach Vorschauen mit dem Nutzer
   laterne: { group: 'Laternen', icon: '#ffe58a', cols: LANTERN_COLS, forms: [{ id: 'gas', name: 'Gaslaterne' }, { id: 'kandelaber', name: 'Kandelaber' },
     { id: 'lampion', name: 'Lampion', design: 150 }, { id: 'pilz', name: 'Pilzlaterne', design: 150 }, { id: 'stab', name: 'Stablaterne', design: 200 }] },
   bank: { group: 'Bänke', icon: '#b57b4a', cols: BENCH_COLS, forms: [{ id: 'park', name: 'Parkbank' }, { id: 'garten', name: 'Gartenbank' },

@@ -9,7 +9,7 @@ beforeEach(() => {
 
 describe('Beete (Block 152)', () => {
   it('neun Formen, Boden als Auswahl; zwei Formen und drei Böden frei, der Rest in der Kunstakademie', () => {
-    expect(game("DECO_LOOKS.blumen.forms.map(f => f.id)")).toEqual(['feld', 'stein', 'rund', 'rosen', 'tulpen', 'lavendel', 'hochbeet', 'sonnen', 'wild']);
+    expect(game("DECO_LOOKS.blumen.forms.map(f => f.id)")).toEqual(['feld', 'stein', 'rund', 'rosen', 'tulpen', 'lavendel', 'hochbeet', 'sonnen', 'wild', 'nachtblumen', 'eisblumen']);   // die zwei letzten: Sternenbasar (sternstaub.test.js)
     expect(game("DECO_LOOKS.blumen.cols.map(c => c.id)")).toEqual(['mulch', 'kies', 'gruen', 'erde']);
     expect(game("[0, 1, 2, 3, 4, 5, 6, 7, 8].map(i => lookOk('blumen', 'form', i))")).toEqual([true, true, false, false, false, false, false, false, false]);
     expect(game("[0, 1, 2, 3].map(i => lookOk('blumen', 'col', i))")).toEqual([true, true, true, false]);

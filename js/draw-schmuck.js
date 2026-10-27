@@ -137,6 +137,35 @@ function drawStreetLamp(cx, cy, z, now, x, y, t) {
   }
 }
 
+// Nachtblumen-/Eisblumen-Beet (Formen mit `sd`, frei mit dem Basar-Stück): füllt das Feld bis an die Seiten, an denen ein gleiches 1×1-Beet
+// liegt (sonst wie die anderen mit Rand); Blumen auf einem Raster in Weltkoordinaten, so laufen sie über die Feldgrenze ohne Naht weiter
+function drawStarBed(form, x, y, t, span, z, P, R, soilPoly) {
+  const same = (dx, dy) => { const n = span === 1 && state.tiles.get((x + dx) + ',' + (y + dy)); return !!n && baseOf(n.b) === 'blumen' && !ITEMS[n.b].variantOf && lookForm('blumen', n) === form; };
+  const E = 0.5 / decoScale((t && t.b) || 'blumen') + 0.01;               // Beete werden verkleinert gezeichnet (DECO_SCALE): bis an die echte Feldkante
+  const u0 = same(-1, 0) ? -E : -R, u1 = same(1, 0) ? E : R, v0 = same(0, -1) ? -E : -R, v1 = same(0, 1) ? E : R;
+  const area = [P(u0, v0), P(u1, v0), P(u1, v1), P(u0, v1)], ice = form === 'eisblumen', lit = night > 0.15 && isLive();
+  if (ice) { poly(area, C('#eef6fb')); if (v1 < 0.5) poly([P(u0, v1 - 0.04), P(u1, v1 - 0.04), P(u1, v1), P(u0, v1)], C('#d6e6f0')); if (u1 < 0.5) poly([P(u1 - 0.04, v0), P(u1, v0), P(u1, v1), P(u1 - 0.04, v1)], C('#d6e6f0')); }   // Kante nur, wo kein Nachbar-Beet anschließt
+  else soilPoly(area, '#3f3a4a');
+  const n = 5, pts = [];                                                   // je Feld 5 × 5 Plätze, Lage aus den Weltkoordinaten
+  for (let gi = Math.floor((x + u0) * n) - 1; gi <= Math.ceil((x + u1) * n); gi++) for (let gj = Math.floor((y + v0) * n) - 1; gj <= Math.ceil((y + v1) * n); gj++) {
+    const u = (gi + 0.5 + (hash(gi, gj, 801) - 0.5) * 0.6) / n - x, v = (gj + 0.5 + (hash(gi, gj, 802) - 0.5) * 0.6) / n - y;
+    if (u > u0 + 0.05 && u < u1 - 0.05 && v > v0 + 0.05 && v < v1 - 0.05) pts.push([u, v, gi, gj]);
+  }
+  pts.sort((p, q) => p[0] + p[1] - q[0] - q[1]);
+  let glows = 0;
+  for (const [u, v, gi, gj] of pts) {
+    const q = P(u, v), h = (5 + hash(gi, gj, 803) * 4) * z, top = [q[0], q[1] - h], s = 0.75 + hash(gi, gj, 804) * 0.3;
+    g.strokeStyle = C(ice ? '#7fb6cf' : '#4f9e5a'); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(top[0], top[1]); g.stroke();
+    if (ice) {
+      for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; poly([top, [top[0] + Math.cos(a - 0.3) * 2.3 * s * z, top[1] + Math.sin(a - 0.3) * 1.6 * s * z], [top[0] + Math.cos(a + 0.3) * 2.3 * s * z, top[1] + Math.sin(a + 0.3) * 1.6 * s * z]], lit ? (k % 2 ? '#cfefff' : '#ffffff') : k % 2 ? C('#7cc0e6') : C('#a9dcf4')); }
+      circle(top[0], top[1], 0.6 * z, C('#ffffff'));
+    } else {
+      for (let k = 0; k < 5; k++) { const a = k / 5 * Math.PI * 2; circle(top[0] + Math.cos(a) * 1.2 * s * z, top[1] + Math.sin(a) * 0.75 * s * z, 1 * s * z, lit ? '#bfe4ff' : C(hash(gi, gj, 805) < 0.5 ? '#8fa8ff' : '#b79bff')); }
+      circle(top[0], top[1], 0.65 * s * z, lit ? '#ffffff' : C('#fff3a0'));
+    }
+    if (lit && (gi + gj) % 3 === 0 && glows++ < 6) { const r = 0.35 * z; glowQuad([[top[0] - r, top[1] + r], [top[0] + r, top[1] + r], [top[0] + r, top[1] - r], [top[0] - r, top[1] - r]], 8 * z, 'blue'); }
+  }
+}
 let BED_SOIL = null;                                                       // nur Vorschau: Bodenart erzwingen (sonst t.col → BED_SOILS)
 // --- Beete (Block 152): Formen wie Laternen/Bänke (DECO_LOOKS.blumen), je Größe (span 1–3) mehr Blumen statt größerer ---------
 // Bodenpunkt (cx, cy) = Mitte der Fläche; R = halbe Kante in Feldern. Alles von hinten nach vorn (u + v), damit nichts durchscheint
@@ -177,6 +206,10 @@ function drawBed(cx, cy, z, x, y, t, span) {
     }
     g.restore();
   };
+  if (form === 'nachtblumen' || form === 'eisblumen') {                  // aus dem Sternenbasar (Basar-Durchsicht 28.10.2026): gleiche Beete
+    drawStarBed(form, x, y, t, span, z, P, R, soilPoly);                 // nebeneinander wachsen ohne Lücke zusammen
+    return;
+  }
   if (form === 'stein') {                                                  // Feldsteine rundum, gemischte Blumen
     soilPoly(quad(R * 0.94), '#8f6542');
     const back = edgePts(R, 0.11 / span).filter(([u, v]) => u + v < 0), front = edgePts(R, 0.11 / span).filter(([u, v]) => u + v >= 0);

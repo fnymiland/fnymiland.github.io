@@ -2868,7 +2868,8 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         Strickschal um den Hals mit Knoten und Fransen, Ballon-Laternen, alle fliegen; Lampions hängen am Seil, Flocken an Fäden vom Bogen,
         Laternenbaum: Laternen an hellen Fäden unter dem Kronenrand, Eiskristall-Laterne leuchtet (Licht im Kristall, Flocke sitzt auf); Zopfturm-Ebenen → 6e): 30 Himmelslaternen „komplett broken“; 8 Lampion-Bogen und 21 Schneeflocken-Bogen: Lampen/Flocken schweben; 24 Pinguine: Schal
         des linken falsch; 4 Laternenbaum: Laternen hängen komisch, schwarze Zipfel; 15 Eiskristall-Laterne: leuchtet sie?; 29 Turm mit Zopf: Ebenen prüfen
-  - [ ] 6c Neue Regeln: 8, 21, 31 als Durchgang (auf den Weg stellen, Bewohner laufen drunter durch, oder seitlich am Weg); 5 Nachtblumen und
+  - [~] 6c Neue Regeln (v1347: Kanu nur aufs Wasser, schaukelt; Nachtblumen- und Eisblumen-Beet als Beet-Formen, frei mit dem Stück,
+        wachsen nahtlos zusammen; offen: Durchgänge, Schlittschuh-Teich): 8, 21, 31 als Durchgang (auf den Weg stellen, Bewohner laufen drunter durch, oder seitlich am Weg); 5 Nachtblumen und
         20 Eisblumen als Beet über ein ganzes Feld ohne Lücke; 63 Kanu nur aufs Wasser; 26 Schlittschuh-Teich: Bewohner fahren Schlittschuh (falls machbar)
   - [ ] 6d Umbauen: 45 nur Rosenhecke (ohne Spinnrad); 47 Zwergenhäuschen als Pilz; 9 Sonnenuhr: klein und nutzlos → Idee nötig
   - [ ] 6e Neu zeichnen/schöner: 6 Pfau („sieht scheiße aus“), 7 Katze, 11 Koi-Teich (Fische wirken tot), 12 Sternbrunnen („da geht mehr“),

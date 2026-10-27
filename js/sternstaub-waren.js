@@ -664,4 +664,7 @@ ANIM_ITEMS.add('sd_himmelslaternen');
 ITEMS.sd_kanu.water = true;                                          // Kanu nur aufs Wasser (smallError), schaukelt
 ITEMS.sd_kanu.desc = 'Aus der Sammlung „Inselleben“ im Sternenbasar. Schwimmt: Stell es aufs Wasser.';
 ITEM_TIPS.sd_kanu = 'Aus dem Sternenbasar ✨. Schwimmt: nur aufs Wasser, bis zu 4 pro Feld.';
-ANIM_ITEMS.add('sd_kanu');                               // schwebende Laternen wiegen sich (Basar-Durchsicht 27.10.2026)
+ANIM_ITEMS.add('sd_kanu');
+// Beet aus dem Basar (Basar-Durchsicht 28.10.2026: „ein ganzes Feld voll, ohne Unterbrechung, wie ein Beet“): Wer das Stück hat, findet
+// unter Beete die gleichnamige Form (DECO_LOOKS.blumen, `sd`), gleiche Beete nebeneinander wachsen zusammen (drawStarBed)
+for (const [id, name] of [['sd_nachtblumen', 'Nachtblumen'], ['sd_eisblumen', 'Eisblumen']]) ITEM_TIPS[id] = `Aus dem Sternenbasar ✨. Ein Büschel für eine Ecke. Unter Beete gibt es jetzt auch das ${name}-Beet: ein ganzes Feld voll, nebeneinander ohne Lücke.`;                               // schwebende Laternen wiegen sich (Basar-Durchsicht 27.10.2026)

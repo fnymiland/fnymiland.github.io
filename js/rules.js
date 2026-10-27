@@ -1778,6 +1778,7 @@ const flagColOk = c => { const i = FLAG_COLORS.indexOf(c); return i < FLAG_FREE 
 function lookOk(b, kind, i) {
   const L = DECO_LOOKS[b], e = L && (kind === 'form' ? L.forms : L.cols || [])[i];
   if (!e) return false;
+  if (e.sd) return !!(state.sdItems && state.sdItems.has(e.sd));            // Beet-Form aus dem Sternenbasar: frei, sobald gekauft
   const key = `${b}:${kind}:${e.id}`;
   return !e.design || state.design.has(key) || !!(state.legacy && state.legacy.has(key));
 }
