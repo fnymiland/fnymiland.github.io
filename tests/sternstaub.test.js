@@ -225,6 +225,24 @@ describe('Basar-Durchsicht: Fehler (Nutzer 27.10.2026)', () => {
   });
 });
 
+describe('Basar-Durchsicht: neue Regeln (Nutzer 28.10.2026)', () => {
+  const place = "for (let y = 3; y <= 8; y++) for (let x = 3; x <= 8; x++) { const k = x + ',' + y; state.terra.set(k, x === 5 ? 'water' : 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.sdItems = new Set(['sd_kanu']); recalc()";
+  it('Kanu nur aufs Wasser: auf Gras abgelehnt, auf Wasser gebaut (Wasser bleibt), schaukelt', () => {
+    game(place);
+    expect(game('smallError("sd_kanu", 4, 4, 0)')).toBe('Das gehört aufs Wasser');
+    expect(game('ownedTile(5, 4) && smallError("sd_kanu", 5, 4, 0)')).toBe(null);
+    expect(game('buildSmall("sd_kanu", 5, 4, 0)')).toBe(true);
+    expect(game("[terrainAt(5, 4), decosAt('5,4')[0].b]")).toEqual(['water', 'sd_kanu']);
+    expect(game('smallError("sd_kanu", 5, 4, 0)')).toBe('Dieser Platz ist schon belegt');
+    expect(game("ANIM_ITEMS.has('sd_kanu')")).toBe(true);
+  });
+  it('ein altes Kanu auf der Wiese bleibt stehen und lässt sich weiter zeichnen', () => {
+    game(place + "; state.decos.set('4,4', [{ b: 'sd_kanu', rot: 0 }, null, null, null, null, null, null, null, null, null]); adoptState(parseSave(JSON.parse(JSON.stringify(serialize())))); recalc()");
+    expect(game("decosAt('4,4')[0].b")).toBe('sd_kanu');
+    game("drawObject('sd_kanu', 400, 300, 2, 1e6, 4, 4, 1, decosAt('4,4')[0])");
+  });
+});
+
 describe('Nicht mehr im Verkauf (Basar-Durchsicht, Nutzer 27.10.2026)', () => {
   const WEG = ['sd_pagode', 'sd_leseecke', 'sd_wandbild', 'sd_apfelbaum', 'sd_glockenbaum', 'sd_huehnerhaus'];
   it('nie im Angebot, Katalog, Kauf oder Ausprobieren; zählt nicht zu „n von allen“', () => {

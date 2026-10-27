@@ -1702,6 +1702,15 @@ function smallError(b, x, y, slot, opts = {}) {
     if (state.money < d.cost) return 'Zu wenig Taler';
     return matError(d.mat);
   }
+  if (d.water) {                                                 // nur aufs Wasser (Kanu, Basar-Durchsicht 28.10.2026): kein Roden, kein Gebäude, keine Brücke
+    if (terrainAt(x, y) !== 'water') return 'Das gehört aufs Wasser';
+    if (objAt(x, y)) return 'Hier ist kein Platz';
+    const ds = decosAt(k);
+    if (ds && ds[slot]) return 'Dieser Platz ist schon belegt';
+    if (opts.move || opts.noCost) return null;
+    if (state.money < d.cost) return 'Zu wenig Taler';
+    return matError(d.mat);
+  }
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
   if (baseOf(b) === 'stuetze' && hillAt(x, y)) return 'Auf einer Anhöhe geht keine Überdachung, Stützen nur unten';   // Anhöhe (Block 157); sonst darf kleine Deko hinauf
   const t = objAt(x, y);

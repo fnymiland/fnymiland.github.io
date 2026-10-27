@@ -568,8 +568,11 @@ SD_WAREN.INSEL = (() => {
       g.restore();
       sdStarDraw([cx + 9 * z, cy - 24 * z], 1.4 * z, '#f5c84b', '#c9962a');
     }],
-    ['Kanu', (cx, cy, z) => {
-      sdShadow(cx, cy, 12, z);
+    // Schwimmt (nur aufs Wasser, Basar-Durchsicht 28.10.2026: „nur auf Wasser platzierbar“): Wellenringe statt Schatten, schaukelt leicht
+    ['Kanu', (cx, cy0, z, now = 0) => {
+      const t = (now || 0) / 1000, cy = cy0 + Math.sin(t * 1.6) * 0.5 * z;
+      for (const [r, a] of [[15, 0.18], [11, 0.28]]) { g.strokeStyle = `rgba(255,255,255,${a})`; g.lineWidth = Math.max(0.5, 0.5 * z); g.beginPath(); g.ellipse(cx, cy0 + 0.5 * z, (r + Math.sin(t * 1.6) * 0.6) * z, (r * 0.32) * z, 0, 0, Math.PI * 2); g.stroke(); }
+      ellipse(cx, cy0 + 0.4 * z, 12.5 * z, 2.6 * z, 'rgba(30,70,110,0.22)');
       g.beginPath(); g.moveTo(cx - 13 * z, cy - 4 * z); g.quadraticCurveTo(cx, cy + 3 * z, cx + 13 * z, cy - 4 * z); g.quadraticCurveTo(cx, cy - 1 * z, cx - 13 * z, cy - 4 * z); g.closePath(); g.fillStyle = C('#d9701e'); g.fill();
       g.beginPath(); g.moveTo(cx - 12 * z, cy - 4 * z); g.quadraticCurveTo(cx, cy - 1.6 * z, cx + 12 * z, cy - 4 * z); g.quadraticCurveTo(cx, cy - 2.6 * z, cx - 12 * z, cy - 4 * z); g.closePath(); g.fillStyle = C('#8a4a1e'); g.fill();
       sdLine('#a8794e', 0.9, z, [[cx - 4 * z, cy - 8 * z], [cx + 6 * z, cy + 1 * z]]); ellipse(cx + 6.6 * z, cy + 1.6 * z, 1.4 * z, 0.7 * z, C('#a8794e'));
@@ -657,4 +660,8 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
     SD_SHOP.push({ id: m.id, price: m.price, ...(m.rare ? { rare: true } : {}) });
     if (!ITEM_TIPS[m.id]) ITEM_TIPS[m.id] = tile ? 'Aus dem Sternenbasar ✨, braucht ein ganzes Feld Wiese.' : 'Aus dem Sternenbasar ✨. Kleine Deko für eine Ecke, bis zu 4 pro Feld.';
   }
-ANIM_ITEMS.add('sd_himmelslaternen');                               // schwebende Laternen wiegen sich (Basar-Durchsicht 27.10.2026)
+ANIM_ITEMS.add('sd_himmelslaternen');
+ITEMS.sd_kanu.water = true;                                          // Kanu nur aufs Wasser (smallError), schaukelt
+ITEMS.sd_kanu.desc = 'Aus der Sammlung „Inselleben“ im Sternenbasar. Schwimmt: Stell es aufs Wasser.';
+ITEM_TIPS.sd_kanu = 'Aus dem Sternenbasar ✨. Schwimmt: nur aufs Wasser, bis zu 4 pro Feld.';
+ANIM_ITEMS.add('sd_kanu');                               // schwebende Laternen wiegen sich (Basar-Durchsicht 27.10.2026)
