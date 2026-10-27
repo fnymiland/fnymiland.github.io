@@ -131,6 +131,23 @@ describe('Aussehen', () => {
     expect(r).toEqual([0, 2, 3, 'object', 0]);
   });
 
+  it('Nacht: auch innen dunkler (Nutzer „jetzt passt es“): Fläche mit Abendfarbe, body[data-night] dimmt den Inhalt stufenweise', () => {
+    const r = game(`(() => {
+      const na = nightAt, day = GFX.day; const out = [UI_NIGHT_INNER.a, UI_NIGHT_INNER.hecke, UI_NIGHT_INNER.wolke];
+      try {
+        GFX.day = 'uhr';
+        nightAt = () => NIGHT_MAX; uiNightSync(); out.push(document.body.dataset.night);
+        GFX.day = 'tag'; uiNightSync(); out.push(document.body.dataset.night);
+      } finally { nightAt = na; GFX.day = day; uiNightSync(); }
+      return out;
+    })()`);
+    expect(r).toEqual([0.22, '70,50,40', '40,55,110', '3', '0']);
+    const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
+    const lv = [1, 2, 3].map(n => +(css.match(new RegExp(`body\\[data-night="${n}"\\][^{]*\\{\\s*filter:\\s*brightness\\(([.\\d]+)\\)`)) || [])[1]);
+    expect(lv).toEqual([0.94, 0.88, 0.82]);
+    expect(css).toMatch(/#modal-card:not\(\.basar-night\)/);   // Sternenbasar hat eigenes Nachtbild
+  });
+
   it('Ziel-Fenster zeigt, dass es sich einklappen lässt: Pfeil-Knopf in der Überschrift, aria-expanded folgt dem Antippen', () => {
     const css = fs.readFileSync(path.join(__dirname, '..', 'style.css'), 'utf8');
     expect(css).toMatch(/#goal > h4:first-child::before \{[^}]*var\(--chev-up\)/);

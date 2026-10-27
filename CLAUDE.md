@@ -555,8 +555,10 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     `drawCritter`). Der Sternenbasar ist hell wie alle Fenster (Klasse `basar`, die alten `.basar-night`-Regeln greifen nicht mehr).
     Bewusst Text geblieben: ♥ ↔ ▶ ⬆ ➕ ℹ und die Farbquadrate 🟥🟦🟨🟩 (Farbwahl). Emojis in Gebäudezeichnungen (Ladenschilder) gehören zur Welt.
     Vorschaubilder (`thumb`) passen sich ein: ragt etwas über den Rand (`thumbOverflow`), malt `thumbRaw` mit `thumbFit` kleiner neu (um den Fuß).
-    Nacht (Variante C): `uiNightSync` (aus `updateHud`) setzt `uiNightNow` 0–3 aus `nightAt()`; `paintSlab(…, night)` dunkelt nur den Rand
-    (Hecke/Wolkenbuckel), die Fläche innen bleibt hell. Neu gemalt nur beim Stufenwechsel (Stufe steht im `slabKey`). „Immer Tag“ → 0.
+    Nacht (Variante C): `uiNightSync` (aus `updateHud`) setzt `uiNightNow` 0–3 aus `nightAt()`; `paintSlab(…, night)` dunkelt den Rand
+    (Hecke/Wolkenbuckel) und die Fläche innen mit (`UI_NIGHT_INNER`: Hecke warmer Dämmerton, Wolken Abendblau, 22 % bei Stufe 3; Nutzer
+    27.10.2026: „jetzt passt es“). Inhalt (Kästchen, Bilder) dimmt `body[data-night]` in style.css (94/88/82 %), nie den Sternenbasar.
+    Neu gemalt nur beim Stufenwechsel (Stufe steht im `slabKey`, Farben nicht: wer `UI_NIGHT_INNER` ändert, prüft mit frisch geladener Seite). „Immer Tag“ → 0.
     Hecke und Wolken sind gleichmäßig (`roundRectRing`: gleicher Abstand, echte Viertelkreis-Ecken) – nie wieder zufällige Größen/Wackeln.
     Unter den Büschen liegt eine dichte dunkelgrüne Fläche (ganze Form): Papier und Büsche allein ließen an Ecken und zwischen den Büschen
     durchsichtige Lücken (Nutzer: „kleine Lücke, darf nicht sein“). Prüfen: `paintSlab` malen und Alpha innerhalb der Form zählen (muss 0 sein).

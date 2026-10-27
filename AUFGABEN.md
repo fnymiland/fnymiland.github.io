@@ -2859,5 +2859,8 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] 5r Rechtsklick auf die Karte schließt das Infofenster (nach Planung und Werkzeug); Ziel-Fenster startet eingeklappt; Zahlen oben
         mit zweitem Tippen wieder kurz (v1327)
   - [x] 5s Scrollbalken A (Holzstab / Wolkenleiste); Wolken ist Standard (gewählt bleibt gewählt); Medaille über dem Rathaus wieder weg (v1331)
+  - [x] 5t Wolken: runde Knöpfe oben als Wölkchen mit zwölf Buckeln (Entwurf E, tools/wolkenknopf-entwurf.js) (v1335)
+  - [x] 5u Nachts auch innen dunkler (Nutzer 26.10.2026: „der Rand wird dunkel, aber der Inhalt bleibt hell“ → „mit abdunkeln“, zweimal
+        verstärkt, „jetzt passt es“): Fläche 22 % Abendfarbe, Inhalt bis 82 % Helligkeit (v1338)
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).
