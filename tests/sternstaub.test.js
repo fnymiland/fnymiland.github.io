@@ -302,6 +302,13 @@ describe('Basar-Durchsicht: umgebaut (Nutzer 28.10.2026)', () => {
     for (const b of ['sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_herzlaube']) for (const now of [0, 1234, 98765])   // ohne Fehler zu jeder Zeit
       game(`drawObject('${b}', 400, 300, 2, ${now}, 4, 4, 1, { b: '${b}', rot: 0, slot: 0 })`);
   });
+  it('Eiszauber: Schneekugel, Eispalast-Pavillon und Schneeflocken-Brunnen bewegen sich, Schneemann, Schlitten und Rentier nicht', () => {
+    expect(game("['sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen'].every(b => ANIM_ITEMS.has(b))")).toBe(true);
+    expect(game("['sd_schneemann', 'sd_schlitten', 'sd_rentier'].some(b => ANIM_ITEMS.has(b))")).toBe(false);
+    for (const b of ['sd_schneemann', 'sd_schlitten', 'sd_rentier', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen']) for (const now of [0, 1234, 98765])
+      for (const nachts of [false, true]) game(`(() => { const sp = SPRITE_PAINT, nv = night; SPRITE_PAINT = true; night = ${nachts ? 'NIGHT_MAX' : 0};
+        try { drawObject('${b}', 400, 300, 2, ${now}, 4, 4, 1, { b: '${b}', rot: 0, slot: 0 }); } finally { SPRITE_PAINT = sp; night = nv; } })()`);
+  });
   it('Zwergenhäuschen (Pilzhaus): Fenster leuchten nur nachts', () => {
     const n = lit => game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
       try { drawObject('sd_zwergenhaus', 400, 300, 2, 1e6, 4, 4, 1, { b: 'sd_zwergenhaus', rot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`);

@@ -27,20 +27,245 @@ SD_WAREN.EISZAUBER = (() => {
     for (const k of [0, 1, 2]) sdLine('#f6dcd8', 0.22, z, [[kx + (0.25 + k * 0.4) * z, ky + 4.3 * z], [kx + (0.3 + k * 0.4) * z, ky + 5 * z]]);
     circle(kx, ky, 0.75 * z, C(dark)); circle(kx - 0.1 * z, ky - 0.1 * z, 0.55 * z, C(col));
   };
+  // Neu gezeichnet (Basar-Durchsicht 28.10.2026, Entwürfe tools/basar-entwurf-p5.js, Nutzer: Schneekugel A, Pavillon A, Brunnen B)
+  const TAU = Math.PI * 2;
+  const path = (pts, close = true) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); if (close) g.closePath(); };
+  const snowPile = (cx, cy, rx, z) => { ellipse(cx, cy + 0.8 * z, rx * z, rx * 0.44 * z, C(SNOW_S)); ellipse(cx - 0.6 * z, cy + 0.2 * z, rx * 0.88 * z, rx * 0.36 * z, C(SNOW));
+    for (const [dx, r] of [[-0.55, 0.22], [0.35, 0.28], [0.7, 0.16]]) ellipse(cx + dx * rx * z, cy - 0.1 * z, r * rx * z, r * rx * 0.45 * z, C(SNOW)); };
+  const ball = (x, y, r) => { const gr = g.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.1, x, y, r);
+    gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.6, C('#f2f7fb')); gr.addColorStop(1, C('#c3d6e4')); g.beginPath(); g.arc(x, y, r, 0, TAU); g.fillStyle = gr; g.fill(); };
+  // Schneeflocke mit Ästen (6 Arme, je zwei Zweigpaare), rot = Drehung in ihrer Ebene
+  const bigFlake = (x, y, r, rot, z, col, w = 0.5) => {
+    g.strokeStyle = col; g.lineWidth = Math.max(0.5, w * z); g.lineCap = 'round'; g.beginPath();
+    for (let k = 0; k < 6; k++) { const a = rot + k * Math.PI / 3, ca = Math.cos(a), sa = Math.sin(a);
+      g.moveTo(x, y); g.lineTo(x + ca * r, y + sa * r);
+      for (const [f, l] of [[0.45, 0.32], [0.72, 0.22]]) for (const s of [-1, 1]) { const b = a + s * 0.75, px = x + ca * r * f, py = y + sa * r * f; g.moveTo(px, py); g.lineTo(px + Math.cos(b) * r * l, py + Math.sin(b) * r * l); } }
+    g.stroke();
+    g.beginPath(); for (let k = 0; k < 6; k++) { const a = rot + k * Math.PI / 3 + Math.PI / 6; g[k ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r * 0.18, y + Math.sin(a) * r * 0.18); } g.closePath(); g.fillStyle = col; g.fill();
+  };
+  const twinkle = (x, y, s, z, col) => poly([[x, y - s * z], [x + 0.3 * s * z, y - 0.3 * s * z], [x + s * z, y], [x + 0.3 * s * z, y + 0.3 * s * z], [x, y + s * z], [x - 0.3 * s * z, y + 0.3 * s * z], [x - s * z, y], [x - 0.3 * s * z, y - 0.3 * s * z]], col);
+  // Quader im Raum (kit): sichtbare Seiten oben, a = a1 (vorn rechts), b = b1 (vorn links)
+  const box3 = (K, a0, a1, b0, b1, h0, h1, top, fa, fb) => { const P = K.P;
+    poly([P(a1, b0, h0), P(a1, b1, h0), P(a1, b1, h1), P(a1, b0, h1)], fa);
+    poly([P(a0, b1, h0), P(a1, b1, h0), P(a1, b1, h1), P(a0, b1, h1)], fb);
+    poly([P(a0, b0, h1), P(a1, b0, h1), P(a1, b1, h1), P(a0, b1, h1)], top); };
+
+  // ── Schneemann ────────────────────────────────────────────────────────────────────────────────────────────────────────
+  const scarf = (x, ny, hw, z, col, dark, tail) => {
+    const band = (dy, th, c) => { g.beginPath(); g.moveTo(x - hw * z, ny + dy * z); g.quadraticCurveTo(x, ny + (dy + 1.6) * z, x + hw * z, ny + dy * z);
+      g.lineTo(x + hw * z, ny + (dy + th) * z); g.quadraticCurveTo(x, ny + (dy + th + 1.6) * z, x - hw * z, ny + (dy + th) * z); g.closePath(); g.fillStyle = c; g.fill(); };
+    band(-0.6, 2, C(dark)); band(-0.8, 1.8, C(col));
+    for (const dy of [-0.3, 0.4]) { g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = Math.max(0.4, 0.25 * z); g.beginPath(); g.moveTo(x - (hw - 0.3) * z, ny + dy * z); g.quadraticCurveTo(x, ny + (dy + 1.5) * z, x + (hw - 0.3) * z, ny + dy * z); g.stroke(); }
+    const kx = x + hw * 0.5 * z, ky = ny + 1.1 * z;
+    poly([[kx - 0.8 * z, ky], [kx + 0.8 * z, ky], [kx + 1.6 * z, ky + tail * z], [kx - 0.2 * z, ky + (tail + 0.2) * z]], C(col));
+    for (const t of [0.35, 0.65]) sdLine('rgba(255,255,255,0.6)', 0.25, z, [[kx - 0.6 * z + t * 1.8 * z * 0.5, ky + t * tail * z], [kx + 0.9 * z + t * 0.8 * z, ky + t * tail * z]]);
+    for (const k of [0, 1, 2, 3]) sdLine(dark, 0.25, z, [[kx + (-0.1 + k * 0.55) * z, ky + (tail + 0.1) * z], [kx + (-0.1 + k * 0.55) * z, ky + (tail + 1) * z]]);
+    poly([[kx + 0.2 * z, ky - 0.2 * z], [kx + 1.2 * z, ky - 0.4 * z], [kx + 3.4 * z, ky + 2.6 * z], [kx + 2.2 * z, ky + 3 * z]], C(dark));
+    circle(kx, ky, 1 * z, C(dark)); circle(kx - 0.1 * z, ky - 0.1 * z, 0.75 * z, C(col));
+  };
+  const twig = (pts, z) => { sdLine('#6b4f3a', 0.8, z, pts.slice(0, 2)); for (const [a, b] of pts.slice(2)) sdLine('#6b4f3a', 0.45, z, [a, b]); };
+  const schneemann = (cx, cy, z) => {
+    snowPile(cx, cy, 10, z);
+    ball(cx, cy - 5.6 * z, 6.6 * z);
+    ellipse(cx + 0.4 * z, cy - 10.2 * z, 4.2 * z, 1.1 * z, 'rgba(140,170,195,0.35)');
+    ball(cx, cy - 14 * z, 4.9 * z);
+    ellipse(cx + 0.3 * z, cy - 18 * z, 3.2 * z, 0.9 * z, 'rgba(140,170,195,0.35)');
+    twig([[cx - 4.3 * z, cy - 14.6 * z], [cx - 10 * z, cy - 19.4 * z], [[cx - 8.6 * z, cy - 18.2 * z], [cx - 9.4 * z, cy - 21 * z]], [[cx - 9.4 * z, cy - 19 * z], [cx - 11.6 * z, cy - 19.6 * z]]], z);
+    twig([[cx + 4.3 * z, cy - 13.6 * z], [cx + 9.6 * z, cy - 11 * z], [[cx + 8.2 * z, cy - 11.7 * z], [cx + 9.6 * z, cy - 13.6 * z]], [[cx + 9 * z, cy - 11.3 * z], [cx + 11.2 * z, cy - 10.4 * z]]], z);
+    for (const [dx, dy] of [[-0.3, -15.6], [-0.15, -13], [0, -10.4], [0.1, -6.8], [0.2, -3.6]]) { circle(cx + dx * z, cy + dy * z, 0.62 * z, C('#2f3038')); circle(cx + (dx - 0.2) * z, cy + (dy - 0.2) * z, 0.2 * z, 'rgba(255,255,255,0.5)'); }
+    ball(cx, cy - 21.4 * z, 3.8 * z);
+    scarf(cx, cy - 18.4 * z, 3.9, z, '#d9534a', '#a8392f', 4.6);
+    for (const dx of [-1.4, 0.9]) { circle(cx + dx * z, cy - 22.6 * z, 0.52 * z, C('#2f3038')); circle(cx + (dx - 0.15) * z, cy - 22.8 * z, 0.16 * z, '#ffffff'); }
+    for (let k = 0; k < 5; k++) { const a = Math.PI * (0.2 + k * 0.15); circle(cx - 0.2 * z + Math.cos(a) * 2 * z, cy - 21.4 * z + Math.sin(a) * 1.3 * z, 0.3 * z, C('#2f3038')); }   // Lächeln
+    poly([[cx - 0.4 * z, cy - 21.9 * z], [cx - 5.6 * z, cy - 21.1 * z], [cx - 0.4 * z, cy - 20.7 * z]], C('#f08a2e'));                                      // Karotte
+    poly([[cx - 0.4 * z, cy - 21.3 * z], [cx - 5.6 * z, cy - 21.1 * z], [cx - 0.4 * z, cy - 20.7 * z]], C('#d46f1e'));
+    for (const t of [0.3, 0.55]) sdLine('#c4621a', 0.2, z, [[cx - (0.4 + t * 5.2) * z, cy - (21.9 - t * 0.8) * z], [cx - (0.4 + t * 5.2) * z, cy - (20.7 - t * 0.4) * z]]);
+    const hy = cy - 24.4 * z;                                                                             // Zylinder, leicht schief, mit Stechpalme
+    g.save(); g.translate(cx + 0.3 * z, hy); g.rotate(0.12);
+    ellipse(0, 0, 4.8 * z, 1.3 * z, C('#2a2b33'));
+    poly([[-3 * z, 0], [3 * z, 0], [2.7 * z, -6.4 * z], [-2.7 * z, -6.4 * z]], C('#33343d')); poly([[1 * z, 0], [3 * z, 0], [2.7 * z, -6.4 * z], [0.9 * z, -6.4 * z]], C('#2a2b33'));
+    ellipse(0, -6.4 * z, 2.7 * z, 0.7 * z, C('#40414c'));
+    poly([[-3 * z, -0.6 * z], [3 * z, -0.6 * z], [2.95 * z, -1.8 * z], [-2.95 * z, -1.8 * z]], C('#d9534a'));
+    for (const s of [-1, 1]) { g.beginPath(); g.ellipse(-1.8 * z + s * 0.9 * z, -1.6 * z, 1.1 * z, 0.5 * z, s * 0.5, 0, TAU); g.fillStyle = C('#3f8a3e'); g.fill(); }
+    for (const [dx, dy] of [[-1.8, -2], [-1.2, -1.6], [-2.3, -1.4]]) circle(dx * z, dy * z, 0.45 * z, C('#e8364f'));
+    g.restore();
+  };
+
+  // ── Schlitten ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+  const present = (K, a, b, s, h0, hh, col, rib) => { const P = K.P;
+    box3(K, a - s, a + s, b - s, b + s, h0, h0 + hh, C(shade(col, 0.12)), C(shade(col, -0.12)), C(col));
+    sdLine(rib, 0.45, K.z, [P(a + s, b - s * 0.15, h0), P(a + s, b - s * 0.15, h0 + hh), P(a - s, b - s * 0.15, h0 + hh)]);
+    sdLine(rib, 0.45, K.z, [P(a - s * 0.15, b + s, h0), P(a - s * 0.15, b + s, h0 + hh), P(a - s * 0.15, b - s, h0 + hh)]);
+    const t = P(a - s * 0.15, b - s * 0.15, h0 + hh);
+    for (const d of [-1, 1]) { g.beginPath(); g.ellipse(t[0] + d * 0.9 * K.z, t[1] - 0.6 * K.z, 0.9 * K.z, 0.55 * K.z, d * 0.5, 0, TAU); g.fillStyle = C(rib); g.fill(); } };
+  const schlitten = (cx, cy, z) => {
+    const K = kit(cx, cy, z, 0), P = K.P, A0 = -0.2, A1 = 0.15, B = 0.095;
+    snowPile(cx, cy, 11, z);
+    for (const b of [-0.07, 0.07]) sdLine('#d3e2ee', 0.5, z, [P(-0.3, b, 0), P(A0, b, 0)]);                 // Spuren im Schnee
+    const runner = b => { const pts = []; for (let i = 0; i <= 10; i++) pts.push(P(A0 - 0.03 + i * 0.042, b, 0));
+      pts.push(P(0.25, b, 1.4), P(0.27, b, 3.6), P(0.245, b, 5.2), P(0.21, b, 4.6)); return pts; };
+    const drawRunner = b => { g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = C('#5a3c26'); g.lineWidth = 1.1 * z; path(runner(b), false); g.stroke();
+      g.strokeStyle = C('#e0b04a'); g.lineWidth = 0.35 * z; path(runner(b), false); g.stroke();
+      for (const a of [-0.13, 0, 0.1]) sdLine('#6b4a2e', 0.7, z, [P(a, b, 0), P(a, b, 3.4)]); };
+    drawRunner(-B);
+    poly([P(A0, -B - 0.01, 3.4), P(A1, -B - 0.01, 3.4), P(A1, B + 0.01, 3.4), P(A0, B + 0.01, 3.4)], C('#a8774a'));   // Boden
+    poly([P(A0, -B, 3.4), P(A1, -B, 3.4), P(A1, -B, 7), P(A0, -B, 7)], C('#a8392f'));                       // hintere Wand innen
+    poly([P(A0, -B, 3.4), P(A0, B, 3.4), P(A0, B, 11.5), P(A0, 0, 12.8), P(A0, -B, 11.5)], C('#b8433a'));   // Lehne innen
+    sdLine('#e0b04a', 0.4, z, [P(A0, -B, 11.5), P(A0, 0, 12.8), P(A0, B, 11.5)]);
+    const pr = [[-0.12, -0.03, 0.045, 5, '#58b3e8', '#ffd23f'], [-0.02, 0.04, 0.04, 4, '#58b36a', '#e86f8f'], [0.07, -0.04, 0.035, 3.4, '#ffd23f', '#d9534a'], [-0.07, 0.05, 0.03, 7, '#b57bff', '#ffffff']];
+    pr.sort((p, q) => (p[0] + p[1]) - (q[0] + q[1])).forEach(([a, b, s, hh, c, r]) => present(K, a, b, s, 3.4, hh, c, C(r)));
+    poly([P(A0, B, 3.4), P(A1, B, 3.4), P(A1, B, 7), P(A0, B, 7)], C('#d9534a'));                            // vordere Wand
+    poly([P(A1, -B, 3.4), P(A1, B, 3.4), P(A1, B, 6.4), P(A1, -B, 6.4)], C('#c23f37'));                      // Stirnwand
+    sdLine('#e0b04a', 0.45, z, [P(A0, B, 7), P(A1, B, 7), P(A1, B, 6.4), P(A1, -B, 6.4)]);
+    for (const a of [-0.12, 0, 0.1]) { const p = P(a, B, 5.2); circle(p[0], p[1], 0.6 * z, C('#e0b04a')); }
+    sdLine('#ffffff', 0.5, z, [P(A0 + 0.03, B, 5.2), P(A1 - 0.03, B, 5.2)]);
+    drawRunner(B);
+  };
+
+  // ── Rentier ───────────────────────────────────────────────────────────────────────────────────────────────────────────
+  const leg = (x, y, z, col, bend, far) => { const c = far ? shade(col, -0.18) : col;
+    poly([[x - 1 * z, y - 9 * z], [x + 1 * z, y - 9 * z], [x + (0.6 + bend) * z, y - 4.4 * z], [x + (-0.2 + bend) * z, y - 4.4 * z]], C(c));
+    poly([[x + (-0.2 + bend) * z, y - 4.4 * z], [x + (0.6 + bend) * z, y - 4.4 * z], [x + 0.5 * z, y - 0.8 * z], [x - 0.2 * z, y - 0.8 * z]], C(shade(c, 0.08)));
+    poly([[x - 0.45 * z, y - 0.9 * z], [x + 0.75 * z, y - 0.9 * z], [x + 0.85 * z, y], [x - 0.55 * z, y]], C('#3a2a22')); };
+  const antler = (x, y, z, s) => { const col = '#c9a77a';
+    sdLine(col, 0.65, z, [[x, y], [x + s * 1.5 * z, y - 7 * z]], [x + s * 2.6 * z, y - 3 * z]);
+    sdLine(col, 0.45, z, [[x + s * 1.2 * z, y - 2 * z], [x - s * 1.2 * z, y - 4.2 * z]]);
+    sdLine(col, 0.45, z, [[x + s * 2 * z, y - 4.4 * z], [x + s * 4 * z, y - 6.2 * z]]);
+    sdLine(col, 0.4, z, [[x + s * 1.7 * z, y - 6 * z], [x + s * 0.2 * z, y - 8.4 * z]]); };
+  const rentier = (cx, cy, z) => {
+    const F = '#a8784e';
+    snowPile(cx, cy, 9, z);
+    leg(cx - 3.2 * z, cy - 0.4 * z, z, F, -0.4, true); leg(cx + 5.2 * z, cy - 0.6 * z, z, F, 0.5, true);
+    g.beginPath(); g.ellipse(cx + 0.6 * z, cy - 10 * z, 6.8 * z, 3.7 * z, -0.05, 0, TAU); g.fillStyle = C(F); g.fill();
+    g.beginPath(); g.ellipse(cx + 0.4 * z, cy - 8.2 * z, 5 * z, 1.7 * z, 0, 0, TAU); g.fillStyle = C('#e6d2b2'); g.fill();
+    g.beginPath(); g.ellipse(cx + 0.8 * z, cy - 12.2 * z, 5.4 * z, 1.4 * z, -0.05, 0, TAU); g.fillStyle = C(shade(F, -0.12)); g.fill();
+    circle(cx + 7 * z, cy - 11.2 * z, 1.3 * z, C('#ffffff'));                                             // Schwänzchen
+    leg(cx - 4.4 * z, cy, z, F, -0.5, false); leg(cx + 4.2 * z, cy, z, F, 0.6, false);
+    poly([[cx - 6.4 * z, cy - 10 * z], [cx - 2.8 * z, cy - 12.6 * z], [cx - 5.6 * z, cy - 18.4 * z], [cx - 8.6 * z, cy - 17 * z]], C(F));   // Hals
+    for (const [dx, dy, r] of [[-6.8, -11.6, 1.5], [-7.4, -13.4, 1.4], [-7.6, -15.2, 1.2], [-6, -10.6, 1.3]]) circle(cx + dx * z, cy + dy * z, r * z, C('#efe3cc'));   // heller Halskragen
+    ellipse(cx - 6.6 * z, cy - 15.6 * z, 2.3 * z, 0.75 * z, C('#d9534a')); circle(cx - 7.2 * z, cy - 14.6 * z, 0.75 * z, C('#f5c84b'));   // Halsband mit Glöckchen
+    const hx = cx - 8.4 * z, hy = cy - 18.6 * z;
+    g.beginPath(); g.ellipse(hx + 1.6 * z, hy - 0.6 * z, 1.3 * z, 0.6 * z, -0.6, 0, TAU); g.fillStyle = C(shade(F, -0.1)); g.fill();       // Ohr
+    g.beginPath(); g.ellipse(hx, hy, 2.8 * z, 1.8 * z, 0.35, 0, TAU); g.fillStyle = C(F); g.fill();
+    g.beginPath(); g.ellipse(hx - 2.2 * z, hy + 0.9 * z, 1.4 * z, 1.1 * z, 0.35, 0, TAU); g.fillStyle = C('#8a5f3c'); g.fill();
+    circle(hx - 3.2 * z, hy + 1 * z, 0.6 * z, C('#2a1f1a'));
+    circle(hx + 0.2 * z, hy - 0.5 * z, 0.48 * z, C('#2a1f1a')); circle(hx + 0.05 * z, hy - 0.65 * z, 0.15 * z, '#ffffff');
+    antler(hx + 0.6 * z, hy - 1.4 * z, z, 1); antler(hx - 0.4 * z, hy - 1.5 * z, z, -1);
+  };
+
+  // ── Schneekugel ───────────────────────────────────────────────────────────────────────────────────────────────────────
+  const globe = (cx, cy, z, now) => {
+    const lit = sdLit(), R = 8 * z, gx = cx, gy = cy - 13.5 * z;
+    sdShadow(cx, cy, 7, z);
+    ellipse(cx, cy, 6.4 * z, 2.6 * z, C('#5a3c26'));                                                      // Sockel gedrechselt
+    poly([[cx - 6.4 * z, cy], [cx + 6.4 * z, cy], [cx + 5.2 * z, cy - 4 * z], [cx - 5.2 * z, cy - 4 * z]], C('#8a5a3c'));
+    poly([[cx + 1.5 * z, cy], [cx + 6.4 * z, cy], [cx + 5.2 * z, cy - 4 * z], [cx + 1.2 * z, cy - 4 * z]], C('#73492f'));
+    poly([[cx - 5.6 * z, cy - 2.6 * z], [cx + 5.6 * z, cy - 2.6 * z], [cx + 5.4 * z, cy - 3.3 * z], [cx - 5.4 * z, cy - 3.3 * z]], C('#e0b04a'));
+    ellipse(cx, cy - 4 * z, 5.2 * z, 2 * z, C('#a8774a'));
+    g.save(); g.beginPath(); g.arc(gx, gy, R, 0, TAU); g.clip();
+    const sky = g.createLinearGradient(0, gy - R, 0, gy + R); sky.addColorStop(0, lit ? '#3a4f7a' : C('#cfe9f7')); sky.addColorStop(1, lit ? '#6f86b0' : C('#f2fbff'));
+    g.fillStyle = sky; g.fillRect(gx - R, gy - R, 2 * R, 2 * R);
+    ellipse(gx, gy + 4.6 * z, 8 * z, 3.2 * z, C(SNOW)); ellipse(gx - 2 * z, gy + 3.8 * z, 4 * z, 1.3 * z, '#ffffff');
+    sceneHaus(gx, gy, z, now, lit);
+    for (let k = 0; k < 16; k++) { let x, y;
+      { const p = (now / 5200 + k * 0.137) % 1; x = gx + (((k * 37) % 15) - 7) * z + Math.sin(now / 700 + k) * 0.6 * z; y = gy - R + p * 2 * R; }
+      circle(x, y, (0.35 + (k % 3) * 0.12) * z, '#ffffff'); }
+    g.restore();
+    g.beginPath(); g.arc(gx, gy, R, 0, TAU); g.fillStyle = 'rgba(200,232,250,0.12)'; g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = Math.max(0.5, 0.35 * z); g.stroke();
+    g.beginPath(); g.ellipse(gx - 3.2 * z, gy - 3.6 * z, 1.4 * z, 3 * z, 0.6, 0, TAU); g.fillStyle = 'rgba(255,255,255,0.6)'; g.fill();
+    g.beginPath(); g.arc(gx, gy, R - 0.9 * z, 0.2, 1.2); g.strokeStyle = 'rgba(255,255,255,0.45)'; g.lineWidth = 0.4 * z; g.stroke();
+    if (lit) glowAt(gx, gy + 1 * z, 14 * z, z);
+  };
+  const globeTree = (x, y, s, z) => { for (let k = 0; k < 3; k++) poly([[x - (2.2 - k * 0.5) * s * z, y - k * 1.5 * s * z], [x + (2.2 - k * 0.5) * s * z, y - k * 1.5 * s * z], [x, y - (k * 1.5 + 2.4) * s * z]], C(k % 2 ? '#3f8a52' : '#2f7a47'));
+    for (let k = 0; k < 3; k++) sdLine('#ffffff', 0.35 * s, z, [[x - (1.6 - k * 0.5) * s * z, y - (k * 1.5 + 0.3) * s * z], [x - 0.2 * z, y - (k * 1.5 + 1.2) * s * z]]); };
+  const sceneHaus = (gx, gy, z, now, lit) => {
+    const x = gx - 1 * z, y = gy + 4 * z;
+    poly([[x - 2.6 * z, y], [x + 2.6 * z, y], [x + 2.6 * z, y - 3.4 * z], [x - 2.6 * z, y - 3.4 * z]], C('#d9534a'));
+    poly([[x + 0.8 * z, y], [x + 2.6 * z, y], [x + 2.6 * z, y - 3.4 * z], [x + 0.8 * z, y - 3.4 * z]], C('#b8433a'));
+    poly([[x - 3.4 * z, y - 3.2 * z], [x + 3.4 * z, y - 3.2 * z], [x, y - 6.4 * z]], C('#ffffff')); poly([[x - 3.4 * z, y - 3.2 * z], [x - 2.8 * z, y - 3.8 * z], [x, y - 6.4 * z], [x, y - 5.6 * z]], C('#e6eef4'));
+    poly([[x - 1.6 * z, y - 1.2 * z], [x - 0.4 * z, y - 1.2 * z], [x - 0.4 * z, y - 2.4 * z], [x - 1.6 * z, y - 2.4 * z]], lit ? '#ffd27a' : C('#ffe9b8'));
+    poly([[x + 1.1 * z, y], [x + 2 * z, y], [x + 2 * z, y - 2 * z], [x + 1.1 * z, y - 2 * z]], C('#6b4a2e'));
+    globeTree(gx + 4.2 * z, gy + 4.4 * z, 1.1, z); globeTree(gx - 5 * z, gy + 4 * z, 0.7, z);
+  };
+  // ── Eispalast-Pavillon ────────────────────────────────────────────────────────────────────────────────────────────────
+  const disc = (cx, cy, R, H, z, top, side) => {
+    g.beginPath(); g.ellipse(cx, cy, R * z, R / 2 * z, 0, 0, Math.PI); g.lineTo(cx - R * z, cy - H * z); g.ellipse(cx, cy - H * z, R * z, R / 2 * z, 0, Math.PI, 0, true); g.closePath();
+    const gr = g.createLinearGradient(cx - R * z, 0, cx + R * z, 0); gr.addColorStop(0, C(shade(side, 0.08))); gr.addColorStop(1, C(shade(side, -0.14))); g.fillStyle = gr; g.fill();
+    ellipse(cx, cy - H * z, R * z, R / 2 * z, C(top)); };
+  const column = (x, y, h, z, lit) => {
+    poly([[x - 1.1 * z, y], [x + 1.1 * z, y], [x + 0.85 * z, y - h * z], [x - 0.85 * z, y - h * z]], lit ? 'rgba(225,244,255,0.95)' : C('#cdeefc'));
+    poly([[x + 0.2 * z, y], [x + 1.1 * z, y], [x + 0.85 * z, y - h * z], [x + 0.15 * z, y - h * z]], lit ? 'rgba(170,215,240,0.95)' : C(ICE_D));
+    for (let k = 1; k < 5; k++) sdLine('rgba(255,255,255,0.8)', 0.25, z, [[x - 0.9 * z, y - (k * h / 5 - 0.6) * z], [x + 0.8 * z, y - (k * h / 5 + 0.6) * z]]);   // Spirale
+    ellipse(x, y, 1.6 * z, 0.7 * z, C(ICE_L)); ellipse(x, y - h * z, 1.5 * z, 0.65 * z, C(ICE_L)); };
+  const icicles = (cx, ry, R, z, n) => { for (let k = 0; k <= n; k++) { const t = 0.08 + k / n * (Math.PI - 0.16), x = cx + Math.cos(t) * R * z, y = ry + Math.sin(t) * R / 2 * z, l = 1.4 + ((k * 7) % 4) * 0.7;
+    poly([[x - 0.5 * z, y], [x + 0.5 * z, y], [x, y + l * z]], 'rgba(230,248,255,0.95)'); } };
+  const pavillon = (cx, cy, z, now) => {
+    const lit = sdLit(), Rc = 12.5, Hc = 19, n = 5;
+    snowPile(cx, cy + 1 * z, 23, z);
+    disc(cx, cy + 1 * z, 19, 2, z, '#eef8fd', '#bcdcee'); disc(cx, cy - 1 * z, 15.5, 1.8, z, '#f6fcff', '#cde7f4');
+    const base = cy - 2.8 * z, top = base - Hc * z;
+    const cols = Array.from({ length: n }, (_, k) => { const t = k / n * TAU + Math.PI / 2; return { t, x: cx + Math.cos(t) * Rc * z, y: base + Math.sin(t) * Rc / 2 * z }; });
+    cols.filter(c => Math.sin(c.t) < 0).forEach(c => column(c.x, c.y, Hc, z, lit));
+    const ch = [cx, top + 10 * z];                                                                         // Kristall-Leuchter
+    sdLine('rgba(220,240,255,0.9)', 0.25, z, [[cx, top - 1 * z], ch]);
+    for (const [dx, dy, r] of [[0, 0, 1.4], [-1.6, 1, 0.9], [1.6, 1, 0.9], [0, 2.4, 1]]) poly([[ch[0] + dx * z, ch[1] + (dy - r) * z], [ch[0] + (dx + r * 0.6) * z, ch[1] + dy * z], [ch[0] + dx * z, ch[1] + (dy + r * 1.4) * z], [ch[0] + (dx - r * 0.6) * z, ch[1] + dy * z]], lit ? '#fff3c4' : C('#d8f2ff'));
+    if (lit) glowAt(ch[0], ch[1] + 1 * z, 26 * z, z);
+    cols.filter(c => Math.sin(c.t) >= 0).forEach(c => column(c.x, c.y, Hc, z, lit));
+    const er = Rc + 3;                                                                                    // Traufring mit Eiszapfen
+    g.beginPath(); g.ellipse(cx, top, er * z, er / 2 * z, 0, 0, Math.PI); g.lineTo(cx - er * z, top - 1.6 * z); g.ellipse(cx, top - 1.6 * z, er * z, er / 2 * z, 0, Math.PI, 0, true); g.closePath(); g.fillStyle = C('#d6eef9'); g.fill();
+    ellipse(cx, top - 1.6 * z, er * z, er / 2 * z, C(ICE_L));
+    icicles(cx, top, er, z, 16);
+    const rt = top - 1.6 * z;
+    {                                                                                                     // Zwiebelkuppel mit Rippen
+      const w = er * 0.78 * z, gr = g.createLinearGradient(cx - w, 0, cx + w, 0); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.5, C('#d3eefb')); gr.addColorStop(1, C('#94c9e6'));
+      g.beginPath(); g.moveTo(cx - w, rt); g.bezierCurveTo(cx - w * 1.15, rt - 9 * z, cx - w * 0.2, rt - 12 * z, cx, rt - 19 * z); g.bezierCurveTo(cx + w * 0.2, rt - 12 * z, cx + w * 1.15, rt - 9 * z, cx + w, rt);
+      g.ellipse(cx, rt, w, w / 2, 0, 0, Math.PI); g.closePath(); g.fillStyle = gr; g.fill();
+      for (const f of [-0.55, 0, 0.55]) { g.strokeStyle = 'rgba(255,255,255,0.8)'; g.lineWidth = 0.35 * z; g.beginPath(); g.moveTo(cx + f * w, rt + Math.sqrt(1 - f * f) * w / 2);
+        g.bezierCurveTo(cx + f * w * 1.25, rt - 9 * z, cx + f * w * 0.3, rt - 12 * z, cx, rt - 19 * z); g.stroke(); }
+    }
+    const fy = rt - 23 * z;
+    sdLine(ICE_L, 0.6, z, [[cx, fy + 4 * z], [cx, fy + 1.5 * z]]);
+    bigFlake(cx, fy, 3.4 * z, now / 2600, z, lit ? '#ffffff' : C('#ffffff'), 0.4);
+    if (lit) glowAt(cx, fy, 18 * z, z);
+    for (let k = 0; k < 4; k++) { const p = (now / 1500 + k * 0.27) % 1, s = Math.sin(p * Math.PI) * 1.2, a = k * 1.7;
+      if (s > 0.15) twinkle(cx + Math.cos(a) * 15 * z, top - 6 * z + Math.sin(a) * 9 * z, s, z, 'rgba(255,255,255,0.95)'); }
+  };
+
+  // ── Schneeflocken-Brunnen ─────────────────────────────────────────────────────────────────────────────────────────────
+  const frostRim = (cx, ry, R, z) => { for (let k = 0; k < 22; k++) { const t = k / 22 * TAU, x = cx + Math.cos(t) * R * z, y = ry + Math.sin(t) * R / 2 * z; ellipse(x, y - 0.4 * z, (1.6 + (k % 3) * 0.4) * z, 0.8 * z, C(SNOW)); } };
+  const water = (cx, wy, R, z, lit) => { const gr = g.createRadialGradient(cx, wy, 1 * z, cx, wy, R * z);
+    gr.addColorStop(0, lit ? '#b8f0fa' : C('#a8e2f2')); gr.addColorStop(1, lit ? '#5fb4d6' : C('#5fb2d6')); g.beginPath(); g.ellipse(cx, wy, R * z, R / 2 * z, 0, 0, TAU); g.fillStyle = gr; g.fill(); };
+  const floes = (cx, wy, R, z, now) => { for (let k = 0; k < 4; k++) { const t = now / 6000 + k * 1.57, rr = (R - 4 - (k % 2) * 3), x = cx + Math.cos(t) * rr * z, y = wy + Math.sin(t) * rr / 2 * z, a = t * 0.5 + k;
+    poly([0, 1, 2, 3, 4].map(i => { const b = a + i * TAU / 5, r = (1.2 + ((i + k) % 3) * 0.4) * z; return [x + Math.cos(b) * r, y + Math.sin(b) * r * 0.5]; }), C('#f4fbff')); } };
+  const ripples = (x, y, R, z, now) => { for (let k = 0; k < 3; k++) { const p = (now / 1500 + k / 3) % 1;
+    g.beginPath(); g.ellipse(x, y, (3 + p * R) * z, (1.5 + p * R / 2) * z, 0, 0, TAU); g.strokeStyle = `rgba(255,255,255,${0.55 * (1 - p)})`; g.lineWidth = 0.3 * z; g.stroke(); } };
+  const snowRise = (cx, cy, z, now, lit) => { for (let k = 0; k < 6; k++) { const p = (now / 3000 + k * 0.19) % 1, x = cx + (((k * 29) % 13) - 6.5) * 1.8 * z + Math.sin(now / 800 + k) * 1 * z, y = cy - p * 26 * z;
+    circle(x, y, (0.4 + (k % 2) * 0.2) * z, `rgba(255,255,255,${0.9 * Math.sin(p * Math.PI)})`); } };
+  const bowl = (cx, by, R, z, lit) => { g.beginPath(); g.ellipse(cx, by, R * z, R * 0.62 * z, 0, 0, Math.PI); g.closePath(); g.fillStyle = C('#cfeaf7'); g.fill();
+    ellipse(cx, by, R * z, R / 2 * z, C(ICE_L)); water(cx, by + 0.3 * z, R - 1.4, z, lit); icicles(cx, by + R * 0.3 * z, R * 0.9, z, 8); };
+  const brunnenB = (cx, cy, z, now) => {                                                              // drei Schalen übereinander, Wasser fällt, Flocke oben
+    const lit = sdLit(), R = 18, H = 3.4, top = cy - H * z;
+    snowPile(cx, cy + 1.5 * z, 23, z);
+    disc(cx, cy, R, H, z, '#eef8fd', '#b4d6ea'); frostRim(cx, top, R - 0.6, z);
+    water(cx, top + 0.5 * z, R - 2.4, z, lit); floes(cx, top + 0.5 * z, R - 2.4, z, now); ripples(cx, top + 0.6 * z, 11, z, now);
+    poly([[cx - 2 * z, top + 0.6 * z], [cx + 2 * z, top + 0.6 * z], [cx + 1.3 * z, top - 9 * z], [cx - 1.3 * z, top - 9 * z]], C(ICE)); poly([[cx + 0.4 * z, top + 0.6 * z], [cx + 2 * z, top + 0.6 * z], [cx + 1.3 * z, top - 9 * z], [cx + 0.3 * z, top - 9 * z]], C(ICE_D));
+    const fall = (by, R2, y1, n) => { for (let k = 0; k < n; k++) { const a = 0.3 + k / (n - 1) * (Math.PI - 0.6), x = cx + Math.cos(a) * R2 * z, y0 = by + Math.sin(a) * R2 / 2 * z;
+      g.strokeStyle = 'rgba(210,244,252,0.6)'; g.lineWidth = 0.6 * z; g.beginPath(); g.moveTo(x, y0); g.lineTo(x * 1 + Math.cos(a) * 0.8 * z, y1 + Math.sin(a) * R2 / 2 * z); g.stroke();
+      const p = (now / 500 + k * 0.31) % 1; circle(x + Math.cos(a) * 0.8 * p * z, y0 + (y1 + Math.sin(a) * R2 / 2 * z - y0) * p, 0.38 * z, '#ffffff'); } };
+    const b1 = top - 10 * z; bowl(cx, b1, 9, z, lit); fall(b1, 8.6, top + 0.6 * z, 9);
+    poly([[cx - 1.2 * z, b1], [cx + 1.2 * z, b1], [cx + 0.8 * z, b1 - 7 * z], [cx - 0.8 * z, b1 - 7 * z]], C(ICE));
+    const b2 = b1 - 7.5 * z; bowl(cx, b2, 5.5, z, lit); fall(b2, 5.2, b1 + 0.4 * z, 6);
+    const F = [cx, b2 - 9 * z];
+    sdLine(ICE_L, 0.7, z, [[cx, b2], [cx, F[1] + 5 * z]]);
+    bigFlake(F[0], F[1], 5.6 * z, now / 3200, z, lit ? '#ffffff' : C('#a8dcf2'), 0.7);
+    bigFlake(F[0], F[1], 5.6 * z, now / 3200, z, 'rgba(255,255,255,0.7)', 0.3);
+    if (lit) glowAt(F[0], F[1], 24 * z, z);
+    snowRise(cx, top, z, now, lit);
+  };
+
   return [
-    ['Schneemann', (cx, cy, z) => {
-      snow(cx, cy, 9, z);
-      circle(cx, cy - 5 * z, 6 * z, C(SNOW)); circle(cx - 1.5 * z, cy - 6.5 * z, 3 * z, C('#ffffff'));
-      circle(cx, cy - 14 * z, 4.6 * z, C(SNOW)); circle(cx, cy - 21 * z, 3.6 * z, C(SNOW));
-      ellipse(cx, cy - 17.6 * z, 4.8 * z, 1.4 * z, C('#d9534a'));                                      // Schal
-      poly([[cx + 2 * z, cy - 18 * z], [cx + 4.6 * z, cy - 18 * z], [cx + 5.4 * z, cy - 13 * z], [cx + 3.4 * z, cy - 13.4 * z]], C('#c23f37'));
-      poly([[cx + 0.8 * z, cy - 21 * z], [cx + 5 * z, cy - 20.4 * z], [cx + 0.8 * z, cy - 20 * z]], C('#f08a2e'));   // Karotte
-      for (const dx of [-1.2, 1]) circle(cx + dx * z, cy - 22.2 * z, 0.5 * z, C('#3a3a44'));
-      for (const dy of [-12.5, -15]) circle(cx, cy + dy * z, 0.55 * z, C('#3a3a44'));
-      sdLine('#6b4f3a', 0.9, z, [[cx - 4 * z, cy - 14 * z], [cx - 9 * z, cy - 18 * z]]); sdLine('#6b4f3a', 0.9, z, [[cx + 4 * z, cy - 14 * z], [cx + 8.5 * z, cy - 11 * z]]);
-      poly([[cx - 3.4 * z, cy - 24 * z], [cx + 3.4 * z, cy - 24 * z], [cx + 2.6 * z, cy - 30 * z], [cx - 2.6 * z, cy - 30 * z]], C('#3a3a44'));   // Hut
-      ellipse(cx, cy - 24 * z, 4.4 * z, 1.2 * z, C('#3a3a44')); poly([[cx - 2.9 * z, cy - 25.4 * z], [cx + 2.9 * z, cy - 25.4 * z], [cx + 2.8 * z, cy - 26.4 * z], [cx - 2.8 * z, cy - 26.4 * z]], C('#d9534a'));
-    }],
+    ['Schneemann', (cx, cy, z) => schneemann(cx, cy, z)],
     ['Eiskristall-Laterne', (cx, cy, z) => {
       const lit = sdLit();
       snow(cx, cy, 5, z);
@@ -62,26 +287,8 @@ SD_WAREN.EISZAUBER = (() => {
       }
       sdStarDraw([cx, cy - 31 * z], 2 * z, '#f5c84b', '#c9962a');
     }],
-    ['Schlitten mit Geschenken', (cx, cy, z) => {
-      sdShadow(cx, cy, 10, z);
-      sdLine('#8a5a3c', 1.2, z, [[cx - 10 * z, cy - 1 * z], [cx + 8 * z, cy - 1 * z], [cx + 11 * z, cy - 4 * z]]);
-      for (const dx of [-6, 4]) sdLine('#8a5a3c', 1, z, [[cx + dx * z, cy - 1 * z], [cx + dx * z, cy - 4 * z]]);
-      poly([[cx - 9 * z, cy - 4 * z], [cx + 8 * z, cy - 4 * z], [cx + 9 * z, cy - 8 * z], [cx - 8 * z, cy - 8 * z]], C('#c9443a'));
-      for (const [dx, w, h, c, r] of [[-5, 3.4, 5, '#58b3e8', '#ffd23f'], [0, 3, 7, '#b57bff', '#ffffff'], [5, 2.8, 4, '#58b36a', '#e86f8f']]) {
-        poly([[cx + (dx - w) * z, cy - 8 * z], [cx + (dx + w) * z, cy - 8 * z], [cx + (dx + w) * z, cy - (8 + h) * z], [cx + (dx - w) * z, cy - (8 + h) * z]], C(c));
-        poly([[cx + (dx - 0.5) * z, cy - 8 * z], [cx + (dx + 0.5) * z, cy - 8 * z], [cx + (dx + 0.5) * z, cy - (8 + h) * z], [cx + (dx - 0.5) * z, cy - (8 + h) * z]], C(r));
-        circle(cx + (dx - 0.8) * z, cy - (8.6 + h) * z, 0.9 * z, C(r)); circle(cx + (dx + 0.8) * z, cy - (8.6 + h) * z, 0.9 * z, C(r));
-      }
-    }],
-    ['Rentier', (cx, cy, z) => {
-      snow(cx, cy, 8, z);
-      for (const dx of [-4, -2, 3, 5]) sdLine('#7a5236', 1.1, z, [[cx + dx * z, cy - 6 * z], [cx + dx * z, cy - 0.5 * z]]);
-      ellipse(cx, cy - 8 * z, 6.5 * z, 3.4 * z, C('#a0724a')); ellipse(cx - 1 * z, cy - 7 * z, 4.5 * z, 1.8 * z, C('#e8d4b4'));
-      poly([[cx + 4 * z, cy - 10 * z], [cx + 6.5 * z, cy - 16 * z], [cx + 8 * z, cy - 15 * z], [cx + 6.4 * z, cy - 9 * z]], C('#a0724a'));
-      ellipse(cx + 8 * z, cy - 16.4 * z, 2.6 * z, 1.8 * z, C('#a0724a')); circle(cx + 10.4 * z, cy - 16 * z, 0.9 * z, C('#d9534a'));
-      for (const s of [-1, 1]) { const b = [cx + 7.4 * z, cy - 18 * z]; sdLine('#6e4a3a', 0.6, z, [b, [b[0] + s * 2.4 * z, b[1] - 4.4 * z]]); sdLine('#6e4a3a', 0.6, z, [[b[0] + s * 1.2 * z, b[1] - 2.2 * z], [b[0] + s * 3.4 * z, b[1] - 2.8 * z]]); }
-      circle(cx - 6.6 * z, cy - 9 * z, 1.1 * z, C('#ffffff'));
-    }],
+    ['Schlitten mit Geschenken', (cx, cy, z) => schlitten(cx, cy, z)],
+    ['Rentier', (cx, cy, z) => rentier(cx, cy, z)],
     ['Iglu', (cx, cy, z) => {
       const lit = sdLit();
       snow(cx, cy, 20, z);
@@ -144,19 +351,7 @@ SD_WAREN.EISZAUBER = (() => {
         if (s === 1) pengScarf(x, cy - 9.2 * z, 2.6, z);   // Schal um den Hals (Entwurf A, tools/basar-entwurf-pl.js, Nutzer 28.10.2026)
       }
     }],
-    ['Schneekugel', (cx, cy, z) => {
-      const lit = sdLit();
-      sdShadow(cx, cy, 6, z);
-      poly([[cx - 5 * z, cy], [cx + 5 * z, cy], [cx + 4 * z, cy - 4 * z], [cx - 4 * z, cy - 4 * z]], C('#8a5a3c'));
-      circle(cx, cy - 11 * z, 7.6 * z, lit ? 'rgba(220,240,255,0.75)' : 'rgba(210,236,250,0.7)');
-      ellipse(cx, cy - 5.4 * z, 6 * z, 1.8 * z, C(SNOW));
-      poly([[cx - 2.4 * z, cy - 5.4 * z], [cx + 2.4 * z, cy - 5.4 * z], [cx + 2.4 * z, cy - 9 * z], [cx - 2.4 * z, cy - 9 * z]], C('#e8705f'));
-      poly([[cx - 3 * z, cy - 9 * z], [cx + 3 * z, cy - 9 * z], [cx, cy - 12 * z]], C('#4a5f9e'));
-      circle(cx + 0.9 * z, cy - 7 * z, 0.7 * z, lit ? '#ffd27a' : C('#ffe9b8'));
-      for (const [dx, dy] of [[-4, -13], [3, -15], [5, -10], [-2, -16], [1, -12]]) circle(cx + dx * z, cy + dy * z, 0.5 * z, C('#ffffff'));
-      ellipse(cx - 3 * z, cy - 14 * z, 1.6 * z, 2.6 * z, 'rgba(255,255,255,0.55)');
-      if (lit) glowAt(cx, cy - 9 * z, 14 * z, z);
-    }],
+    ['Schneekugel', (cx, cy, z, now = 0) => globe(cx, cy, z, now)],   // Schnee rieselt (ANIM_ITEMS)
     // Bewohner fahren Schlittschuh (Basar-Durchsicht 28.10.2026): zwei gleiten auf Ellipsen über das Eis, mit Mütze und Schal, Kufenspur dahinter
     ['Schlittschuh-Teich', (cx, cy, z, now = 0, x = 0, y = 0) => {
       snow(cx, cy, 24, z);
@@ -177,30 +372,8 @@ SD_WAREN.EISZAUBER = (() => {
           fur: FUR[Math.floor(hash(x, y, 33 + k.i) * FUR.length)], shirt: SHIRTS[(Math.floor(hash(x, y, 35) * SHIRTS.length) + k.i * 3) % SHIRTS.length], hat: 'muetze', body: 'schal', figS: 0.5 }, z, now);
       }
     }, true],
-    ['Eispalast-Pavillon ✦', (cx, cy, z) => {
-      const lit = sdLit();
-      snow(cx, cy, 22, z);
-      box(cx, cy, 13 * z, 6.5 * z, 2 * z, '#d6ebf6', '#eaf6fc', 0);
-      for (const [dx, dy] of [[-10, -1], [10, -1], [-5, 2.5], [5, 2.5]]) { const x = cx + dx * z, y = cy + (dy - 2) * z;
-        poly([[x - 1 * z, y], [x + 1 * z, y], [x + 0.8 * z, y - 16 * z], [x - 0.8 * z, y - 16 * z]], lit ? 'rgba(230,246,255,0.95)' : C(ICE)); }
-      const top = cy - 18 * z;
-      poly([[cx - 14 * z, top + 2 * z], [cx, top + 9 * z], [cx + 14 * z, top + 2 * z], [cx, top - 5 * z]], C(ICE_L));
-      for (const [dx, h] of [[0, 18], [-7, 11], [7, 11]]) { poly([[cx + (dx - 2.4) * z, top + (dx ? 3 : 0) * z], [cx + (dx + 2.4) * z, top + (dx ? 3 : 0) * z], [cx + dx * z, top - h * z]], lit ? '#e6f6ff' : C(ICE)); poly([[cx + dx * z, top + (dx ? 3 : 0) * z], [cx + (dx + 2.4) * z, top + (dx ? 3 : 0) * z], [cx + dx * z, top - h * z]], C(ICE_D)); }
-      flake(cx, top - 21 * z, 2.4 * z, lit ? '#ffffff' : C('#ffffff'), Math.max(0.6, 0.7 * z));
-      if (lit) { glowAt(cx, top - 21 * z, 24 * z, z, 'blue'); glowAt(cx, cy - 8 * z, 26 * z, z, 'blue'); }
-    }, true],
-    ['Schneeflocken-Brunnen ✦', (cx, cy, z) => {
-      const lit = sdLit();
-      snow(cx, cy, 22, z);
-      ellipse(cx, cy + 1 * z, 19 * z, 9 * z, C('#b9cbd8')); ellipse(cx, cy, 17 * z, 8 * z, C('#e6f1f8')); ellipse(cx, cy - 0.5 * z, 14.5 * z, 6.6 * z, C('#bfe6f7'));
-      for (const [dx, dy] of [[-8, -1], [6, 2], [9, -2], [-3, 3]]) { poly([[cx + dx * z, cy + dy * z], [cx + (dx + 2.6) * z, cy + (dy - 0.6) * z], [cx + (dx + 1.6) * z, cy + (dy + 1) * z]], C('#ffffff')); }   // Eisschollen
-      poly([[cx - 2.2 * z, cy - 1 * z], [cx + 2.2 * z, cy - 1 * z], [cx + 1.4 * z, cy - 14 * z], [cx - 1.4 * z, cy - 14 * z]], C(ICE_L));
-      for (const s of [-1, 1]) { g.strokeStyle = 'rgba(230,246,255,0.95)'; g.lineWidth = Math.max(0.6, 1.4 * z); g.lineCap = 'round'; g.beginPath(); g.moveTo(cx + s * 1.6 * z, cy - 13 * z); g.quadraticCurveTo(cx + s * 7 * z, cy - 17 * z, cx + s * 9 * z, cy - 4 * z); g.stroke(); }   // gefrorene Strahlen
-      const F = [cx, cy - 21 * z];
-      flake(F[0], F[1], 6 * z, lit ? '#ffffff' : C('#9fd3ee'), Math.max(0.8, 1.4 * z));
-      circle(F[0], F[1], 1.4 * z, lit ? '#ffffff' : C(ICE_L));
-      if (lit) glowAt(F[0], F[1], 28 * z, z, 'blue');
-    }, true],
+    ['Eispalast-Pavillon ✦', (cx, cy, z, now = 0) => pavillon(cx, cy, z, now), true],   // Flocke dreht sich, Funkeln (ANIM_ITEMS)
+    ['Schneeflocken-Brunnen ✦', (cx, cy, z, now = 0) => brunnenB(cx, cy, z, now), true],   // Wasser fällt, Schollen treiben, Flocke dreht sich (ANIM_ITEMS)
   ];
 })();
 // 🏰 Turm & Himmelslaternen und 👑 Prinzessinnen & Märchen (Block 161c): eigene Motive nach Grimms Märchen (Rapunzel, Aschenputtel,
@@ -730,7 +903,7 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
 // bewegt (Basar-Durchsicht 27./28.10.2026): Himmelslaternen wiegen sich, Kanu schaukelt, auf dem Teich fahren Bewohner Schlittschuh;
 // in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js vergleicht die Liste)
 { // bewegte Basar-Stücke live zeichnen; ANIM_ITEMS bleibt in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js)
-  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu']);
+  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen']);
   ANIM_ITEMS.clear();
   for (const id of Object.keys(ITEMS)) if (all.delete(id)) ANIM_ITEMS.add(id);
   for (const id of all) ANIM_ITEMS.add(id);
