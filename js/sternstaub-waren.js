@@ -388,6 +388,34 @@ SD_WAREN.EISZAUBER = (() => {
   };
   const kinderPilz = (x, y, s, z, col) => { poly([[x - 0.8 * s * z, y], [x + 0.8 * s * z, y], [x + 0.6 * s * z, y - 3 * s * z], [x - 0.6 * s * z, y - 3 * s * z]], C('#fbf1de')); pilzKappe(x, y - 3 * s * z, 2.4 * s * z, 1.9 * s * z, col, z); };
 
+  // Herzchen-Laube (Basar-Durchsicht 28.10.2026 „was soll das sein?“, Entwurf A in tools/basar-entwurf-p4.js): echte Gartenlaube im Raum (kit),
+  // vier Pfosten, Gitter an den Seiten, Bank mit Kissen, oben Bögen wie ein halbes Herz, Rosen ranken hoch, nachts eine Lichterkette
+  const LA = 0.2, LB = 0.14, LH = 15;
+  const laubePath = (pts, close = true) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); if (close) g.closePath(); };
+  const laubeHump = s => LH + 1.5 + 4.8 * Math.sqrt(Math.max(0, 1 - Math.pow((Math.abs(s) - 0.5) / 0.5, 2)));
+  const laubeBench = (K, z) => {
+    const P = K.P, a0 = -LA + 0.025, a1 = -LA + 0.1, b0 = -0.1, b1 = 0.1;
+    for (const b of [b0 + 0.015, b1 - 0.015]) sdLine('#9a6a40', 0.5, z, [P(a1 - 0.01, b), P(a1 - 0.01, b, 4)]);
+    poly([P(a0, b0, 8.5), P(a0, b1, 8.5), P(a0, b1, 4.5), P(a0, b0, 4.5)], C('#b47a4a'));                 // Lehne
+    for (const b of [-0.05, 0, 0.05]) sdLine('#8a5a34', 0.25, z, [P(a0, b, 4.8), P(a0, b, 8.2)]);
+    poly([P(a0, b0, 4.5), P(a1, b0, 4.5), P(a1, b1, 4.5), P(a0, b1, 4.5)], C('#c98f5a'));                 // Sitz
+    poly([P(a1, b0, 4.5), P(a1, b1, 4.5), P(a1, b1, 3.6), P(a1, b0, 3.6)], C('#a8774a'));
+    const c = P((a0 + a1) / 2, 0.035, 5.3); ellipse(c[0], c[1], 2.2 * z, 1.1 * z, C('#ff8fb1')); heart(c[0] + 0.1 * z, c[1] - 0.2 * z, 0.6 * z, C('#ffffff'));
+  };
+  const laubePost = (K, a, b, z) => { const p0 = K.P(a, b), p1 = K.P(a, b, LH); sdLine('#e8ddcf', 1.3, z, [p0, p1]); sdLine('#fffaf2', 0.8, z, [[p0[0] - 0.25 * z, p0[1]], [p1[0] - 0.25 * z, p1[1]]]); };
+  const laubeGitter = (K, a, z) => {
+    const P = K.P;
+    g.save(); laubePath([P(a, -LB, 2), P(a, LB, 2), P(a, LB, 12.5), P(a, -LB, 12.5)]); g.clip(); g.beginPath();      // alle Gitterstäbe in einem Pfad
+    for (let k = -6; k <= 6; k++) { const b = k * 0.045; for (const d of [1, -1]) { const p0 = P(a, b - d * 0.12, 0), p1 = P(a, b + d * 0.12, 15); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); } }
+    g.strokeStyle = C('#fff6ea'); g.lineWidth = 0.4 * z; g.stroke(); g.restore();
+    sdLine('#fffaf2', 0.6, z, [P(a, -LB, 12.5), P(a, LB, 12.5)]); sdLine('#fffaf2', 0.6, z, [P(a, -LB, 2), P(a, LB, 2)]);
+  };
+  const laubeBogen = (K, b, z) => { const pts = []; for (let i = 0; i <= 40; i++) { const s = -1 + i / 20; pts.push(K.P(s * LA, b, laubeHump(s))); }
+    g.lineJoin = 'round'; g.lineCap = 'round';
+    g.strokeStyle = C('#ddd2c2'); g.lineWidth = 1.6 * z; laubePath(pts, false); g.stroke();
+    g.strokeStyle = C('#fffaf2'); g.lineWidth = 0.9 * z; laubePath(pts, false); g.stroke(); };
+  const laubeLaub = (x, y, z, n, seed) => { for (const odd of [0, 1]) { g.beginPath(); for (let k = odd; k < n; k += 2) { const a = seed + k * 2.3, d = 0.6 + (k % 3) * 0.5, r = (0.9 + odd * 0.3) * z, px = x + Math.cos(a) * d * z, py = y + Math.sin(a) * d * z; g.moveTo(px + r, py); g.arc(px, py, r, 0, Math.PI * 2); } g.fillStyle = C(odd ? '#4f9e4a' : '#3f8a3e'); g.fill(); } };
+
   SD_WAREN.MAERCHEN = [
     ['Kürbiskutsche ✦', (cx, cy, z) => {                                    // ganzes Feld, selten
       const lit = sdLit();
@@ -473,12 +501,23 @@ SD_WAREN.EISZAUBER = (() => {
       for (const [k, c] of [[0, PINK], [1, LILA], [2, '#7fd3ff']]) sdLine(c, 1.2, z, [[cx - 6 * z, cy - 9 * z], [cx - (9 + k) * z, cy - (4 - k * 0.5) * z]], [cx - (9 - k) * z, cy - 10 * z]);   // Schweif
     }],
     ['Herzchen-Laube', (cx, cy, z) => {
-      sdShadow(cx, cy, 10, z);
-      g.strokeStyle = C('#ffffff'); g.lineWidth = Math.max(0.8, 1.4 * z);
-      for (const s of [-1, 1]) { g.beginPath(); g.moveTo(cx + s * 8 * z, cy); g.lineTo(cx + s * 8 * z, cy - 14 * z); g.stroke(); }
-      heart(cx, cy - 18 * z, 9 * z, C('#ffb3cf')); heart(cx, cy - 18.4 * z, 6.6 * z, C('#ff8fb1'));
-      for (const [dx, dy] of [[-8, -8], [8, -11], [-8, -3], [8, -5]]) rose(cx + dx * z, cy + dy * z, 1.2 * z, '#ffffff');
-      poly([[cx - 5 * z, cy - 3 * z], [cx + 5 * z, cy - 3 * z], [cx + 5 * z, cy - 4.2 * z], [cx - 5 * z, cy - 4.2 * z]], C('#ffffff'));
+      const lit = sdLit(), K = kit(cx, cy, z, 0), P = K.P;
+      sdShadow(cx, cy, 11, z);
+      poly([P(-LA - 0.05, -LB - 0.05), P(LA + 0.05, -LB - 0.05), P(LA + 0.05, LB + 0.05), P(-LA - 0.05, LB + 0.05)], C('#e9e0d2'));   // Steinboden
+      for (const [a, b] of [[-0.1, -0.06], [0.08, 0.02], [-0.02, 0.11], [0.15, -0.09]]) { const p = P(a, b); ellipse(p[0], p[1], 1.6 * z, 0.8 * z, C('#d8cebd')); }
+      laubePost(K, -LA, -LB, z); laubePost(K, LA, -LB, z); laubeGitter(K, -LA, z);
+      laubeBogen(K, -LB, z);
+      laubeBench(K, z);
+      for (const s of [-0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75]) sdLine('#f4ece0', 0.5, z, [P(s * LA, -LB, laubeHump(s)), P(s * LA, LB, laubeHump(s))]);   // Dachlatten
+      laubePost(K, -LA, LB, z); laubeGitter(K, LA, z); laubePost(K, LA, LB, z);
+      laubeBogen(K, LB, z);
+      const hp = P(0, LB, laubeHump(0) - 2.4); sdLine('#e8ddcf', 0.2, z, [[hp[0], hp[1] - 2 * z], [hp[0], hp[1]]]); heart(hp[0], hp[1] + 0.6 * z, 1.5 * z, C('#ff6f9a'));
+      for (const [a, b] of [[-LA, LB], [LA, LB], [LA, -LB]]) for (let h = 2; h <= LH; h += 2.6) { const p = P(a, b, h);     // Rosen an den Pfosten hoch
+        laubeLaub(p[0], p[1], z, 3, h + a * 10); if ((h | 0) % 3 === 2) rose(p[0] + 0.5 * z, p[1] - 0.3 * z, 0.9 * z, h > 9 ? '#ff6f9a' : '#e8364f'); }
+      for (const [s, c] of [[-0.85, '#ff6f9a'], [-0.55, '#ffffff'], [-0.3, '#e8364f'], [0.35, '#ff6f9a'], [0.6, '#ffffff'], [0.9, '#e8364f']]) {   // und über den Bogen
+        const p = P(s * LA, LB, laubeHump(s)); laubeLaub(p[0], p[1], z, 3, s * 7); rose(p[0], p[1] - 0.6 * z, 1 * z, c); }
+      for (let i = 1; i < 12; i++) { const s = -1 + i / 6, p = P(s * LA, LB, laubeHump(s) - 0.9);                          // Lichterkette
+        circle(p[0], p[1], 0.45 * z, lit ? '#ffe9a0' : C('#fff2c8')); if (lit) glowAt(p[0], p[1], 6 * z, z); }
     }],
     ['Krönchen-Laterne', (cx, cy, z) => {
       const lit = sdLit();
@@ -690,7 +729,12 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
   }
 // bewegt (Basar-Durchsicht 27./28.10.2026): Himmelslaternen wiegen sich, Kanu schaukelt, auf dem Teich fahren Bewohner Schlittschuh;
 // in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js vergleicht die Liste)
-for (const id of Object.keys(ITEMS)) if (['sd_eisteich', 'sd_himmelslaternen', 'sd_kanu'].includes(id)) ANIM_ITEMS.add(id);
+{ // bewegte Basar-Stücke live zeichnen; ANIM_ITEMS bleibt in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js)
+  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu']);
+  ANIM_ITEMS.clear();
+  for (const id of Object.keys(ITEMS)) if (all.delete(id)) ANIM_ITEMS.add(id);
+  for (const id of all) ANIM_ITEMS.add(id);
+}
 ITEMS.sd_kanu.water = true;                                          // Kanu nur aufs Wasser (smallError), schaukelt
 ITEMS.sd_kanu.desc = 'Aus der Sammlung „Inselleben“ im Sternenbasar. Schwimmt: Stell es aufs Wasser.';
 ITEM_TIPS.sd_kanu = 'Aus dem Sternenbasar ✨. Schwimmt: nur aufs Wasser, bis zu 4 pro Feld.';

@@ -3432,7 +3432,7 @@ const NEWS_HISTORY = [
     '🌸 <b>Neue Beete:</b> Wer Nachtblumen oder Eisblumen aus dem Basar hat, findet unter Beete das passende Beet. Nebeneinander wachsen die Beete ohne Lücke zu einem großen Feld zusammen.',
     '🛶 <b>Kanu:</b> Das Kanu schwimmt jetzt und gehört aufs Wasser. Kanus, die schon auf der Wiese stehen, bleiben dort.',
     '⛸️ <b>Schlittschuh-Teich:</b> Auf dem Eis drehen jetzt zwei Bewohner mit Mütze und Schal ihre Runden.',
-    '✨ <b>Schöner gezeichnet:</b> Die Himmelslaternen schweben sanft und leuchten nachts von innen. Lampions und Schneeflocken hängen an ihren Leinen, der Pinguin trägt seinen Schal um den Hals, am Laternenbaum hängen die Laternen unter der Krone. Das Zwergenhäuschen ist jetzt ein Fliegenpilz, und an der Sonnenuhr kannst du die Uhrzeit ablesen.',
+    '✨ <b>Schöner gezeichnet:</b> Die Himmelslaternen schweben sanft und leuchten nachts von innen. Lampions und Schneeflocken hängen an ihren Leinen, der Pinguin trägt seinen Schal um den Hals, am Laternenbaum hängen die Laternen unter der Krone. Das Zwergenhäuschen ist jetzt ein Fliegenpilz, und an der Sonnenuhr kannst du die Uhrzeit ablesen. Im Koi-Teich schwimmen die Fische, der Pfau schimmert, der Sternbrunnen hat ein Becken in Sternform, und die Herzchen-Laube ist eine richtige Laube mit Bank.',
     '🧺 <b>Nicht mehr im Basar:</b> Pagode, Leseecke, Wandgemälde, Apfelbaum mit Bank, Glockenbaum und Hühnerhaus gibt es nicht mehr zu kaufen. Wer sie schon hat, behält sie.',
   ] },
   { id: '2026-10-25-aussehen', date: '25. Oktober', title: 'Neues Aussehen', items: [

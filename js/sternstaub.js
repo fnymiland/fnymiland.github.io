@@ -552,6 +552,195 @@ const sdArch = (cx, cy, z, t) => {
   const K = kit(cx, cy, z, t && t.rot), W = (t && t.slot === CSLOT ? 0.44 : 0.3) / 0.9;
   return { K, W, Q: (s, h = 0) => K.P(0, s * W, h), back: K.depth(0, -1) < K.depth(0, 1) ? -1 : 1 };
 };
+// Basar-Durchsicht 28.10.2026, Paket 4 (Entwürfe tools/basar-entwurf-p4.js, gewählt: Pfau B, Koi-Teich B, Sternbrunnen B): alle drei bewegt
+// (ANIM_ITEMS in sternstaub-waren.js). Pfau „sieht scheiße aus“ → schräg mit Rad aus Federaugen, über das ein Schimmer läuft; Koi-Teich
+// „Fische wirken tot“ → Kois schwimmen ihre Bahnen und schlagen mit dem Schwanz, Steinlaterne und Schilf; Sternbrunnen „da geht mehr“ →
+// Becken als Stern mit gleich breitem Rand, fünf Wasserbögen aus einer Düse, der Stern dreht sich und funkelt
+const SD_NEU = (() => {
+  const TAU = Math.PI * 2;
+  const glowAt = (x, y, r, z, tint) => { const q = 0.35 * z; glowQuad([[x - q, y + q], [x + q, y + q], [x + q, y - q], [x - q, y - q]], r, tint); };
+  const path = (pts, close = true) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); if (close) g.closePath(); };
+
+  // Pfau: Federaugen als Tropfen nach außen (gelbgrün, türkis, tiefblau, Glanzpunkt), je Farbe ein Pfad für alle Augen; Schimmer läuft übers Rad
+  const ellipses = (list, col) => { g.beginPath(); for (const [x, y, rx, ry, a] of list) { g.moveTo(x + Math.cos(a) * rx, y + Math.sin(a) * rx); g.ellipse(x, y, rx, ry, a, 0, TAU); } g.fillStyle = col; g.fill(); };
+  const fan = (fx, fy, R, z, now) => {
+    const a0 = Math.PI - 0.32, a1 = TAU + 0.32;
+    g.beginPath(); for (let k = 0; k <= 20; k++) { const a = a0 + (a1 - a0) * k / 20, x = fx + Math.cos(a) * R * z, y = fy + Math.sin(a) * R * 0.9 * z; g.moveTo(x + 2.3 * z, y); g.arc(x, y, 2.3 * z, 0, TAU); }
+    g.fillStyle = C('#2e9168'); g.fill();                                                                // Fransen
+    g.beginPath(); g.moveTo(fx, fy); g.ellipse(fx, fy, R * z, R * 0.9 * z, 0, a0, a1); g.closePath(); g.fillStyle = C('#1d6a52'); g.fill();
+    g.beginPath(); for (let k = 0; k <= 16; k++) { const a = a0 + (a1 - a0) * k / 16; g.moveTo(fx, fy); g.lineTo(fx + Math.cos(a) * R * 0.97 * z, fy + Math.sin(a) * R * 0.87 * z); }
+    g.strokeStyle = C('#62b98f'); g.lineWidth = Math.max(0.5, 0.28 * z); g.stroke();
+    const eyes = [];
+    for (const [n, rr, s, o] of [[14, 0.9, 1, 0], [10, 0.64, 0.82, 0.5], [6, 0.4, 0.62, 0.5]]) for (let k = 0; k < n; k++) { const a = a0 + 0.14 + (a1 - a0 - 0.28) * (k + o) / (n - 1 + o);
+      eyes.push([fx + Math.cos(a) * rr * R * z, fy + Math.sin(a) * rr * R * 0.9 * z, a, s, Math.sin(now / 420 - a * 2.2 + rr * 3) > 0.8]); }
+    for (const [r1, r2, off, col] of [[2.4, 1.75, 0, '#a6cf45'], [1.75, 1.3, -0.2, '#1ea89b'], [1.1, 0.82, -0.3, '#1c3c9a']])
+      ellipses(eyes.map(([x, y, a, s]) => [x + Math.cos(a) * off * s * z, y + Math.sin(a) * off * s * z, r1 * s * z, r2 * s * z, a]), C(col));
+    for (const sh of [false, true]) ellipses(eyes.filter(e => e[4] === sh).map(([x, y, a, s]) => [x - 0.3 * s * z, y - 0.3 * s * z, 0.38 * s * z, 0.38 * s * z, 0]), sh ? '#e6fdff' : C('#58c8f0'));
+  };
+  const wingBars = (x, y, rx, ry, rot, z) => {
+    g.beginPath(); g.ellipse(x, y, rx * z, ry * z, rot, 0, TAU); g.fillStyle = C('#b88a52'); g.fill();
+    g.save(); g.beginPath(); g.ellipse(x, y, rx * z, ry * z, rot, 0, TAU); g.clip();
+    for (let k = -3; k <= 3; k++) sdLine('#7d5530', 0.28, z, [[x - rx * z, y + k * ry * 0.3 * z - rx * 0.3 * z], [x + rx * z, y + k * ry * 0.3 * z + rx * 0.3 * z]]);
+    g.restore();
+  };
+  const pfau = (cx, cy, z, now) => {
+    sdShadow(cx, cy, 11, z);
+    g.save(); g.translate(cx + 2.5 * z, cy - 8.5 * z); g.transform(0.72, 0.24, 0, 1, 0, 0); fan(0, 0, 13.5, z, now); g.restore();   // Rad schräg in der Tiefe
+    for (const [x0, y0, x1, y1] of [[cx - 0.6 * z, cy - 3 * z, cx - 1 * z, cy], [cx + 1.2 * z, cy - 3 * z, cx + 1.2 * z, cy + 0.4 * z]]) {
+      sdLine('#8c8c84', 0.45, z, [[x0, y0], [x1, y1]]); sdLine('#8c8c84', 0.3, z, [[x1 - 0.8 * z, y1 + 0.2 * z], [x1 + 0.8 * z, y1 + 0.2 * z]]); }
+    g.beginPath(); g.ellipse(cx, cy - 5.4 * z, 4.8 * z, 3.3 * z, -0.25, 0, TAU); g.fillStyle = C('#1f4fb8'); g.fill();
+    g.beginPath(); g.ellipse(cx - 1.6 * z, cy - 6 * z, 2.2 * z, 2.4 * z, -0.25, 0, TAU); g.fillStyle = C('#2f6fe0'); g.fill();
+    wingBars(cx + 1.2 * z, cy - 5.6 * z, 3, 1.9, -0.3, z);
+    g.lineCap = 'round';
+    g.strokeStyle = C('#2a62d4'); g.lineWidth = 2.3 * z; g.beginPath(); g.moveTo(cx - 2.4 * z, cy - 7 * z); g.quadraticCurveTo(cx - 5.2 * z, cy - 10 * z, cx - 3.8 * z, cy - 13.6 * z); g.stroke();
+    g.strokeStyle = C('#4f8ff0'); g.lineWidth = 0.6 * z; g.beginPath(); g.moveTo(cx - 3.2 * z, cy - 7.6 * z); g.quadraticCurveTo(cx - 5.6 * z, cy - 10 * z, cx - 4.6 * z, cy - 13 * z); g.stroke();
+    const hx = cx - 3.8 * z, hy = cy - 14.8 * z;                                                          // Kopf, Schnabel nach links, Krönchen
+    circle(hx, hy, 1.75 * z, C('#2a62d4')); circle(hx - 0.4 * z, hy - 0.5 * z, 0.8 * z, C('#3f80ea'));
+    ellipse(hx - 0.5 * z, hy - 0.1 * z, 0.95 * z, 0.42 * z, C('#ffffff')); circle(hx - 0.6 * z, hy - 0.1 * z, 0.36 * z, C('#1a1a22'));
+    poly([[hx - 1.5 * z, hy + 0.1 * z], [hx - 3.1 * z, hy + 0.6 * z], [hx - 1.5 * z, hy + 0.9 * z]], C('#c9a46a'));
+    for (const d of [-1, 0, 1]) { const tx = hx + (d * 1.1 - 0.6) * z, ty = hy - 4 * z + Math.abs(d) * 0.4 * z;
+      sdLine('#2a62d4', 0.22, z, [[hx + d * 0.3 * z, hy - 1.5 * z], [tx, ty]]); ellipse(tx, ty - 0.2 * z, 0.5 * z, 0.75 * z, C('#2fa0c8')); }
+  };
+
+  // Koi von oben in der Wasserebene (y halbiert), Kopf vorn; Rücken schlängelt, Schwanz schlägt (ph); Körper als glatter Umriss
+  const koi = (x, y, ang, L, base, spots, ph, z, alpha = 1) => {
+    g.save(); g.globalAlpha *= alpha; g.translate(x, y); g.scale(1, 0.5); g.rotate(ang);
+    const n = 12, k = L / 10, pts = [], r = i => (1.5 - Math.pow(i / n, 1.3) * 1.15) * z * k;
+    for (let i = 0; i <= n; i++) { const u = i / n; pts.push([L * z * (0.45 - u), Math.sin(ph - u * 2.4) * u * u * 1.6 * z * k]); }
+    const nrm = i => { const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [-dy / l, dx / l]; };
+    const [tx, ty] = pts[n], [px, py] = pts[n - 1];
+    g.save(); g.translate(tx, ty); g.rotate(Math.atan2(ty - py, tx - px) + Math.sin(ph - 1) * 0.35); g.globalAlpha *= 0.75;     // Schwanzflosse, leicht durchscheinend
+    g.beginPath(); g.moveTo(-0.3 * z * k, 0); g.quadraticCurveTo(1.1 * z * k, -0.9 * z * k, 2.3 * z * k, -1.6 * z * k); g.quadraticCurveTo(1.6 * z * k, 0, 2.3 * z * k, 1.6 * z * k); g.quadraticCurveTo(1.1 * z * k, 0.9 * z * k, -0.3 * z * k, 0);
+    g.fillStyle = C(base); g.fill(); g.restore();
+    for (const s of [-1, 1]) { const [fx, fy] = pts[3], [nx, ny] = nrm(3); g.save(); g.globalAlpha *= 0.75; g.beginPath();
+      g.ellipse(fx + nx * s * 1.5 * z * k, fy + ny * s * 1.5 * z * k, 1.1 * z * k, 0.45 * z * k, s * (0.7 + Math.sin(ph * 1.3) * 0.3), 0, TAU); g.fillStyle = C(base); g.fill(); g.restore(); }
+    const body = () => { g.beginPath(); const h = pts[0], [hx, hy] = nrm(0);
+      g.moveTo(h[0] + hx * r(0), h[1] + hy * r(0)); g.quadraticCurveTo(h[0] + 1.6 * r(0), h[1], h[0] - hx * r(0), h[1] - hy * r(0));
+      for (let i = 1; i <= n; i++) { const [nx, ny] = nrm(i); g.lineTo(pts[i][0] - nx * r(i), pts[i][1] - ny * r(i)); }
+      for (let i = n; i >= 1; i--) { const [nx, ny] = nrm(i); g.lineTo(pts[i][0] + nx * r(i), pts[i][1] + ny * r(i)); } g.closePath(); };
+    body(); g.fillStyle = C(base); g.fill();
+    if (spots.length) { g.save(); body(); g.clip(); for (const [col, idx] of spots) for (const i of idx) { const j = Math.round(i * n / 8); circle(pts[j][0] + 0.3 * z * k, pts[j][1] + (i % 2 ? 0.4 : -0.3) * z * k, r(j) * 0.95, C(col)); } g.restore(); }
+    sdLine('rgba(255,255,255,0.45)', 0.3 * k, z, [pts[1], pts[6]]);                                      // Glanz auf dem Rücken
+    for (const s of [-1, 1]) circle(pts[0][0] + 0.5 * z * k, pts[0][1] + s * 0.75 * z * k, 0.28 * z * k, C('#1a1a22'));
+    g.restore();
+  };
+  const FISH = [
+    { base: '#fff6ee', spots: [['#e8452a', [1, 3, 4, 6]]] },                       // Kohaku: weiß mit Rot
+    { base: '#ff8a2a', spots: [['#ffb15a', [2, 5]]] },                             // ganz orange
+    { base: '#fff6ee', spots: [['#e8452a', [2, 5]], ['#2a2a30', [3, 7]]] },         // Sanke: weiß, rot, schwarz
+    { base: '#f5c84b', spots: [['#ffe28a', [1, 4]]] },                             // gelb
+  ];
+  // Bahnen in der Teichebene (u, v; Teich hat Radius 20): Kreis, Gegenkreis, Acht, kleiner Kreis vorn
+  const swim = (k, now) => {
+    if (k === 0) { const t = now / 4200; return [11 * Math.cos(t), 11 * Math.sin(t), t + Math.PI / 2]; }
+    if (k === 1) { const t = -now / 3100 + 3.6; return [-5 + 7 * Math.cos(t), -3 + 7 * Math.sin(t), t - Math.PI / 2]; }
+    if (k === 2) { const t = now / 5200 + 3.4; return [12 * Math.sin(t), 7 * Math.sin(2 * t), Math.atan2(14 * Math.cos(2 * t), 12 * Math.cos(t))]; }
+    const t = now / 3600 + 1.5; return [3 + 6 * Math.cos(t), 6 + 4 * Math.sin(t), Math.atan2(4 * Math.cos(t), -6 * Math.sin(t))];
+  };
+  const STONES = Array.from({ length: 18 }, (_, k) => [k / 18 * TAU + (k % 3) * 0.06, 2.4 + ((k * 7) % 5) * 0.35, ['#b9b1a1', '#a69c8a', '#c4bcae'][k % 3]]);
+  const pad = (x, y, r, a, z, flower) => {
+    g.beginPath(); g.moveTo(x, y); g.ellipse(x, y, r * z, r * 0.5 * z, 0, a + 0.35, a + TAU - 0.35); g.closePath(); g.fillStyle = C('#4f9e5a'); g.fill();
+    g.beginPath(); g.ellipse(x - 0.3 * z, y - 0.2 * z, r * 0.7 * z, r * 0.32 * z, 0, a + 0.5, a + TAU - 0.5); g.strokeStyle = C('#6fbf6a'); g.lineWidth = 0.25 * z; g.stroke();
+    if (flower) { for (let k = 0; k < 6; k++) { const b = k / 6 * TAU; g.beginPath(); g.ellipse(x + Math.cos(b) * 0.9 * z, y - 0.8 * z + Math.sin(b) * 0.45 * z, 0.7 * z, 1.2 * z, b + Math.PI / 2, 0, TAU); g.fillStyle = C(k & 1 ? '#ffb3cf' : '#ff8fb1'); g.fill(); }
+      circle(x, y - 1.2 * z, 0.7 * z, C('#ffd23f')); }
+  };
+  const koiteich = (cx, cy, z, now) => {
+    const rx = 21 * z, ry = 10.5 * z, lit = sdLit();
+    ellipse(cx, cy + 1.2 * z, rx + 3.5 * z, ry + 2.4 * z, C('#8f866f'));
+    ellipse(cx, cy, rx, ry, C('#2b7aa0'));
+    const gr = g.createRadialGradient(cx - 4 * z, cy - 1 * z, 1 * z, cx, cy, rx);
+    gr.addColorStop(0, C('#86d4ea')); gr.addColorStop(0.7, C('#4aa6cc')); gr.addColorStop(1, C('#2f86ad'));
+    g.beginPath(); g.ellipse(cx, cy + 0.6 * z, rx - 1 * z, ry - 1.2 * z, 0, 0, TAU); g.fillStyle = gr; g.fill();
+    g.save(); g.beginPath(); g.ellipse(cx, cy + 0.6 * z, rx - 1 * z, ry - 1.2 * z, 0, 0, TAU); g.clip();
+    for (const [dx, dy, r] of [[-9, 3, 1.2], [5, 5, 0.9], [11, -1, 1.1], [-3, -5, 0.8], [-14, -1, 0.9]]) ellipse(cx + dx * z, cy + dy * z, r * z, r * 0.5 * z, 'rgba(120,110,80,0.35)');   // Kiesel am Grund
+    const fish = [0, 1, 2, 3].map(k => { const [u, v, a] = swim(k, now); return { k, x: cx + u * z, y: cy + v * 0.5 * z, a }; });
+    fish.forEach(f => koi(f.x + 0.6 * z, f.y + 2 * z, f.a, f.k === 3 ? 10 : 13, '#1f5f80', [], now / 170 + f.k * 1.7, z, 0.35));   // Schatten am Grund
+    ellipse(cx, cy + 0.6 * z, rx, ry, 'rgba(80,170,210,0.18)');                                          // Wasser zwischen Grund und Fischen
+    fish.forEach(f => koi(f.x, f.y, f.a, f.k === 3 ? 10 : 13, FISH[f.k].base, FISH[f.k].spots, now / 170 + f.k * 1.7, z));
+    for (let k = 0; k < 2; k++) { const p = ((now / 1700 + k * 0.5) % 1), [u, v] = k ? [7, -3] : [-6, 2];  // Ringe, wo ein Fisch hochkam
+      g.beginPath(); g.ellipse(cx + u * z, cy + v * z, (1 + p * 6) * z, (0.5 + p * 3) * z, 0, 0, TAU); g.strokeStyle = `rgba(255,255,255,${0.7 * (1 - p)})`; g.lineWidth = 0.35 * z; g.stroke(); }
+    for (const [dx, dy, w] of [[-10, -4, 4], [3, -6, 3], [9, 3, 3.5]]) { const s = Math.sin(now / 900 + dx) * 0.8;   // Glanz auf dem Wasser
+      sdLine('rgba(255,255,255,0.75)', 0.35, z, [[cx + (dx + s) * z, cy + dy * z], [cx + (dx + s + w) * z, cy + (dy - 0.3) * z]]); }
+    g.restore();
+    pad(cx + 12 * z, cy + 2.5 * z, 3.2, 0.6, z, true); pad(cx - 14 * z, cy - 1.5 * z, 2.8, 2.4, false); pad(cx - 10.5 * z, cy + 3.5 * z, 2.2, 4, true);
+    const st = STONES.map(([a, r, col]) => [cx + Math.cos(a) * (rx + 0.8 * z), cy + Math.sin(a) * (ry + 0.6 * z) + 0.4 * z, r, col]);   // Randsteine, je Farbe ein Pfad
+    ellipses(st.map(([x, y, r]) => [x, y + 0.5 * z, r * z, r * 0.6 * z, 0]), C('#958c7c'));
+    for (const col of ['#b9b1a1', '#a69c8a', '#c4bcae']) ellipses(st.filter(q => q[3] === col).map(([x, y, r]) => [x - 0.2 * z, y, r * 0.9 * z, r * 0.5 * z, 0]), C(col));
+    ellipses(st.map(([x, y, r]) => [x - 0.6 * z, y - 0.3 * z, r * 0.4 * z, r * 0.2 * z, 0]), 'rgba(255,255,255,0.35)');
+    const lx = cx + 13 * z, ly = cy - 8 * z;                                                             // Steinlaterne hinten rechts, nachts mit Licht
+    ellipse(lx, ly + 0.5 * z, 3 * z, 1.4 * z, 'rgba(60,50,40,0.25)');
+    poly([[lx - 1.8 * z, ly], [lx + 1.8 * z, ly], [lx + 1.4 * z, ly - 1.2 * z], [lx - 1.4 * z, ly - 1.2 * z]], C('#a8a294'));
+    poly([[lx - 0.7 * z, ly - 1.2 * z], [lx + 0.7 * z, ly - 1.2 * z], [lx + 0.7 * z, ly - 6 * z], [lx - 0.7 * z, ly - 6 * z]], C('#bdb7aa'));
+    poly([[lx - 2 * z, ly - 6 * z], [lx + 2 * z, ly - 6 * z], [lx + 2 * z, ly - 9.4 * z], [lx - 2 * z, ly - 9.4 * z]], C('#c9c3b6'));
+    poly([[lx - 1 * z, ly - 6.6 * z], [lx + 1 * z, ly - 6.6 * z], [lx + 1 * z, ly - 8.8 * z], [lx - 1 * z, ly - 8.8 * z]], lit ? '#ffd27a' : C('#5a554c'));
+    poly([[lx - 3.4 * z, ly - 9.4 * z], [lx + 3.4 * z, ly - 9.4 * z], [lx + 1.2 * z, ly - 11.6 * z], [lx - 1.2 * z, ly - 11.6 * z]], C('#a8a294'));
+    circle(lx, ly - 12.2 * z, 0.8 * z, C('#a8a294'));
+    if (lit) glowAt(lx, ly - 7.7 * z, 16 * z, z);
+    for (let k = 0; k < 7; k++) { const x = cx - (16 + (k % 3) * 2) * z + k * 0.6 * z, y = cy + (-3 + k * 1.1) * z, h = 8 + (k * 5) % 4, sw = Math.sin(now / 700 + k) * 0.5;   // Schilf, wiegt sich
+      sdLine('#4f8f3a', 0.35, z, [[x, y], [x + sw * z, y - h * z]], [x + 0.2 * z, y - h * 0.5 * z]);
+      if (k % 2) poly([[x + (sw - 0.45) * z, y - (h - 1) * z], [x + (sw + 0.45) * z, y - (h - 1) * z], [x + (sw + 0.45) * z, y - (h - 3.4) * z], [x + (sw - 0.45) * z, y - (h - 3.4) * z]], C('#7a4f2e')); }
+  };
+
+  // Sternbrunnen: Stern dreht sich langsam (Breite cos), Spitzen hell/dunkel geteilt wie geschliffen
+  const turnStar = (x, y, r, z, now, lit) => {
+    const c = Math.cos(now / 2400), sx = 0.35 + 0.65 * Math.abs(c), L = lit ? '#fff3b0' : C('#f9d65c'), D = lit ? '#ffd94a' : C('#d49c26');
+    const P = (a, rr) => [x + Math.cos(a) * rr * sx, y + Math.sin(a) * rr];
+    for (let k = 0; k < 5; k++) { const a = -Math.PI / 2 + k * TAU / 5, tip = P(a, r), il = P(a - Math.PI / 5, r * 0.45), ir = P(a + Math.PI / 5, r * 0.45);
+      poly([[x, y], tip, il], c > 0 ? L : D); poly([[x, y], tip, ir], c > 0 ? D : L); }
+    if (lit) glowAt(x, y, 24 * z, z);
+  };
+  const twinkle = (x, y, s, z, col) => poly([[x, y - s * z], [x + 0.3 * s * z, y - 0.3 * s * z], [x + s * z, y], [x + 0.3 * s * z, y + 0.3 * s * z], [x, y + s * z], [x - 0.3 * s * z, y + 0.3 * s * z], [x - s * z, y], [x - 0.3 * s * z, y - 0.3 * s * z]], col);
+  // Sternform in der Ebene (u, v), wahlweise um w nach innen versetzt (Gehrung): der Rand ist überall gleich breit
+  const starUV = (r, ri, w = 0) => {
+    const p = Array.from({ length: 10 }, (_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i & 1 ? ri : r; return [Math.cos(a) * rr, Math.sin(a) * rr]; });
+    if (!w) return p;
+    return p.map((q, i) => {                                                                             // Punkte laufen im Uhrzeigersinn: innen = rechts der Kante
+      const a = p[(i + 9) % 10], b = p[(i + 1) % 10], n = (s, e) => { const dx = e[0] - s[0], dy = e[1] - s[1], l = Math.hypot(dx, dy); return [-dy / l, dx / l]; };
+      const n1 = n(a, q), n2 = n(q, b), m = [n1[0] + n2[0], n1[1] + n2[1]], d = n1[0] * m[0] + n1[1] * m[1];
+      return [q[0] + m[0] * w / d, q[1] + m[1] * w / d];
+    });
+  };
+  const iso = (cx, cy, z, dy) => uv => uv.map(([u, v]) => [cx + u * z, cy + dy * z + v * 0.5 * z]);
+  const sternbrunnen = (cx, cy, z, now) => {
+    const lit = sdLit(), R = 22, Ri = 12, H = 3.6, top = cy - H * z, S = starUV(R, Ri);
+    poly(iso(cx + 1 * z, cy, z, 1.4)(starUV(R + 1, Ri + 0.6)), 'rgba(40,60,20,0.16)');                  // Schatten in Sternform
+    const bot = iso(cx, cy, z, 0)(S), up = iso(cx, cy, z, -H)(S);
+    const faces = [];                                                                                    // Wände: nur die nach vorn zeigen, hinten zuerst
+    for (let i = 0; i < 10; i++) { const j = (i + 1) % 10, a = S[i], b = S[j], nx = b[1] - a[1], ny = -(b[0] - a[0]);
+      if (ny > 0) faces.push({ i, j, nx, y: (bot[i][1] + bot[j][1]) / 2 }); }
+    faces.sort((p, q) => p.y - q.y).forEach(f => poly([up[f.i], up[f.j], bot[f.j], bot[f.i]], C(f.nx > 0 ? '#c9bfae' : '#e2d9c9')));
+    poly(up, C('#f2ebde'));
+    path(up); g.strokeStyle = C('#e0b04a'); g.lineWidth = 0.35 * z; g.lineJoin = 'round'; g.stroke();
+    poly(iso(cx, cy, z, -H)(starUV(R, Ri, 2.4)), C('#d8cebd'));                                         // Innenkante (Wasser liegt etwas tiefer)
+    const wat = iso(cx, cy, z, -H + 0.6)(starUV(R, Ri, 2.7));
+    path(wat); const gr = g.createRadialGradient(cx, top, 1 * z, cx, top, R * z);
+    gr.addColorStop(0, lit ? '#a8ecf6' : C('#8fd8ec')); gr.addColorStop(1, lit ? '#4fa8cc' : C('#3f9ec6')); g.fillStyle = gr; g.fill();
+    g.save(); path(wat); g.clip();
+    for (let k = 0; k < 3; k++) { const p = (now / 1500 + k / 3) % 1;
+      g.beginPath(); g.ellipse(cx, top + 0.6 * z, (4 + p * 12) * z, (2 + p * 6) * z, 0, 0, TAU); g.strokeStyle = `rgba(255,255,255,${0.5 * (1 - p)})`; g.lineWidth = 0.3 * z; g.stroke(); }
+    g.restore();
+    // fünf Wasserbögen aus der Düse in die Zacken: hintere vor der Säule, vordere danach
+    const sy = top - 10.5 * z;
+    const jets = [0, 1, 2, 3, 4].map(k => { const a = -Math.PI / 2 + k * TAU / 5;
+      return { a, sx: cx + Math.cos(a) * 1.3 * z, sy: sy + Math.sin(a) * 0.5 * z, ex: cx + Math.cos(a) * (R - 8) * z, ey: top + 0.6 * z + Math.sin(a) * (R - 8) * 0.5 * z }; });
+    const jet = j => { const kx = j.sx + (j.ex - j.sx) * 0.45, ky = sy - 7 * z;
+      g.strokeStyle = 'rgba(200,240,252,0.75)'; g.lineWidth = 0.8 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(j.sx, j.sy); g.quadraticCurveTo(kx, ky, j.ex, j.ey); g.stroke();
+      for (let d = 0; d < 3; d++) { const p = (now / 700 + d / 3 + j.a) % 1, q = 1 - p; circle(q * q * j.sx + 2 * p * q * kx + p * p * j.ex, q * q * j.sy + 2 * p * q * ky + p * p * j.ey, 0.45 * z, 'rgba(255,255,255,0.95)'); }
+      const r = ((now / 600 + j.a) % 1 + 1) % 1; g.beginPath(); g.ellipse(j.ex, j.ey, (0.8 + r * 2) * z, (0.4 + r) * z, 0, 0, TAU); g.strokeStyle = `rgba(255,255,255,${0.8 * (1 - r)})`; g.lineWidth = 0.3 * z; g.stroke(); };
+    jets.filter(j => Math.sin(j.a) < 0).forEach(jet);
+    ellipse(cx, top + 0.6 * z, 4 * z, 2 * z, C('#d3c9b6')); ellipse(cx, top - 0.2 * z, 3.6 * z, 1.7 * z, C('#ece4d6'));   // Sockel
+    poly([[cx - 1.6 * z, top], [cx + 1.6 * z, top], [cx + 1.1 * z, sy], [cx - 1.1 * z, sy]], C('#e8e0d0'));
+    poly([[cx + 0.4 * z, top], [cx + 1.6 * z, top], [cx + 1.1 * z, sy], [cx + 0.3 * z, sy]], C('#d3c9b6'));
+    ellipse(cx, top - 4 * z, 1.75 * z, 0.7 * z, C('#e0b04a'));
+    ellipse(cx, sy + 0.4 * z, 2.2 * z, 0.9 * z, C('#c9962a')); ellipse(cx, sy, 2 * z, 0.8 * z, C('#f5c84b'));   // Düse
+    sdLine('#c9962a', 0.6, z, [[cx, sy], [cx, sy - 2.6 * z]]);
+    turnStar(cx, sy - 7.4 * z, 6.2 * z, z, now, lit);
+    jets.filter(j => Math.sin(j.a) >= 0).forEach(jet);
+    for (let k = 0; k < 5; k++) { const p = (now / 1300 + k * 0.23) % 1, a = k * 2.4, s = Math.sin(p * Math.PI) * 1.4;   // Funkeln um den Stern
+      if (s > 0.1) { const px = cx + Math.cos(a) * (8 + p * 3) * z, py = sy - 7.4 * z + Math.sin(a) * (6 + p * 2) * z - p * 3 * z; twinkle(px, py, s, z, lit ? '#fff6c8' : 'rgba(255,255,255,0.95)'); if (lit) glowAt(px, py, 6 * z, z); } }
+  };
+  return { pfau, koiteich, sternbrunnen };
+})();
 const SD_ART = {
   sd_kirschbaum(cx, cy, z) {
     sdShadow(cx, cy, 10, z);
@@ -601,16 +790,7 @@ const SD_ART = {
       if (lit) { const q = 0.35 * z; glowQuad([[p[0] - q, p[1] + q], [p[0] + q, p[1] + q], [p[0] + q, p[1] - q], [p[0] - q, p[1] - q]], 8 * z, 'blue'); }
     }
   },
-  sd_pfau(cx, cy, z) {
-    sdShadow(cx, cy, 9, z);
-    for (let k = 0; k < 9; k++) { const a = Math.PI + k / 8 * Math.PI, ex = cx + 3 * z + Math.cos(a) * 12 * z, ey = cy - 10 * z + Math.sin(a) * 10 * z;
-      sdLine('#3f8f6a', 1.6, z, [[cx + 3 * z, cy - 8 * z], [ex, ey]]);
-      circle(ex, ey, 2.2 * z, C('#2aa58f')); circle(ex, ey, 1.2 * z, C('#2b4fa8')); circle(ex, ey, 0.5 * z, C('#ffd23f')); }
-    ellipse(cx, cy - 5 * z, 4 * z, 3.4 * z, C('#2b5fb8'));
-    poly([[cx - 2 * z, cy - 7 * z], [cx - 1 * z, cy - 14 * z], [cx + 0.6 * z, cy - 7 * z]], C('#2b5fb8'));
-    circle(cx - 1 * z, cy - 15 * z, 1.8 * z, C('#2f6fd0')); poly([[cx - 2.6 * z, cy - 15 * z], [cx - 4.5 * z, cy - 14.4 * z], [cx - 2.6 * z, cy - 14 * z]], C('#e9a23b'));
-    for (const dx of [-1.6, -0.6, 0.4]) { sdLine('#2f6fd0', 0.4, z, [[cx + (dx - 0.6) * z, cy - 16.5 * z], [cx + dx * z, cy - 19 * z]]); circle(cx + dx * z, cy - 19 * z, 0.5 * z, C('#2f6fd0')); }
-  },
+  sd_pfau(cx, cy, z, now) { SD_NEU.pfau(cx, cy, z, now); },
   sd_katze(cx, cy, z) {
     sdShadow(cx, cy, 7, z);
     ellipse(cx, cy - 1.5 * z, 7 * z, 3.2 * z, C('#b48cff')); ellipse(cx, cy - 2.4 * z, 6 * z, 2.4 * z, C('#cdb0ff'));
@@ -669,29 +849,8 @@ const SD_ART = {
     poly([[cx - 3.4 * z, cy - 6 * z], [cx + 3.4 * z, cy - 6 * z], [cx + 3.4 * z, cy - 5 * z], [cx - 3.4 * z, cy - 5 * z]], C('#e86f8f'));
     [-6, 0, 6].forEach((dx, k) => circle(cx + dx * z, cy - 20.5 * z, 1.2 * z, C(['#ffb3cf', '#ffffff', '#ffd23f'][k])));
   },
-  sd_koiteich(cx, cy, z) {
-    const rx = 22 * z, ry = 11 * z;
-    ellipse(cx, cy + 1 * z, rx + 3 * z, ry + 2 * z, C('#a69c8a'));
-    for (let k = 0; k < 14; k++) { const a = k / 14 * Math.PI * 2; ellipse(cx + Math.cos(a) * (rx + 1 * z), cy + Math.sin(a) * (ry + 0.6 * z), 3 * z, 1.8 * z, C(k & 1 ? '#c9c1b1' : '#b5ad9c')); }
-    ellipse(cx, cy, rx, ry, C('#5fb8d6')); ellipse(cx - 4 * z, cy - 2 * z, rx * 0.6, ry * 0.5, C('#7fcde6'));
-    for (const [dx, dy, c, r] of [[-8, 1, '#ff7a2f', 0.3], [6, -3, '#ffffff', -0.4], [2, 4, '#ff9a4a', 2.6]]) {
-      g.save(); g.translate(cx + dx * z, cy + dy * z); g.rotate(r);
-      ellipse(0, 0, 3.4 * z, 1.4 * z, C(c)); poly([[-3.2 * z, 0], [-5.2 * z, -1.4 * z], [-5.2 * z, 1.4 * z]], C(c)); if (c === '#ffffff') circle(0.5 * z, 0, 0.9 * z, C('#ff5a2a'));
-      g.restore();
-    }
-    for (const [dx, dy] of [[12, 3], [-14, -2]]) { ellipse(cx + dx * z, cy + dy * z, 3.4 * z, 1.8 * z, C('#4f9e5a')); circle(cx + (dx + 1) * z, cy + (dy - 0.6) * z, 1 * z, C('#ffb3cf')); }
-  },
-  sd_sternbrunnen(cx, cy, z) {
-    const lit = sdLit();
-    ellipse(cx, cy + 1 * z, 20 * z, 9.5 * z, C('#b9b0a0'));
-    ellipse(cx, cy, 18 * z, 8.4 * z, C('#e8e1d4')); ellipse(cx, cy - 0.5 * z, 15.5 * z, 7 * z, C('#6fc6e0'));
-    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2 + 0.3; circle(cx + Math.cos(a) * 9 * z, cy - 0.5 * z + Math.sin(a) * 4 * z, 0.8 * z, C('#ffffff')); }
-    poly([[cx - 2.4 * z, cy - 1 * z], [cx + 2.4 * z, cy - 1 * z], [cx + 1.6 * z, cy - 16 * z], [cx - 1.6 * z, cy - 16 * z]], C('#e8e1d4'));
-    const S = [cx, cy - 22 * z];
-    poly(sdStarPts(S[0], S[1], 6.5 * z), lit ? '#ffe680' : C('#f5c84b'));
-    if (lit) sdGlow(S[0], S[1], 26 * z, z);
-    for (const s of [-1, 1]) { g.strokeStyle = 'rgba(184,236,246,0.9)'; g.lineWidth = Math.max(0.6, 1 * z); g.beginPath(); g.moveTo(cx + s * 2 * z, cy - 15 * z); g.quadraticCurveTo(cx + s * 8 * z, cy - 18 * z, cx + s * 10 * z, cy - 2 * z); g.stroke(); }
-  },
+  sd_koiteich(cx, cy, z, now) { SD_NEU.koiteich(cx, cy, z, now); },
+  sd_sternbrunnen(cx, cy, z, now) { SD_NEU.sternbrunnen(cx, cy, z, now); },
   sd_pagode(cx, cy, z) {
     const lit = sdLit();
     sdShadow(cx, cy, 16, z);

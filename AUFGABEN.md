@@ -2879,5 +2879,12 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         33 Laternenboot (Laternen schweben sichtbar, mehr), 37 Blumenkranz-Bank (nicht als Bank erkennbar), 40 Glühwürmchen-Glas, 41 Sonnenpavillon
         (Details), 43 Glasschuh (Schuh nicht erkennbar), 44 Froschkönig-Brunnen (Details, Bewegung), 48 Zauberspiegel, 49 Einhorn, 50 Herzchen-Laube
         („was soll das sein?“), 51 Krönchen-Laterne, 52 Tanzpavillon, 54 Hängematte, 55 Picknickdecke, 57 Fossil, 58 Strandkorb
+    - [x] 6e1 (Paket 4, Entwürfe tools/basar-entwurf-p4.js, gewählt: Pfau B, Koi-Teich B, Sternbrunnen B, Herzchen-Laube A): Pfau schräg mit Rad
+          aus Federaugen und Schimmer; Kois schwimmen ihre Bahnen (Körper als glatter Umriss, Schwanz schlägt), Steinlaterne und Schilf; Sternbrunnen
+          mit Sternbecken (Rand überall gleich breit, Wände hinten zuerst), fünf Wasserbögen aus einer Düse (hintere hinter der Säule), Stern dreht
+          sich, Funkeln; Herzchen-Laube als Gartenlaube mit Bank, Gitter, Herzbögen, Rosen, Lichterkette. Pfau/Teich/Brunnen in ANIM_ITEMS.
+          Je Ding: Pfau 110 → 401, Koi-Teich 62 → 711, Sternbrunnen 40 → 254, Herzchen-Laube 37 → 659 (gewollt: viel reicher gezeichnet;
+          gleichfarbige Teile je ein Pfad).
+    - [ ] 6e2 Blauer Schein (glowQuad 'blue') zeigt nachts im Spiel eine eckige Kante (Zauberspiegel, vorher auch Sternbrunnen): Ursache suchen.
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

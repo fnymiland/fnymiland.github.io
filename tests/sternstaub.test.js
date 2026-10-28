@@ -296,6 +296,12 @@ describe('Basar-Durchsicht: umgebaut (Nutzer 28.10.2026)', () => {
     expect(shadowAt(23)).toBe(null);
     expect(game("CLOCK_SPRITES.has('sd_sonnenuhr')")).toBe(true);
   });
+  it('Pfau, Koi-Teich und Sternbrunnen bewegen sich (live gezeichnet), die Herzchen-Laube nicht', () => {
+    expect(game("['sd_pfau', 'sd_koiteich', 'sd_sternbrunnen'].every(b => ANIM_ITEMS.has(b))")).toBe(true);
+    expect(game("ANIM_ITEMS.has('sd_herzlaube')")).toBe(false);
+    for (const b of ['sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_herzlaube']) for (const now of [0, 1234, 98765])   // ohne Fehler zu jeder Zeit
+      game(`drawObject('${b}', 400, 300, 2, ${now}, 4, 4, 1, { b: '${b}', rot: 0, slot: 0 })`);
+  });
   it('Zwergenhäuschen (Pilzhaus): Fenster leuchten nur nachts', () => {
     const n = lit => game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
       try { drawObject('sd_zwergenhaus', 400, 300, 2, 1e6, 4, 4, 1, { b: 'sd_zwergenhaus', rot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`);

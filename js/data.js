@@ -233,8 +233,8 @@ const ITEMS = {
   sd_lampions: { cat: 'deko', name: 'Lampion-Bogen', sdShop: true, cost: 120, beauty: 5, small: true, desc: 'Bunte Lampions an einer Leine, leuchten nachts.' },
   sd_sonnenuhr: { cat: 'deko', name: 'Sonnenuhr', sdShop: true, cost: 100, beauty: 4, small: true, desc: 'Zeigt die Zeit mit dem Schatten.' },
   sd_schaukel: { cat: 'deko', name: 'Schaukel', sdShop: true, cost: 150, beauty: 5, small: true, desc: 'Eine Holzschaukel mit Blümchen am Balken.' },
-  sd_koiteich: { cat: 'deko', name: 'Koi-Teich', sdShop: true, cost: 600, needs: 'grass', beauty: 14, desc: 'Ein runder Teich mit Kois und Seerosen.' },
-  sd_sternbrunnen: { cat: 'deko', name: 'Sternbrunnen', sdShop: true, cost: 1500, mat: { quader: 6 }, needs: 'grass', beauty: 24, desc: 'Ein Brunnen mit goldenem Stern, der nachts leuchtet.' },
+  sd_koiteich: { cat: 'deko', name: 'Koi-Teich', sdShop: true, cost: 600, needs: 'grass', beauty: 14, desc: 'Ein runder Teich mit Kois, Seerosen, Schilf und einer Steinlaterne.' },
+  sd_sternbrunnen: { cat: 'deko', name: 'Sternbrunnen', sdShop: true, cost: 1500, mat: { quader: 6 }, needs: 'grass', beauty: 24, desc: 'Ein Brunnen in Sternform mit fünf Wasserbögen. Der goldene Stern dreht sich und leuchtet nachts.' },
   sd_pagode: { cat: 'deko', name: 'Pagode', sdShop: true, cost: 2000, mat: { bretter: 8 }, needs: 'grass', beauty: 26, desc: 'Drei rote Dächer übereinander, nachts warme Fenster.' },
   sternenbasar: { cat: 'deko', name: 'Sternenbasar', sd: true, once: true, size: [2, 2], cost: 2500, mat: { bretter: 10 }, needs: 'grass', beauty: 20,
     desc: 'Ein Zelt voller Sternstaub-Schätze: jeden Tag neue Angebote und ein Katalog mit besonderen, schönen Dingen. Nur einer je Insel.' },   // Block 161c
