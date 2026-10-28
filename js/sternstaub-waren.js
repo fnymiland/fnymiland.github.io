@@ -368,6 +368,26 @@ SD_WAREN.EISZAUBER = (() => {
     }, true],
   ];
 
+  // Pilzhaus (Basar-Durchsicht 28.10.2026 „Zwergenhäuschen wie einen Pilz“, Entwurf C in tools/basar-entwurf-p3.js): dicker Stiel als Haus mit
+  // runder Tür und runden Fenstern, Kappe als Halbkugel mit Lamellen darunter, kleine Kinderpilze daneben
+  const pilzKappe = (x, y, rx, ry, col, z) => {
+    ellipse(x, y + 0.6 * z, rx, ry * 0.28, C('#f2e2c4'));                                              // Unterseite
+    for (let k = -4; k <= 4; k++) sdLine('#dcc7a0', 0.2, z, [[x + k * rx / 5, y + 0.5 * z], [x + k * rx / 6.5, y + ry * 0.2]]);
+    g.beginPath(); g.ellipse(x, y, rx, ry, 0, Math.PI, 0); g.quadraticCurveTo(x, y + ry * 0.35, x - rx, y); g.closePath(); g.fillStyle = C(col); g.fill();
+    g.beginPath(); g.ellipse(x - rx * 0.25, y - ry * 0.55, rx * 0.4, ry * 0.25, -0.3, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,0.22)'; g.fill();
+  };
+  const pilzStiel = (x, y, w, h, z, lit) => {
+    poly([[x - w * z, y], [x + w * z, y], [x + w * 0.82 * z, y - h * z], [x - w * 0.82 * z, y - h * z]], C('#fbf1de'));
+    poly([[x + w * 0.3 * z, y], [x + w * z, y], [x + w * 0.82 * z, y - h * z], [x + w * 0.25 * z, y - h * z]], 'rgba(160,120,80,0.14)');
+    ellipse(x, y, w * z, w * 0.32 * z, C('#fbf1de'));
+    g.beginPath(); g.moveTo(x - 1.8 * z, y + 0.4 * z); g.lineTo(x - 1.8 * z, y - 4 * z); g.arc(x, y - 4 * z, 1.8 * z, Math.PI, 0); g.lineTo(x + 1.8 * z, y + 0.4 * z); g.closePath(); g.fillStyle = C('#8a5a3c'); g.fill();
+    circle(x + 1 * z, y - 2.4 * z, 0.3 * z, C('#f5c84b'));
+    for (const dx of [-w * 0.55, w * 0.55]) { const wx = x + dx * z, wy = y - h * 0.62 * z; circle(wx, wy, 1.5 * z, C('#8a5a3c')); circle(wx, wy, 1.15 * z, lit ? '#ffd27a' : C('#a8d8ff'));
+      sdLine('#8a5a3c', 0.25, z, [[wx - 1.1 * z, wy], [wx + 1.1 * z, wy]]); sdLine('#8a5a3c', 0.25, z, [[wx, wy - 1.1 * z], [wx, wy + 1.1 * z]]);
+      if (lit) glowAt(wx, wy, 12 * z, z); }
+  };
+  const kinderPilz = (x, y, s, z, col) => { poly([[x - 0.8 * s * z, y], [x + 0.8 * s * z, y], [x + 0.6 * s * z, y - 3 * s * z], [x - 0.6 * s * z, y - 3 * s * z]], C('#fbf1de')); pilzKappe(x, y - 3 * s * z, 2.4 * s * z, 1.9 * s * z, col, z); };
+
   SD_WAREN.MAERCHEN = [
     ['Kürbiskutsche ✦', (cx, cy, z) => {                                    // ganzes Feld, selten
       const lit = sdLit();
@@ -420,17 +440,16 @@ SD_WAREN.EISZAUBER = (() => {
       for (const dx of [2, 9]) sdLine('#8a5a3c', 0.8, z, [[cx + dx * z, cy - 3 * z], [cx + dx * z, cy]]);
       circle(cx + 6 * z, cy - 5.6 * z, 1.4 * z, C('#d6303a'));                                          // ein Apfel auf der Bank
     }],
-    ['Zwergenhäuschen ✦', (cx, cy, z) => {                                  // ganzes Feld, selten
+    ['Zwergenhäuschen ✦', (cx, cy, z) => {                                  // ganzes Feld, selten: Fliegenpilz-Haus mit Kinderpilzen
       const lit = sdLit();
       sdShadow(cx, cy, 16, z);
-      box(cx, cy, 11 * z, 5.5 * z, 11 * z, '#f3e2c2', null, 0);
-      for (const dx of [-7, 2]) { poly([[cx + dx * z, cy - 4 * z], [cx + (dx + 3) * z, cy - 4.6 * z], [cx + (dx + 3) * z, cy - 8 * z], [cx + dx * z, cy - 7.4 * z]], lit ? '#ffd27a' : C('#a8d8ff')); if (lit) glowAt(cx + (dx + 1.5) * z, cy - 6 * z, 12 * z, z); }
-      poly([[cx + 6 * z, cy - 1 * z], [cx + 9 * z, cy - 2 * z], [cx + 9 * z, cy - 8 * z], [cx + 6 * z, cy - 7 * z]], C('#8a5a3c'));
-      const top = cy - 11 * z;
-      poly([[cx - 14 * z, top + 2 * z], [cx, top + 9 * z], [cx + 14 * z, top + 2 * z], [cx + 4 * z, top - 12 * z], [cx - 6 * z, top - 10 * z]], C('#c9443a'));
-      for (const [dx, dy] of [[-6, -2], [2, 2], [7, -4], [-1, -7]]) circle(cx + dx * z, top + dy * z, 1.3 * z, C('#ffffff'));   // Fliegenpilz-Punkte
-      poly([[cx + 6 * z, top - 4 * z], [cx + 8.4 * z, top - 5 * z], [cx + 8.4 * z, top - 13 * z], [cx + 6 * z, top - 12 * z]], C('#b4634a'));
-      for (const [dx, h] of [[-12, 4], [-9, 3], [12, 3.4]]) { poly([[cx + (dx - 1) * z, cy + 1 * z], [cx + (dx + 1) * z, cy + 1 * z], [cx + (dx + 0.8) * z, cy - h * z], [cx + (dx - 0.8) * z, cy - h * z]], C('#fff3e0')); ellipse(cx + dx * z, cy - h * z, 2.4 * z, 1.4 * z, C('#d9534a')); }
+      kinderPilz(cx - 11 * z, cy - 1 * z, 1, z, '#e8604f');
+      pilzStiel(cx, cy, 7, 12, z, lit);
+      pilzKappe(cx, cy - 12 * z, 15 * z, 11 * z, '#d9443a', z);
+      for (const [dx, dy, r] of [[-8, -16, 2], [-2, -20, 2.4], [5, -17, 2], [9, -13, 1.5], [-11, -13, 1.4], [1, -14, 1.6]]) ellipse(cx + dx * z, cy + dy * z, r * z, r * 0.7 * z, C('#ffffff'));
+      kinderPilz(cx + 11 * z, cy + 2 * z, 0.8, z, '#d9443a');
+      kinderPilz(cx + 13.5 * z, cy - 0.5 * z, 0.6, z, '#e8604f');
+      for (const [dx, dy, r] of [[-3, 3, 1.2], [0, 4, 1.1], [3, 5, 1.2]]) { ellipse(cx + dx * z, cy + dy * z, r * z, r * 0.55 * z, C('#c9c2b4')); ellipse(cx + (dx - 0.2) * z, cy + (dy - 0.2) * z, r * 0.7 * z, r * 0.35 * z, C('#e2ddd2')); }   // Trittsteine
     }, true],
     ['Zauberspiegel', (cx, cy, z) => {
       const lit = sdLit();

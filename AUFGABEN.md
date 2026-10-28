@@ -2872,7 +2872,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         wachsen nahtlos zusammen; v1349: Lampion-Bogen, Schneeflocken-Bogen, Blumenranken-Tor als Durchgänge auf geraden Wegstücken, am Feldrand
         längs; v1352: auf dem Schlittschuh-Teich fahren zwei Bewohner mit Mütze und Schal; Neuigkeiten „Sternenbasar aufgeräumt“): 8, 21, 31 als Durchgang (auf den Weg stellen, Bewohner laufen drunter durch, oder seitlich am Weg); 5 Nachtblumen und
         20 Eisblumen als Beet über ein ganzes Feld ohne Lücke; 63 Kanu nur aufs Wasser; 26 Schlittschuh-Teich: Bewohner fahren Schlittschuh (falls machbar)
-  - [ ] 6d Umbauen: 45 nur Rosenhecke (ohne Spinnrad); 47 Zwergenhäuschen als Pilz; 9 Sonnenuhr: klein und nutzlos → Idee nötig
+  - [x] 6d Umbauen: 45 nur Rosenhecke (ohne Spinnrad); 47 Zwergenhäuschen als Pilz (Entwurf C: Fliegenpilz-Haus mit Kinderpilzen, Fenster leuchten nachts, je Ding 72 → 216); 9 Sonnenuhr (Entwurf B: größer, Blumenkreis, Schatten zeigt die Spielzeit, nachts keiner; CLOCK_SPRITES auch für kleine Deko, je Ding 53 → 168). Entwürfe tools/basar-entwurf-p3.js
   - [ ] 6e Neu zeichnen/schöner: 6 Pfau („sieht scheiße aus“), 7 Katze, 11 Koi-Teich (Fische wirken tot), 12 Sternbrunnen („da geht mehr“),
         14 Schneemann (Schal), 17 Schlitten (mehr 3D), 18 Rentier, 19 Iglu (mehr 3D), 22 Eisbank (nicht als Bank erkennbar), 25 Schneekugel
         (innen beweglich), 27 Eispalast-Pavillon (kein Pavillon), 28 Schneeflocken-Brunnen (Details, Bewegung), 29 Turm mit Zopf (höher, Details),

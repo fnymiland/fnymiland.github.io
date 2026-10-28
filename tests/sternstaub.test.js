@@ -284,6 +284,26 @@ describe('Basar-Durchsicht: neue Regeln (Nutzer 28.10.2026)', () => {
   });
 });
 
+describe('Basar-Durchsicht: umgebaut (Nutzer 28.10.2026)', () => {
+  // Schatten der Sonnenuhr: das halbdurchsichtige Band, das poly bekommt; Lage = Mitte seiner Punkte relativ zur Uhr
+  const shadowAt = h => game(`(() => { const gh = gameHour, pp = poly; let s = null; gameHour = () => ${h};
+    poly = (pts, col) => { if (col === 'rgba(70,50,35,0.42)') s = [pts.reduce((a, q) => a + q[0], 0) / pts.length - 400, pts.reduce((a, q) => a + q[1], 0) / pts.length - 300]; return pp(pts, col); };
+    try { drawObject('sd_sonnenuhr', 400, 300, 2, 1e6, 4, 4, 1, { b: 'sd_sonnenuhr', rot: 0, slot: 0 }); } finally { gameHour = gh; poly = pp; } return s; })()`);
+  it('Sonnenuhr: Schatten morgens rechts, abends links, nachts keiner; Bildchen alle 10 Spielminuten neu', () => {
+    const [m, a] = [shadowAt(8), shadowAt(18)];
+    expect(m[0]).toBeGreaterThan(2);
+    expect(a[0]).toBeLessThan(-2);
+    expect(shadowAt(23)).toBe(null);
+    expect(game("CLOCK_SPRITES.has('sd_sonnenuhr')")).toBe(true);
+  });
+  it('Zwergenhäuschen (Pilzhaus): Fenster leuchten nur nachts', () => {
+    const n = lit => game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
+      try { drawObject('sd_zwergenhaus', 400, 300, 2, 1e6, 4, 4, 1, { b: 'sd_zwergenhaus', rot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`);
+    expect(n(false)).toBe(0);
+    expect(n(true)).toBeGreaterThan(0);
+  });
+});
+
 describe('Nicht mehr im Verkauf (Basar-Durchsicht, Nutzer 27.10.2026)', () => {
   const WEG = ['sd_pagode', 'sd_leseecke', 'sd_wandbild', 'sd_apfelbaum', 'sd_glockenbaum', 'sd_huehnerhaus'];
   it('nie im Angebot, Katalog, Kauf oder Ausprobieren; zählt nicht zu „n von allen“', () => {

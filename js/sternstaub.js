@@ -638,13 +638,28 @@ const SD_ART = {
     });
     post(-back);
   },
+  // Basar-Durchsicht 28.10.2026 („relativ klein und nutzlos“, Entwurf B in tools/basar-entwurf-p3.js): größer, mit Blumenkreis, und der
+  // Schatten zeigt die Spielzeit – morgens nach rechts, mittags nach hinten, abends nach links, nachts keiner. Neu gemalt alle 10 Spielminuten (CLOCK_SPRITES)
   sd_sonnenuhr(cx, cy, z) {
-    sdShadow(cx, cy, 6, z);
-    box(cx, cy, 3.4 * z, 1.7 * z, 8 * z, '#e5dccb', null, 0);
-    ellipse(cx, cy - 8.5 * z, 6 * z, 3 * z, C('#d9cfbf')); ellipse(cx, cy - 9 * z, 5.6 * z, 2.7 * z, C('#f3ecdf'));
-    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; circle(cx + Math.cos(a) * 4.4 * z, cy - 9 * z + Math.sin(a) * 2.1 * z, 0.35 * z, C('#8a7a62')); }
-    poly([[cx, cy - 9 * z], [cx - 0.5 * z, cy - 13 * z], [cx + 3 * z, cy - 9.4 * z]], C('#c9962a'));
-    poly([[cx, cy - 9 * z], [cx + 3 * z, cy - 9.4 * z], [cx + 5 * z, cy - 7.6 * z]], 'rgba(60,40,30,0.25)');
+    const S = 1.6, top = cy - 8 * S * z, h = gameHour(), night = h < 6 || h > 20;
+    sdShadow(cx, cy, 7 * S, z);
+    const ring = Array.from({ length: 12 }, (_, k) => { const a = k / 12 * Math.PI * 2; return [cx + Math.cos(a) * 10 * z, cy + 1 * z + Math.sin(a) * 4.6 * z, k]; });
+    const flower = ([fx, fy, k]) => { sdLine('#4f9e3a', 0.4, z, [[fx, fy], [fx, fy - 2.4 * z]]); ellipse(fx - 0.8 * z, fy - 1 * z, 0.8 * z, 0.4 * z, C('#5aa84f'));
+      circle(fx, fy - 2.8 * z, 1.1 * z, C(['#ff8fb1', '#ffd23f', '#ffffff', '#c49bff'][k % 4])); circle(fx, fy - 2.8 * z, 0.4 * z, C('#f5c84b')); };
+    ring.filter(p => p[1] < cy + 1 * z).forEach(flower);                 // hintere Blumen vor dem Sockel
+    poly([[cx - 2.6 * S * z, cy], [cx + 2.6 * S * z, cy], [cx + 2 * S * z, top + 1 * z], [cx - 2 * S * z, top + 1 * z]], C('#e5dccb'));
+    poly([[cx + 0.5 * S * z, cy], [cx + 2.6 * S * z, cy], [cx + 2 * S * z, top + 1 * z], [cx + 0.4 * S * z, top + 1 * z]], C('#d3c8b4'));
+    ellipse(cx, top + 1 * z, 6.4 * S * z, 3.2 * S * z, C('#cfc4b0')); ellipse(cx, top, 6 * S * z, 2.9 * S * z, C('#f6efe2'));
+    for (let k = 0; k < 12; k++) { const a = Math.PI + k / 11 * Math.PI, r1 = 4.6 * S, r2 = 5.4 * S;    // Stundenstriche auf der hinteren Hälfte
+      sdLine('#8a7a62', k % 3 ? 0.25 : 0.45, z, [[cx + Math.cos(a) * r1 * z, top + Math.sin(a) * r1 * 0.48 * z], [cx + Math.cos(a) * r2 * z, top + Math.sin(a) * r2 * 0.48 * z]]); }
+    if (!night) {                                                        // Schatten als Band, quer dazu in der Ebene der Scheibe
+      const th = Math.PI * (h - 6) / 14, L = 4.4 * S, ex = cx + Math.cos(th) * L * z, ey = top - Math.sin(th) * L * 0.48 * z;
+      const n = w => [-Math.sin(th) * w * z, -Math.cos(th) * w * 0.48 * z], [ax, ay] = n(1.6), [bx, by] = n(0.7);
+      poly([[cx + ax, top + ay], [ex + bx, ey + by], [ex - bx, ey - by], [cx - ax, top - ay]], 'rgba(70,50,35,0.42)');
+    }
+    poly([[cx - 0.35 * z, top + 0.1 * z], [cx + 0.35 * z, top + 0.1 * z], [cx, top - 3.6 * S * z]], C('#b8862a'));          // Zeiger: schmales Dreieck
+    poly([[cx, top - 3.6 * S * z], [cx + 0.35 * z, top + 0.1 * z], [cx + 2.2 * S * z, top - 0.1 * z]], C('#e0b04a'));
+    ring.filter(p => p[1] >= cy + 1 * z).forEach(flower);
   },
   sd_schaukel(cx, cy, z) {
     sdShadow(cx, cy, 10, z);

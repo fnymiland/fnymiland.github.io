@@ -1010,7 +1010,7 @@ function putSprite(e, cx, cy, z) {
   }
 }
 // Gebäude (Anker ax, ay) an Bildschirmpunkt c; true = erledigt
-const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm', 'uhrmacher']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101)
+const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm', 'uhrmacher', 'sd_sonnenuhr']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101; Sonnenuhr: Schatten)
 // Bewegtes zeichnen – im GL-Bild in eine Zelle der Sammelfläche (Block 144)
 // lift: um so viele Bildpunkte angehoben (Feld auf einer Anhöhe, Block 157) – Zelle im GL-Bild mit, gezeichnet verschoben
 function moverLive(m, z, now, walker = false, lift = 0) {
@@ -1087,7 +1087,7 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
     if (sp) sp.z = zs;
     return sp;
   };
-  const e = getSprite(key, zs, make);
+  const e = getSprite(key, zs, make, CLOCK_SPRITES.has(b) ? Math.floor(gameHour() * 6) : 0);   // Sonnenuhr: neuer Schatten alle 10 Spielminuten
   if (preLit()) prewarm(keyOf(1), zs, make);                             // Block 143
   if (!e) return false;
   putSprite(e, sx, sy, z);
