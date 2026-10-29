@@ -526,6 +526,9 @@ SD_WAREN.EISZAUBER = (() => {
       g.strokeStyle = C('#85593a'); g.lineWidth = Math.max(0.3, 0.25 * z); g.beginPath();
       for (let j = 1; j < 10; j++) { const t = j / 10 * Math.PI; g.moveTo(cx + KR * z * Math.cos(t), cy - BH * z + KR / 2 * z * Math.sin(t)); g.lineTo(cx + BR * z * Math.cos(t), cy - BH * z + BR / 2 * z * Math.sin(t)); }
       g.stroke();
+      g.strokeStyle = C('#74492e'); g.lineWidth = Math.max(0.4, 0.35 * z); g.beginPath();                  // Geländer hinten (Nutzer 29.10.2026: „muss bis rum gehen“), Kammer verdeckt die Mitte
+      for (let j = 1; j < 16; j++) { const t = Math.PI + j / 16 * Math.PI, x = cx + BR * z * Math.cos(t), y = cy - BH * z + BR / 2 * z * Math.sin(t); g.moveTo(x, y); g.lineTo(x, y - 3 * z); }
+      g.stroke(); g.lineWidth = Math.max(0.6, 0.6 * z); g.beginPath(); halfArc(cx, cy - (BH + 3) * z, BR * z, Math.PI, 2 * Math.PI); g.stroke();
     }
     cyl(cx, cy, KR, KR, K0 + 1.8, K1, z, '#f6ecd9', '#ead9bc', '#c3ae8e');
     band(cx, cy - (K0 + 1.8) * z, KR * z, cy - (K0 + 3) * z, KR * z); g.fillStyle = C('#d4c1a0'); g.fill();   // Gesims

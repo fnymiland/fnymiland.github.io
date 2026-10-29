@@ -2887,7 +2887,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
           gleichfarbige Teile je ein Pfad).
     - [x] 6e4 (Paket 6 Turm, Entwürfe tools/basar-entwurf-p6.js, gewählt: Turm B, Laternenboot B): Turm mit Zopf runder Steinturm, gut die
           Hälfte höher (Spitze passt aufs Feld), Steinreihen als Bögen um den Turm (vorher gerade Striche: „Ebenen prüfen“), Fugen versetzt,
-          Kammer auf Kragsteinen mit Bogenfenster, Läden, Blumenkasten, Holzbalkon rundum, Kegeldach mit Schindeln, geflochtener Zopf bis auf die
+          Kammer auf Kragsteinen mit Bogenfenster, Läden, Blumenkasten, Holzbalkon rundum (Geländer auch hinten, Nutzer: „muss bis rum gehen“), Kegeldach mit Schindeln, geflochtener Zopf bis auf die
           Wiese, Rosenranke. Laternenboot: Ruderboot (Planken, Bänke, Ruder) in kleinem Teich mit Schilf, schaukelt, sieben Ballon-Laternen
           schweben darüber und wiegen sich (ANIM_ITEMS), nachts kleiner Schein je Laterne (balloonLantern glow). Je Ding: Turm 91 → 828
           (Bildchen, nicht bewegt; Bögen als Ellipsenbögen statt Punkte, vorher 1426), Laternenboot 37 → 552. Nebenbei: Basar-Test „Gekauftes
