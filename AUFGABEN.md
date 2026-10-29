@@ -2885,13 +2885,14 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
           sich, Funkeln; Herzchen-Laube als Gartenlaube mit Bank, Gitter, Herzbögen, Rosen, Lichterkette. Pfau/Teich/Brunnen in ANIM_ITEMS.
           Je Ding: Pfau 110 → 401, Koi-Teich 62 → 711, Sternbrunnen 40 → 254, Herzchen-Laube 37 → 659 (gewollt: viel reicher gezeichnet;
           gleichfarbige Teile je ein Pfad).
-    - [ ] 6e3 (Paket 5 Eiszauber, Entwürfe tools/basar-entwurf-p5.js, gewählt: Schneekugel A, Pavillon A, Brunnen B): eingebaut sind Schneemann
+    - [x] 6e3 (Paket 5 Eiszauber, Entwürfe tools/basar-entwurf-p5.js, gewählt: Schneekugel A, Pavillon A, Brunnen B, Eisbank A2): eingebaut sind Schneemann
           (schattierte Kugeln, Schal um den Hals mit Knoten und Fransen, Zylinder mit Stechpalme), Schlitten (räumlich, Kufen mit Schnecken,
           Geschenke als Päckchen), Rentier (Knie, Hufe, Halskragen, Halsband mit Glöckchen, Geweih mit Enden), Schneekugel (Häuschen, Schnee
           rieselt), Eispalast-Pavillon (offen auf Stufen, fünf Eissäulen, Zwiebelkuppel, Eiszapfen, Flocke dreht sich, Leuchter) und
           Schneeflocken-Brunnen (drei Schalen, Wasser fällt, Schollen treiben, Flocke dreht sich). Kugel/Pavillon/Brunnen in ANIM_ITEMS.
           Je Ding: Schneemann 49 → 167, Schlitten 59 → 250, Rentier 43 → 131, Schneekugel 34 → 137, Pavillon 86 → 370, Brunnen 46 → 417.
-          Offen: Iglu (neuer Eingang, Nutzer: „scheint da der Hintergrund durch?“) und Eisbank (Nutzer: „too much“, schlicht A/B) warten auf Wahl.
+          29.10.: Iglu (Kuppel aus Blöcken, Eingangsröhre schattiert statt durchscheinend, Nutzer: „scheint da der Hintergrund durch?“, nachts
+          warme Tür) und Eisbank A2 (schlicht: Lehne, Sitz, zwei Füße, Schnee; Lehne etwas niedriger, Nutzer: „too much“). Iglu 22 → 279, Eisbank 42 → 105.
     - [ ] 6e2 Blauer Schein (glowQuad 'blue') zeigt nachts im Spiel eine eckige Kante (Zauberspiegel, vorher auch Sternbrunnen): Ursache suchen.
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

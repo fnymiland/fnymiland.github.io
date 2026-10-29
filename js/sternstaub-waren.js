@@ -27,7 +27,7 @@ SD_WAREN.EISZAUBER = (() => {
     for (const k of [0, 1, 2]) sdLine('#f6dcd8', 0.22, z, [[kx + (0.25 + k * 0.4) * z, ky + 4.3 * z], [kx + (0.3 + k * 0.4) * z, ky + 5 * z]]);
     circle(kx, ky, 0.75 * z, C(dark)); circle(kx - 0.1 * z, ky - 0.1 * z, 0.55 * z, C(col));
   };
-  // Neu gezeichnet (Basar-Durchsicht 28.10.2026, Entwürfe tools/basar-entwurf-p5.js, Nutzer: Schneekugel A, Pavillon A, Brunnen B)
+  // Neu gezeichnet (Basar-Durchsicht 28.10.2026, Entwürfe tools/basar-entwurf-p5.js, Nutzer: Schneekugel A, Pavillon A, Brunnen B, Eisbank A2)
   const TAU = Math.PI * 2;
   const path = (pts, close = true) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); if (close) g.closePath(); };
   const snowPile = (cx, cy, rx, z) => { ellipse(cx, cy + 0.8 * z, rx * z, rx * 0.44 * z, C(SNOW_S)); ellipse(cx - 0.6 * z, cy + 0.2 * z, rx * 0.88 * z, rx * 0.36 * z, C(SNOW));
@@ -264,6 +264,71 @@ SD_WAREN.EISZAUBER = (() => {
     snowRise(cx, top, z, now, lit);
   };
 
+  // ── Iglu ──
+  const iglu = (cx, cy, z) => {
+    const lit = sdLit(), R = 14 * z, ox = cx - 2 * z, oy = cy - 1 * z, K = kit(cx, cy, z, 0), P = K.P;   // Kuppelmitte = P(-0.0625, 0)
+    snowPile(cx, cy + 1 * z, 22, z);
+    const gr = g.createRadialGradient(ox - R * 0.4, oy - R * 0.7, R * 0.1, ox, oy - R * 0.3, R * 1.1);
+    gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.6, C('#eef5fa')); gr.addColorStop(1, C('#c7d9e6'));
+    g.beginPath(); g.arc(ox, oy, R, Math.PI, 0); g.ellipse(ox, oy, R, R / 2, 0, 0, Math.PI); g.closePath(); g.fillStyle = gr; g.fill();
+    g.strokeStyle = C('#bcd0df'); g.lineWidth = Math.max(0.5, 0.35 * z); g.beginPath();                        // Blöcke: Breitenkreise vorn, Fugen versetzt
+    const lat = [0, 0.2, 0.4, 0.6, 0.8].map(f => { const ph = f * Math.PI / 2; return { h: R * Math.sin(ph), r: R * Math.cos(ph) }; });
+    lat.slice(1).forEach(({ h, r }) => { g.moveTo(ox + r, oy - h); g.ellipse(ox, oy - h, r, r / 2, 0, 0, Math.PI); });
+    for (let i = 0; i < 4; i++) { const lo = lat[i], hi = lat[i + 1]; for (let j = 0; j < 6; j++) { const t = (j + (i % 2 ? 0.5 : 0) + 0.25) / 6 * Math.PI;
+      g.moveTo(ox + lo.r * Math.cos(t), oy - lo.h + lo.r / 2 * Math.sin(t)); g.lineTo(ox + hi.r * Math.cos(t), oy - hi.h + hi.r / 2 * Math.sin(t)); } }
+    g.stroke();
+    ellipse(ox - R * 0.3, oy - R * 0.75, R * 0.22, R * 0.1, 'rgba(255,255,255,0.7)');
+    // Eingang (überarbeitet, Nutzer 28.10.2026 „scheint da der Hintergrund durch?“): Röhre aus schattierten Streifen, beginnt genau an der
+    // Kuppel (Schnittlinie mit der Halbkugel), Blockfugen versetzt, Stirnseite mit Rand, dunkle Öffnung mit Boden, Schatten im Schnee
+    const U = 45.25, dA = -0.0625, Rd = 14, a1 = 0.43, rb = 0.14, rh = 8.4, N = 12;
+    const aS = t => { const bb = rb * Math.cos(t) * U, h = rh * Math.sin(t); return dA + Math.sqrt(Math.max(0, Rd * Rd - h * h - bb * bb)) / U; };
+    const pt = (a, t, f = 1, d = 0) => P(a, rb * f * Math.cos(t), rh * f * Math.sin(t) + d);
+    const ts = Array.from({ length: N + 1 }, (_, i) => i / N * Math.PI);
+    for (let i = N - 1; i >= 0; i--) { const t0 = ts[i], t1 = ts[i + 1], tm = (t0 + t1) / 2, lum = Math.max(0, Math.min(1, 0.85 * Math.sin(tm) + 0.25 * Math.cos(tm)));
+      poly([pt(aS(t0), t0), pt(a1, t0), pt(a1, t1), pt(aS(t1), t1)], C(shade('#f8fbfd', -0.1 * (1 - lum)))); }
+    g.strokeStyle = C('#bcd0df'); g.lineWidth = Math.max(0.5, 0.35 * z); g.beginPath();
+    const VIS = 0.7 * Math.PI;                                                                            // Rückseite (t > VIS) ist verdeckt
+    const ring = a => { let on = false; for (const t of ts) { if (t > VIS) break; const p = pt(a, t); if (a <= aS(t)) { on = false; continue; } on ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); on = true; } };
+    const r1 = a1 - 0.055, r2 = a1 - 0.11; ring(r1); ring(r2);
+    const along = (t, from, to) => { const s0 = Math.max(from, aS(t)); if (s0 >= to) return; const p = pt(s0, t), q = pt(to, t); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); };
+    for (const t of [0.33, 0.67]) along(t * Math.PI, r1, a1);
+    for (const t of [0.17, 0.5]) along(t * Math.PI, r2, r1);
+    for (const t of [0.33, 0.67]) along(t * Math.PI, -1, r2);
+    g.stroke();
+    g.strokeStyle = C('#aabfcf'); g.lineWidth = Math.max(0.5, 0.45 * z); g.beginPath(); ts.filter(t => t <= VIS + 0.01).forEach((t, i) => { const p = pt(aS(t), t); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }); g.stroke();   // Naht an der Kuppel
+    const face = (f) => ts.map(t => pt(a1, t, f));
+    poly(face(1), C('#dde8f0'));                                                                          // Stirnseite (zur Seite, etwas dunkler)
+    const door = face(0.64);
+    poly(door, lit ? '#ffcf7a' : C('#3f5d77'));
+    g.save(); path(door); g.clip();                                                                       // Boden in der Röhre
+    const dg = g.createLinearGradient(0, pt(a1, Math.PI / 2, 0.64)[1], 0, P(a1, 0, 0)[1]); dg.addColorStop(0, lit ? '#ffb85a' : C('#22384d')); dg.addColorStop(1, lit ? '#ffd88a' : C('#4d6b85'));
+    path(door); g.fillStyle = dg; g.fill();
+    poly([P(a1, -rb, 0), P(a1, rb, 0), P(a1 - 0.035, rb, 0), P(a1 - 0.035, -rb, 0)], lit ? '#ffe9b8' : C('#9db5c8'));
+    g.restore();
+    g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = Math.max(0.5, 0.4 * z); path(face(1), false); g.stroke();
+    g.strokeStyle = C('#c3d5e2'); g.lineWidth = Math.max(0.5, 0.45 * z); path(door, false); g.stroke();
+    if (lit) glowAt(P(a1, 0, 3)[0], P(a1, 0, 3)[1], 22 * z, z);
+    const L = P(0.5, 0.2, 0);                                                                             // Laterne neben der Tür
+    sdLine('#5a4636', 0.5, z, [L, [L[0], L[1] - 5 * z]]); poly([[L[0] - 1 * z, L[1] - 5 * z], [L[0] + 1 * z, L[1] - 5 * z], [L[0] + 0.8 * z, L[1] - 7.4 * z], [L[0] - 0.8 * z, L[1] - 7.4 * z]], lit ? '#ffd27a' : C('#e9d8a8'));
+    poly([[L[0] - 1.3 * z, L[1] - 7.4 * z], [L[0] + 1.3 * z, L[1] - 7.4 * z], [L[0], L[1] - 8.8 * z]], C('#5a4636'));
+    if (lit) glowAt(L[0], L[1] - 6.2 * z, 12 * z, z);
+    for (const [a, b, r] of [[-0.3, 0.32, 1.2], [-0.24, 0.36, 1], [-0.27, 0.3, 0.9]]) { const p = P(a, b, 0); ball(p[0], p[1] - r * z, r * z); }   // Schneebälle
+  };
+  // Eisbank schlicht (Nutzer 28./29.10.2026 „too much“, Lehne etwas niedriger): nur Lehne, Sitz, zwei Füße, etwas Schnee
+  const eisbank = (cx, cy, z) => {
+    const K = kit(cx, cy, z, 0), P = K.P, BL = 0.21;
+    snowPile(cx, cy, 10, z);
+    const iceBox = (a0, a1, b0, b1, h0, h1) => { box3(K, a0, a1, b0, b1, h0, h1, C('#eef9ff'), C('#a6d7ef'), C('#c6eaf9'));
+      sdLine('rgba(255,255,255,0.85)', 0.3, z, [P(a1, b0, h1), P(a1, b1, h1), P(a0, b1, h1)]); };
+    const A0 = -0.08, A1 = -0.045, H0 = 3.4, H1 = 8.5;
+    iceBox(A0, A1, -BL, BL, H0, H1);
+    const sp = []; for (let i = 0; i <= 8; i++) { const b = -BL + i * BL / 4; sp.push(P((A0 + A1) / 2, b, H1 + (i % 2 ? 1 : 0.6))); }
+    poly([P(A0 - 0.004, -BL - 0.008, H1 - 0.2), ...sp, P(A1 + 0.004, BL + 0.008, H1 - 0.2)], C(SNOW));
+    sdLine('rgba(255,255,255,0.6)', 0.3, z, [P(A1, -0.1, H0 + 1.8), P(A1, -0.06, H1 - 1.2)]);
+    for (const b of [-0.16, 0.12]) iceBox(-0.035, 0.055, b, b + 0.04, 0, H0);                              // Füße
+    iceBox(-0.045, 0.07, -BL, BL, H0, H0 + 1.2);                                                          // Sitz
+    const s = P(0.01, -0.15, H0 + 1.2); ellipse(s[0], s[1], 2.2 * z, 0.9 * z, C(SNOW)); ellipse(s[0] + 0.6 * z, s[1] - 0.3 * z, 1.2 * z, 0.5 * z, '#ffffff');
+  };
   return [
     ['Schneemann', (cx, cy, z) => schneemann(cx, cy, z)],
     ['Eiskristall-Laterne', (cx, cy, z) => {
@@ -289,16 +354,7 @@ SD_WAREN.EISZAUBER = (() => {
     }],
     ['Schlitten mit Geschenken', (cx, cy, z) => schlitten(cx, cy, z)],
     ['Rentier', (cx, cy, z) => rentier(cx, cy, z)],
-    ['Iglu', (cx, cy, z) => {
-      const lit = sdLit();
-      snow(cx, cy, 20, z);
-      g.beginPath(); g.ellipse(cx, cy - 1 * z, 15 * z, 13 * z, 0, Math.PI, 0); g.closePath(); g.fillStyle = C('#f2f8fc'); g.fill();
-      g.strokeStyle = C('#cfdde8'); g.lineWidth = Math.max(0.5, 0.5 * z);
-      for (const k of [4, 8, 11]) { g.beginPath(); g.ellipse(cx, cy - 1 * z, 15 * z * Math.sqrt(1 - (k / 13) ** 2), 1, 0, 0, 0); g.moveTo(cx - 15 * z * Math.sqrt(1 - (k / 13) ** 2), cy - (1 + k) * z); g.lineTo(cx + 15 * z * Math.sqrt(1 - (k / 13) ** 2), cy - (1 + k) * z); g.stroke(); }
-      g.beginPath(); g.ellipse(cx + 6 * z, cy, 5 * z, 6 * z, 0, Math.PI, 0); g.closePath(); g.fillStyle = C('#e6f1f8'); g.fill();
-      g.beginPath(); g.ellipse(cx + 6.4 * z, cy, 3 * z, 4.2 * z, 0, Math.PI, 0); g.closePath(); g.fillStyle = lit ? '#ffcf7a' : C('#5d7f99'); g.fill();
-      if (lit) glowAt(cx + 6.4 * z, cy - 2 * z, 20 * z, z);
-    }, true],
+    ['Iglu', (cx, cy, z) => iglu(cx, cy, z), true],
     ['Eisblumen', (cx, cy, z) => {
       const lit = sdLit();
       snow(cx, cy, 7, z);
@@ -323,14 +379,7 @@ SD_WAREN.EISZAUBER = (() => {
         if (lit) glowAt(p[0], p[1] + 1.4 * z, 7 * z, z, 'blue');
       }
     }],
-    ['Eisbank', (cx, cy, z) => {
-      snow(cx, cy, 9, z);
-      for (const dx of [-6, 6]) poly([[cx + (dx - 1.4) * z, cy], [cx + (dx + 1.4) * z, cy], [cx + (dx + 1.2) * z, cy - 5 * z], [cx + (dx - 1.2) * z, cy - 5 * z]], C(ICE_D));
-      poly([[cx - 8 * z, cy - 5 * z], [cx + 8 * z, cy - 5 * z], [cx + 8 * z, cy - 7 * z], [cx - 8 * z, cy - 7 * z]], C(ICE));
-      poly([[cx - 8 * z, cy - 7 * z], [cx + 8 * z, cy - 7 * z], [cx + 8 * z, cy - 14 * z], [cx - 8 * z, cy - 14 * z]], C(ICE_L));
-      for (const [dx, l] of [[-6, 3], [-3, 2], [1, 3.4], [5, 2.2]]) poly([[cx + (dx - 0.7) * z, cy - 5 * z], [cx + (dx + 0.7) * z, cy - 5 * z], [cx + dx * z, cy - (5 - l) * z]], C('#e6f6ff'));
-      ellipse(cx, cy - 14 * z, 8.4 * z, 1.2 * z, C(SNOW));
-    }],
+    ['Eisbank', (cx, cy, z) => eisbank(cx, cy, z)],
     ['Eisbär', (cx, cy, z) => {
       snow(cx, cy, 9, z);
       ellipse(cx - 1 * z, cy - 6 * z, 7.5 * z, 5 * z, C('#f6f3ea'));

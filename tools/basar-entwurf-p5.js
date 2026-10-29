@@ -202,12 +202,12 @@
   };
 
   // Eisbank schlicht (Nutzer 28.10.2026 „too much“): nur Lehne, Sitz, zwei Füße, etwas Schnee
-  const eisbankS = (round) => (cx, cy, z) => {
+  const eisbankS = (round, H1 = 11) => (cx, cy, z) => {
     const K = kit(cx, cy, z, 0), P = K.P, BL = 0.21;
     snowPile(cx, cy, 10, z);
     const iceBox = (a0, a1, b0, b1, h0, h1) => { box3(K, a0, a1, b0, b1, h0, h1, C('#eef9ff'), C('#a6d7ef'), C('#c6eaf9'));
       sdLine('rgba(255,255,255,0.85)', 0.3, z, [P(a1, b0, h1), P(a1, b1, h1), P(a0, b1, h1)]); };
-    const A0 = -0.08, A1 = -0.045, H0 = 3.4, H1 = 11;
+    const A0 = -0.08, A1 = -0.045, H0 = 3.4;
     if (round) {                                                                                          // Lehne mit rundem Rücken
       const top = b => H1 + 2.4 * Math.sqrt(Math.max(0, 1 - (b / BL) ** 2)), bs = Array.from({ length: 17 }, (_, i) => -BL + i / 16 * 2 * BL);
       poly([P(A1, -BL, H0), P(A1, BL, H0), ...bs.slice().reverse().map(b => P(A1, b, top(b)))], C('#c6eaf9'));
@@ -219,7 +219,7 @@
       const sp = []; for (let i = 0; i <= 8; i++) { const b = -BL + i * BL / 4; sp.push(P((A0 + A1) / 2, b, H1 + (i % 2 ? 1 : 0.6))); }
       poly([P(A0 - 0.004, -BL - 0.008, H1 - 0.2), ...sp, P(A1 + 0.004, BL + 0.008, H1 - 0.2)], C(SNOW));
     }
-    sdLine('rgba(255,255,255,0.6)', 0.3, z, [P(A1, -0.1, 5.5), P(A1, -0.04, 9)]);
+    sdLine('rgba(255,255,255,0.6)', 0.3, z, [P(A1, -0.1, H0 + 1.8), P(A1, -0.06, H1 - 1.2)]);
     for (const b of [-0.16, 0.12]) iceBox(-0.035, 0.055, b, b + 0.04, 0, H0);                              // Füße
     iceBox(-0.045, 0.07, -BL, BL, H0, H0 + 1.2);                                                          // Sitz
     const s = P(0.01, -0.15, H0 + 1.2); ellipse(s[0], s[1], 2.2 * z, 0.9 * z, C(SNOW)); ellipse(s[0] + 0.6 * z, s[1] - 0.3 * z, 1.2 * z, 0.5 * z, '#ffffff');
@@ -389,6 +389,8 @@
     'Eisbank: Lehne, Armlehnen, Felldecke': eisbank,
     'Eisbank A: ganz schlicht': eisbankS(false),
     'Eisbank B: schlicht, runde Lehne': eisbankS(true),
+    'Eisbank A2: Lehne etwas niedriger': eisbankS(false, 8.5),
+    'Eisbank A3: Lehne noch niedriger': eisbankS(false, 7.5),
     'Schneekugel A: Häuschen, Schnee rieselt': (cx, cy, z, now) => globe(cx, cy, z, now, sceneHaus, false),
     'Schneekugel B: Eisschloss, Schnee wirbelt': (cx, cy, z, now) => globe(cx, cy, z, now, sceneSchloss, true),
     'Eispalast-Pavillon A: Zwiebelkuppel': (cx, cy, z, now) => pavillon(cx, cy, z, now, 'zwiebel'),
