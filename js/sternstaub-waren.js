@@ -434,7 +434,7 @@ SD_WAREN.EISZAUBER = (() => {
   const heart = (x, y, r, col) => { g.beginPath(); g.moveTo(x, y + r * 0.9); g.bezierCurveTo(x - r * 1.4, y - r * 0.1, x - r * 0.7, y - r * 1.1, x, y - r * 0.35); g.bezierCurveTo(x + r * 0.7, y - r * 1.1, x + r * 1.4, y - r * 0.1, x, y + r * 0.9); g.fillStyle = col; g.fill(); };
   // Himmelslaterne als Ballon (Entwurf A, tools/basar-entwurf-pl.js, Nutzer 28.10.2026; x, y = Öffnung unten): oben rund und breit, unten schmal,
   // Licht von innen (unten am hellsten), Nähte, Drahtring, Flamme; nachts heller und mit Schein ab der Flamme
-  const balloonLantern = (x, y, w, z, lit) => {
+  const balloonLantern = (x, y, w, z, lit, glow = 1) => {               // glow: Größe des Scheins (Laternenboot: viele, daher kleiner)
     const W = w * z, H = 2.3 * W;
     const path = () => { g.beginPath(); g.moveTo(x - 0.5 * W, y); g.bezierCurveTo(x - 0.95 * W, y - 0.3 * H, x - 1.05 * W, y - 0.75 * H, x - 0.7 * W, y - 0.93 * H);
       g.quadraticCurveTo(x, y - 1.12 * H, x + 0.7 * W, y - 0.93 * H); g.bezierCurveTo(x + 1.05 * W, y - 0.75 * H, x + 0.95 * W, y - 0.3 * H, x + 0.5 * W, y); g.closePath(); };
@@ -446,30 +446,187 @@ SD_WAREN.EISZAUBER = (() => {
     for (const k of [-0.5, 0, 0.5]) { g.beginPath(); g.moveTo(x + k * 0.5 * W, y); g.bezierCurveTo(x + k * 0.95 * W, y - 0.3 * H, x + k * 1.05 * W, y - 0.75 * H, x + k * 0.5 * W, y - H); g.stroke(); }
     g.strokeStyle = C('#8a5a3c'); g.lineWidth = Math.max(0.4, 0.16 * z); g.beginPath(); g.ellipse(x, y, 0.5 * W, 0.14 * W, 0, 0, Math.PI * 2); g.stroke();
     ellipse(x, y - 0.12 * W, 0.2 * W, 0.3 * W, lit ? '#fff7c8' : C('#ffb23a')); circle(x, y - 0.06 * W, 0.1 * W, '#ffffff');
-    if (lit) glowAt(x, y - 0.12 * W, w * 8 * z, z);
+    if (lit && glow) glowAt(x, y - 0.12 * W, w * 8 * z * glow, z);
   };
   const skyLantern = (x, y, w, z, lit) => { poly([[x - w * z, y], [x + w * z, y], [x + w * 0.8 * z, y - w * 2 * z], [x - w * 0.8 * z, y - w * 2 * z]], lit ? '#ffcf6a' : C('#ffb347')); ellipse(x, y - w * 2 * z, w * 0.8 * z, w * 0.3 * z, lit ? '#ffe39a' : C('#ffc76a')); if (lit) glowAt(x, y - w * z, w * 7 * z, z); };
 
+  // Neu gezeichnet (Basar-Durchsicht 29.10.2026, Entwürfe tools/basar-entwurf-p6.js, Nutzer: Turm B, Laternenboot B)
+  const TAU = Math.PI * 2;
+  const path = (pts, close = true) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); if (close) g.closePath(); };
+  // ── Runder Turm ───────────────────────────────────────────────────────────────────────────────────────────────────────
+  // Zylinder in Bildschirm-Koordinaten (Ellipsen 2:1): t = 0 rechts, π/2 vorn, π links. Seiten heller links (Licht von links oben).
+  // Bögen als Ellipsenbögen (ein Befehl statt vieler Punkte)
+  // Seitenband zwischen zwei vorderen Halbbögen (unten y0/r0, oben y1/r1) als ein Pfad aus Ellipsenbögen
+  const band = (cx, y0, r0, y1, r1) => { g.beginPath(); g.ellipse(cx, y0, r0, r0 / 2, 0, Math.PI, 0, true); g.ellipse(cx, y1, r1, r1 / 2, 0, 0, Math.PI); g.closePath(); };
+  const halfArc = (cx, y, r, t0 = 0, t1 = Math.PI) => { g.moveTo(cx + r * Math.cos(t0), y + r / 2 * Math.sin(t0)); g.ellipse(cx, y, r, r / 2, 0, t0, t1); };
+  const cyl = (cx, cy, r0, r1, h0, h1, z, light, mid, dark) => {
+    const gr = g.createLinearGradient(cx - r0 * z, 0, cx + r0 * z, 0); gr.addColorStop(0, C(light)); gr.addColorStop(0.45, C(mid)); gr.addColorStop(1, C(dark));
+    band(cx, cy - h0 * z, r0 * z, cy - h1 * z, r1 * z); g.fillStyle = gr; g.fill();
+  };
+  const topDisc = (cx, cy, r, h, z, col) => ellipse(cx, cy - h * z, r * z, r / 2 * z, C(col));
+  const rAt = (r0, r1, h0, h1, h) => r0 + (r1 - r0) * (h - h0) / (h1 - h0);
+  // Steinreihen: jede Reihe ein vorderer Halbbogen auf ihrer Höhe, Stoßfugen je Reihe versetzt (nur vorn, wo sie gut zu sehen sind)
+  const courses = (cx, cy, r0, r1, h0, h1, step, z, col) => {
+    g.strokeStyle = C(col); g.lineWidth = Math.max(0.4, 0.32 * z); g.lineCap = 'round'; g.beginPath();
+    const hs = []; for (let h = h0 + step; h < h1 - 0.5; h += step) hs.push(h);
+    for (const h of hs) { const r = rAt(r0, r1, h0, h1, h) * z; halfArc(cx, cy - h * z, r, 0.04, Math.PI - 0.04); }
+    [h0, ...hs].forEach((h, i) => { const hn = Math.min(h1, h + step), r = rAt(r0, r1, h0, h1, h) * z, rn = rAt(r0, r1, h0, h1, hn) * z;
+      for (let j = 0; j < 6; j++) { const t = (j + (i % 2 ? 0.5 : 0) + 0.25) / 6 * Math.PI; if (Math.sin(t) < 0.3) continue;
+        g.moveTo(cx + r * Math.cos(t), cy - h * z + r / 2 * Math.sin(t)); g.lineTo(cx + rn * Math.cos(t), cy - hn * z + rn / 2 * Math.sin(t)); } });
+    g.stroke();
+  };
+  // Fenster auf der Turmwand bei Winkel t (gestaucht nach der Rundung), Höhe h (Unterkante), w/hh Breite/Höhe
+  const winAt = (cx, cy, r, t, h, w, hh, z, fill, frame) => {
+    const x = cx + r * z * Math.cos(t), y = cy - h * z + r / 2 * z * Math.sin(t), sx = Math.sin(t) * w * z;
+    const pts = [[x - sx, y], [x + sx, y], [x + sx, y - (hh - w) * z], ...Array.from({ length: 9 }, (_, i) => { const a = i / 8 * Math.PI; return [x + Math.cos(a) * sx, y - (hh - w) * z - Math.sin(a) * w * z]; })];
+    path(pts); g.fillStyle = fill; g.fill(); g.strokeStyle = C(frame); g.lineWidth = Math.max(0.5, 0.5 * z); g.stroke();
+    return [x, y, sx];
+  };
+  // Zopf: Mittellinie als Kurve, darauf schräge Glieder abwechselnd links/rechts (geflochten), Bänder und Blüten
+  const braid = (pts, z, w = 1.25) => {
+    const N = 40;
+    // weiche Kurve durch die Punkte (Catmull-Rom über die Stützpunkte)
+    const cr = (u) => { const n = pts.length - 1, s = Math.min(n - 1e-6, u * n), k = Math.floor(s), f = s - k, p0 = pts[Math.max(0, k - 1)], p1 = pts[k], p2 = pts[k + 1], p3 = pts[Math.min(n, k + 2)];
+      const c = (a, b, c2, d) => 0.5 * ((2 * b) + (-a + c2) * f + (2 * a - 5 * b + 4 * c2 - d) * f * f + (-a + 3 * b - 3 * c2 + d) * f * f * f);
+      return [c(p0[0], p1[0], p2[0], p3[0]), c(p0[1], p1[1], p2[1], p3[1])]; };
+    const pt = Array.from({ length: N + 1 }, (_, i) => cr(i / N));
+    g.strokeStyle = C('#c98f26'); g.lineWidth = Math.max(0.8, (w * 2 + 0.5) * z); g.lineCap = 'round'; g.lineJoin = 'round'; path(pt, false); g.stroke();
+    g.strokeStyle = C('#f2c24e'); g.lineWidth = Math.max(0.7, w * 2 * z); path(pt, false); g.stroke();
+    const link = i => { const [x, y] = pt[i], dx = pt[i + 1][0] - pt[i - 1][0], dy = pt[i + 1][1] - pt[i - 1][1], a = Math.atan2(dy, dx), s = i % 2 ? 1 : -1,   // Glieder: je Seite ein Pfad
+      ex = x + Math.cos(a + Math.PI / 2) * s * 0.35 * w * z, ey = y + Math.sin(a + Math.PI / 2) * s * 0.35 * w * z;
+      g.moveTo(ex + Math.cos(a + s * 0.7) * 0.9 * w * z, ey + Math.sin(a + s * 0.7) * 0.9 * w * z); g.ellipse(ex, ey, 0.9 * w * z, 0.55 * w * z, a + s * 0.7, 0, TAU); };
+    for (const odd of [0, 1]) { g.beginPath(); for (let i = 1 + odd; i < N; i += 2) link(i);
+      g.fillStyle = C(odd ? '#ffd968' : '#f6c94a'); g.fill(); g.strokeStyle = C('#d29a2e'); g.lineWidth = Math.max(0.3, 0.18 * z); g.stroke(); }
+    for (const [u, c] of [[0.3, PINK], [0.5, '#ffffff'], [0.68, LILA], [0.84, PINK]]) { const [x, y] = cr(u); rose(x, y, 0.75 * z, c); }   // eingeflochtene Blüten
+    return cr;
+  };
+
+  const zopfturm = (cx, cy, z) => {
+    const lit = sdLit();
+    sdShadow(cx, cy, 18, z);
+    // Wiese am Fuß: Steine, Rosenbusch
+    for (const [dx, dy, r] of [[-13, 3, 1.6], [-10, 5, 1.1], [12, 4, 1.4], [9, 6.4, 1]]) { ellipse(cx + dx * z, cy + dy * z, r * z, r * 0.6 * z, C('#a7a196')); ellipse(cx + (dx - 0.3) * z, cy + (dy - 0.3) * z, r * 0.7 * z, r * 0.4 * z, C('#c4beb2')); }
+    const B0 = 10, R0 = 8.2, R1 = 7.4, HB = 4, HT = 50;                                                      // Sockel, Schaft unten/oben, Höhen
+    cyl(cx, cy, B0, B0 - 0.3, 0, HB, z, '#d9cdb7', '#cbbda4', '#a8977c'); topDisc(cx, cy, B0 - 0.3, HB, z, '#bfb096');
+    courses(cx, cy, B0, B0 - 0.3, 0, HB, 2, z, '#9d8c72');
+    cyl(cx, cy, R0, R1, HB, HT, z, '#f2e7d2', '#e6d6b8', '#bda98a');
+    courses(cx, cy, R0, R1, HB, HT, 4.4, z, '#c9b592');
+    for (const [h, t, d] of [[9, 0.42, 0.06], [22, 0.7, -0.05], [35, 0.33, 0.05], [44, 0.62, -0.06], [26, 0.52, 0.04], [40, 0.47, -0.04]]) {   // einzelne Steine heller/dunkler
+      const r = rAt(R0, R1, HB, HT, h) * z, x = cx + r * Math.cos(t * Math.PI), y = cy - h * z + r / 2 * Math.sin(t * Math.PI), sw = Math.sin(t * Math.PI) * 1.6 * z;
+      poly([[x - sw, y], [x + sw, y], [x + sw, y - 4.2 * z], [x - sw, y - 4.2 * z]], d > 0 ? 'rgba(255,255,255,0.18)' : 'rgba(120,90,50,0.12)'); }
+    for (const [h, t] of [[16, 0.36], [31, 0.66]]) winAt(cx, cy, rAt(R0, R1, HB, HT, h), t * Math.PI, h, 0.7, 4.2, z, lit ? '#ffcf7a' : C('#4d4060'), '#bba585');   // Schießscharten-Fenster
+    // Kragsteine und Kammer oben (etwas breiter)
+    const KR = 8.8, K0 = HT, K1 = HT + 13;
+    for (let j = 0; j < 9; j++) { const t = (j + 0.5) / 9 * Math.PI, x = cx + R1 * z * Math.cos(t), y = cy - HT * z + R1 / 2 * z * Math.sin(t), s = Math.sin(t) * 0.8 * z;
+      poly([[x - s, y], [x + s, y], [x + s * 1.3, y - 2.2 * z], [x - s * 1.3, y - 2.2 * z]], C(t < Math.PI / 2 ? '#c7b494' : '#ddcdb0')); }
+    const BR = KR + 2.2, BH = K0 + 1.2;
+    {                                                                                                         // Balkonboden vor der Kammer (Kammer verdeckt den hinteren Teil)
+      band(cx, cy - (BH - 0.8) * z, BR * z, cy - BH * z, BR * z); g.fillStyle = C('#7d5236'); g.fill();
+      ellipse(cx, cy - BH * z, BR * z, BR / 2 * z, C('#9a6a44'));
+      g.strokeStyle = C('#85593a'); g.lineWidth = Math.max(0.3, 0.25 * z); g.beginPath();
+      for (let j = 1; j < 10; j++) { const t = j / 10 * Math.PI; g.moveTo(cx + KR * z * Math.cos(t), cy - BH * z + KR / 2 * z * Math.sin(t)); g.lineTo(cx + BR * z * Math.cos(t), cy - BH * z + BR / 2 * z * Math.sin(t)); }
+      g.stroke();
+    }
+    cyl(cx, cy, KR, KR, K0 + 1.8, K1, z, '#f6ecd9', '#ead9bc', '#c3ae8e');
+    band(cx, cy - (K0 + 1.8) * z, KR * z, cy - (K0 + 3) * z, KR * z); g.fillStyle = C('#d4c1a0'); g.fill();   // Gesims
+    courses(cx, cy, KR, KR, K0 + 3, K1, 3.4, z, '#cdb998');
+    const wT = 0.62 * Math.PI, [wx, wy, wsx] = winAt(cx, cy, KR, wT, K0 + 4.2, 1.9, 7.4, z, lit ? '#ffd27a' : C('#5d4f73'), '#a88d64');   // Fenster mit Läden
+    if (!lit) { g.save(); path([[wx - wsx, wy], [wx + wsx, wy], [wx + wsx, wy - 5.5 * z], [wx - wsx, wy - 5.5 * z]]); g.clip(); poly([[wx - wsx, wy - 5.5 * z], [wx + wsx, wy - 5.5 * z], [wx - wsx, wy - 1 * z]], 'rgba(255,255,255,0.12)'); g.restore(); }
+    for (const s of [-1, 1]) poly([[wx + s * wsx, wy], [wx + s * (wsx + 1.5 * z), wy + 0.4 * z], [wx + s * (wsx + 1.5 * z), wy - 5.8 * z], [wx + s * wsx, wy - 6 * z]], C(s < 0 ? '#8a62c4' : '#7353a8'));
+    poly([[wx - wsx - 0.6 * z, wy + 0.2 * z], [wx + wsx + 0.6 * z, wy + 0.2 * z], [wx + wsx + 0.4 * z, wy + 1.8 * z], [wx - wsx - 0.4 * z, wy + 1.8 * z]], C('#8a5a3c'));   // Blumenkasten
+    for (let k = 0; k < 5; k++) rose(wx + (-1.6 + k * 0.8) * z * (wsx / (1.9 * z)), wy - 0.2 * z - (k % 2) * 0.5 * z, 0.55 * z, [PINK, '#ffffff', LILA, '#ffd23f', PINK][k]);
+    if (lit) glowAt(wx, wy - 3 * z, 20 * z, z);
+    {                                                                                                         // Geländer vorn (Holzbalkon rund um die Kammer)
+      g.strokeStyle = C('#8a5a3c'); g.lineWidth = Math.max(0.4, 0.35 * z); g.beginPath();
+      for (let j = 0; j <= 16; j++) { const t = j / 16 * Math.PI, x = cx + BR * z * Math.cos(t), y = cy - BH * z + BR / 2 * z * Math.sin(t); g.moveTo(x, y); g.lineTo(x, y - 3 * z); }
+      g.stroke(); g.lineWidth = Math.max(0.6, 0.6 * z); g.beginPath(); halfArc(cx, cy - (BH + 3) * z, BR * z); g.stroke();
+      for (let j = 1; j < 16; j += 3) { const t = j / 16 * Math.PI; rose(cx + BR * z * Math.cos(t), cy - (BH + 3) * z + BR / 2 * z * Math.sin(t), 0.6 * z, [PINK, LILA, '#ffffff'][j % 3]); }
+    }
+    // Dach: Kegel mit Überstand, Schindelreihen als Bögen, Rand dunkler
+    const DR = KR + 2, D0 = K1, D1 = K1 + 22;
+    ellipse(cx, cy - D0 * z, DR * z, DR / 2 * z, C('#4a3570'));
+    const rg = g.createLinearGradient(cx - DR * z, 0, cx + DR * z, 0); rg.addColorStop(0, C('#9a7ccc')); rg.addColorStop(0.45, C('#7b5ea7')); rg.addColorStop(1, C('#5a4287'));
+    g.beginPath(); g.ellipse(cx, cy - D0 * z, DR * z, DR / 2 * z, 0, Math.PI, 0, true); g.lineTo(cx, cy - D1 * z); g.closePath(); g.fillStyle = rg; g.fill();
+    g.strokeStyle = 'rgba(60,35,90,0.35)'; g.lineWidth = Math.max(0.4, 0.3 * z); g.beginPath();
+    for (const f of [0.2, 0.4, 0.58, 0.74, 0.87]) { const r = DR * (1 - f) * z, y = cy - (D0 + (D1 - D0) * f) * z; halfArc(cx, y, r, 0.1, Math.PI - 0.1); }
+    for (let j = 1; j < 8; j++) { const t = j / 8 * Math.PI; g.moveTo(cx + DR * z * Math.cos(t), cy - D0 * z + DR / 2 * z * Math.sin(t)); g.lineTo(cx + DR * 0.2 * z * Math.cos(t), cy - (D0 + (D1 - D0) * 0.8) * z + DR * 0.1 * z * Math.sin(t)); }
+    g.stroke();
+    g.strokeStyle = C('#3f2c60'); g.lineWidth = Math.max(0.5, 0.6 * z); g.beginPath(); halfArc(cx, cy - D0 * z, DR * z); g.stroke();
+    circle(cx, cy - D1 * z, 0.8 * z, C('#f5c84b'));
+    sdLine('#6b4f3a', 0.5, z, [[cx, cy - D1 * z], [cx, cy - (D1 + 6) * z]]);
+    poly([[cx, cy - (D1 + 6) * z], [cx + 4.5 * z, cy - (D1 + 5) * z], [cx, cy - (D1 + 3.6) * z]], C('#ffd23f'));
+    // Rosenranke vom Fuß bis fast zum Balkon, Rosenbusch am Fuß
+    const vine = Array.from({ length: 40 }, (_, i) => { const u = i / 39, h = HB + u * (HT - HB - 3), t = Math.PI * (0.88 + 0.05 * Math.sin(u * Math.PI * 3.2) - u * 0.1), r = rAt(R0, R1, HB, HT, h) + 0.3;
+      return [cx + r * z * Math.cos(t), cy - h * z + r / 2 * z * Math.sin(t)]; });
+    g.strokeStyle = C('#4f7f33'); g.lineWidth = Math.max(0.5, 0.6 * z); g.lineCap = 'round'; path(vine, false); g.stroke();
+    for (const dk of [0, 1]) { g.beginPath(); vine.forEach((p, i) => { if (i % 2 || (i % 3 ? 0 : 1) !== dk) return;   // Blätter je Farbe ein Pfad
+      const x = p[0] + (i % 4 ? 1 : -1) * 0.8 * z, r = 1 * z, rot = i * 0.9; g.moveTo(x + Math.cos(rot) * r, p[1] + Math.sin(rot) * r); g.ellipse(x, p[1], r, r * 0.5, rot, 0, TAU); });
+      g.fillStyle = C(dk ? '#5a9a3c' : '#6fb04a'); g.fill(); }
+    vine.forEach((p, i) => { if (i % 6 === 0 || i === vine.length - 1) rose(p[0] + 0.6 * z, p[1] - 0.6 * z, 0.9 * z, [PINK, '#e8546f', '#ffffff'][i % 3]); });
+    for (const [dx, r] of [[-9.5, 2.2], [-7, 1.8]]) { sdBlob(cx + dx * z, cy + 3.2 * z, z, [[0, 0, r]], '#5a9a3c', '#6fb04a'); rose(cx + (dx + 0.6) * z, cy + 1.8 * z, 0.8 * z, PINK); }
+    // Zopf vom Fenster bis auf die Wiese, unten eingerollt mit Schleife
+    const sx = wx + wsx * 0.3, sy = wy + 1.6 * z, rr = rAt(R0, R1, HB, HT, 30);
+    const cr = braid([[sx, sy], [sx - 1 * z, cy - 46 * z], [cx - rr * 0.5 * z + 1.5 * z, cy - 32 * z], [cx - rr * 0.3 * z, cy - 17 * z], [cx - 1 * z, cy - 4 * z], [cx + 2 * z, cy + 3.6 * z], [cx + 6 * z, cy + 4.4 * z], [cx + 7.4 * z, cy + 2.6 * z], [cx + 5 * z, cy + 1.8 * z]], z);
+    const bo = cr(0.94); for (const s of [-1, 1]) poly([[bo[0], bo[1]], [bo[0] + s * 1.8 * z, bo[1] - 1 * z], [bo[0] + s * 1.8 * z, bo[1] + 1 * z]], C('#e8546f')); circle(bo[0], bo[1], 0.5 * z, C('#c93a58'));
+  };
+
+  const pond = (cx, cy, z, now, lit) => {
+    const P = [], N = 28; for (let i = 0; i < N; i++) { const t = i / N * TAU, w = 1 + 0.07 * Math.sin(t * 3 + 1) + 0.05 * Math.cos(t * 5); P.push([cx + Math.cos(t) * 15 * w * z, cy + 1 * z + Math.sin(t) * 7 * w * z]); }
+    path(P.map(([x, y]) => [x, y + 0.8 * z])); g.fillStyle = C('#7d9a5a'); g.fill();                         // Uferkante
+    const gr = g.createLinearGradient(0, cy - 7 * z, 0, cy + 8 * z); gr.addColorStop(0, lit ? '#2c4a6e' : C('#5fb3d6')); gr.addColorStop(1, lit ? '#1e3756' : C('#3f8fb8'));
+    path(P); g.fillStyle = gr; g.fill();
+    g.save(); path(P); g.clip();
+    g.strokeStyle = lit ? 'rgba(255,220,150,0.25)' : 'rgba(255,255,255,0.45)'; g.lineWidth = Math.max(0.4, 0.35 * z);
+    for (let k = 0; k < 4; k++) { const p = ((now / 3000) + k / 4) % 1; g.globalAlpha = 1 - p; g.beginPath(); g.ellipse(cx + 1 * z, cy + 2 * z, (6 + p * 9) * z, (2.4 + p * 3.6) * z, 0, 0.2, Math.PI - 0.2); g.stroke(); }
+    g.globalAlpha = 1; g.restore();
+    for (const [a, s] of [[2.6, 1], [2.9, 0.8], [0.4, 0.9]]) { const x = cx + Math.cos(a) * 14.5 * z, y = cy + 1 * z + Math.sin(a) * 6.8 * z;   // Schilf
+      for (const d of [-0.6, 0, 0.7]) sdLine('#5f8f3a', 0.4, z, [[x + d * z, y], [x + (d * 1.6 + 0.3) * z, y - (5 + d * 2) * s * z]]);
+      ellipse(x + 0.3 * z, y - 5 * s * z, 0.4 * z, 1.1 * z, C('#7a5233')); }
+    for (const [a, r] of [[0.15, 1.4], [5.9, 1], [3.5, 1.2]]) { const x = cx + Math.cos(a) * 15 * z, y = cy + 1 * z + Math.sin(a) * 7 * z; ellipse(x, y, r * z, r * 0.6 * z, C('#a7a196')); ellipse(x - 0.3 * z, y - 0.3 * z, r * 0.7 * z, r * 0.4 * z, C('#c4beb2')); }
+  };
+  // Ruderboot (kit): Länge entlang a, Bordwand +b sichtbar; Spiegelbild der Laternen kommt vorher ins Wasser
+  const boot = (cx, cy, z, now, lit) => {
+    const K = kit(cx, cy, z, 0), P = K.P, L = 0.2, W = 0.075, bob = Math.sin(now / 900) * 0.4;
+    const w = a => W * Math.pow(Math.max(0, 1 - (a / L) ** 2), 0.7), as = Array.from({ length: 17 }, (_, i) => -L + i / 16 * 2 * L);
+    const G = (a, s) => P(a, s * w(a), 3.6 + bob + Math.abs(a / L) ** 2 * 1.6), Bt = (a, s) => P(a * 0.92, s * w(a) * 0.55, 0.4 + bob);
+    poly(as.map(a => G(a, -1)).concat(as.slice().reverse().map(a => G(a, 1))), C('#5e3c26'));                   // Innenraum
+    const inner = []; for (const a of as) inner.push(P(a * 0.9, -w(a) * 0.75, 1.6 + bob)); for (const a of as.slice().reverse()) inner.push(P(a * 0.9, w(a) * 0.75, 1.6 + bob));
+    poly(inner, C('#7a5233'));                                                                                     // Boden
+    for (const a0 of [-0.08, 0.06]) { const p = [P(a0 - 0.012, -w(a0) * 0.92, 2.8 + bob), P(a0 + 0.012, -w(a0) * 0.92, 2.8 + bob), P(a0 + 0.012, w(a0) * 0.92, 2.8 + bob), P(a0 - 0.012, w(a0) * 0.92, 2.8 + bob)]; poly(p, C('#b88a5a')); }   // Bänke
+    const side = as.map(a => G(a, 1)).concat(as.slice().reverse().map(a => Bt(a, 1)));
+    const hg = g.createLinearGradient(0, G(0, 1)[1], 0, Bt(0, 1)[1]); hg.addColorStop(0, C('#c98a55')); hg.addColorStop(1, C('#8a5a3c'));
+    path(side); g.fillStyle = hg; g.fill();
+    g.strokeStyle = C('#7a4c30'); g.lineWidth = Math.max(0.4, 0.3 * z); g.beginPath();                          // Planken
+    for (const f of [0.35, 0.68]) as.forEach((a, i) => { const p = G(a, 1), q = Bt(a, 1), m = [p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f]; i ? g.lineTo(...m) : g.moveTo(...m); });
+    g.stroke();
+    g.strokeStyle = C('#e0b07a'); g.lineWidth = Math.max(0.5, 0.55 * z); path(as.map(a => G(a, 1)), false); g.stroke();   // Bordkante
+    g.strokeStyle = C('#a06c44'); g.lineWidth = Math.max(0.4, 0.4 * z); path(as.map(a => G(a, -1)), false); g.stroke();
+    ellipse(...P(0, 0.02, 0), 15 * z * 0.6, 2 * z, 'rgba(255,255,255,0.18)');                                    // Wasserlinie
+    sdLine('#c89a62', 0.5, z, [P(-0.02, w(-0.02) * 0.9, 3.2 + bob), P(-0.1, 0.2, 0.2 + bob)]);                    // Ruder
+    ellipse(...P(-0.1, 0.2, 0.2 + bob), 1.4 * z, 0.5 * z, C('#b88a5a'));
+    // Laternenstab am Bug, Laterne daran; eine Laterne wartet im Boot
+    const bow = G(L * 0.82, 0), top = [bow[0] - 1 * z, bow[1] - 12 * z];
+    g.strokeStyle = C('#6b4f3a'); g.lineWidth = Math.max(0.5, 0.55 * z); g.beginPath(); g.moveTo(...bow); g.quadraticCurveTo(bow[0] - 1.5 * z, bow[1] - 9 * z, top[0] + 3 * z, top[1]); g.stroke();
+    sdLine('#6b4f3a', 0.25, z, [[top[0] + 3 * z, top[1]], [top[0] + 3 * z, top[1] + 2.5 * z]]);
+    const lx = top[0] + 3 * z, ly = top[1] + 5.4 * z;
+    poly([[lx - 1.1 * z, ly], [lx + 1.1 * z, ly], [lx + 0.8 * z, ly - 2.9 * z], [lx - 0.8 * z, ly - 2.9 * z]], lit ? '#ffd27a' : C('#ffcf8a'));
+    poly([[lx - 1.4 * z, ly - 2.9 * z], [lx + 1.4 * z, ly - 2.9 * z], [lx, ly - 3.9 * z]], C('#8a5a3c')); poly([[lx - 1.2 * z, ly], [lx + 1.2 * z, ly], [lx + 1.2 * z, ly + 0.5 * z], [lx - 1.2 * z, ly + 0.5 * z]], C('#8a5a3c'));
+    if (lit) glowAt(lx, ly - 1.4 * z, 14 * z, z);
+    const wl = P(-0.13, 0, 2 + bob); balloonLantern(wl[0], wl[1], 1.5, z, lit, 0.6);                                   // noch im Boot
+    return G(0, 0);
+  };
+  // Laternen schweben als lockere Gruppe über dem Boot und wiegen sich (Entwurf B)
+  const laternenboot = (cx, cy, z, now = 0) => {
+    const lit = sdLit();
+    const lan = [[-8, -24], [4, -28], [10, -40], [-3, -42], [-11, -52], [5, -56], [-2, -66]].map((sp, k) =>
+      ({ x: cx + (sp[0] + Math.sin(now / 1700 + k * 1.3) * 0.9) * z, y: cy + (sp[1] + Math.sin(now / 1100 + k * 2.1) * 1.2) * z, w: 2.8 - k * 0.12 }));
+    pond(cx, cy, z, now, lit);
+    boot(cx, cy, z, now, lit);
+    for (const l of lan.slice().sort((p, q) => p.w - q.w)) balloonLantern(l.x, l.y, l.w, z, lit, 0.45);
+  };
+
   SD_WAREN.TURM = [
-    ['Turm mit Zopf ✦', (cx, cy, z) => {                                    // ganzes Feld, selten
-      const lit = sdLit();
-      sdShadow(cx, cy, 14, z);
-      const R = 6.5 * z, H = 44 * z, top = cy - H;
-      poly([[cx - R, cy], [cx + R, cy], [cx + R * 0.9, top], [cx - R * 0.9, top]], C('#e9dcc6'));
-      poly([[cx, cy + 1 * z], [cx + R, cy], [cx + R * 0.9, top], [cx, top]], C('#d9c9ae'));
-      for (let k = 1; k < 7; k++) { const y = cy - k * 6 * z; g.strokeStyle = C('#cdbb9c'); g.lineWidth = Math.max(0.4, 0.4 * z); g.beginPath(); g.moveTo(cx - R * 0.95, y); g.lineTo(cx + R * 0.95, y); g.stroke(); }
-      for (const [dx, dy] of [[-3, 6], [2, 9], [-1, 2]]) { sdLine('#5f9e4a', 1, z, [[cx + dx * z, cy - dy * z], [cx + (dx + 2) * z, cy - (dy + 6) * z]]); circle(cx + (dx + 2) * z, cy - (dy + 6) * z, 1.4 * z, C(PINK)); }   // Ranken mit Blüten
-      ellipse(cx, top, R * 1.25, R * 0.45, C('#c9b897'));
-      const win = [cx - 2.4 * z, top + 3 * z];
-      poly([[win[0] - 2 * z, win[1] + 5 * z], [win[0] + 2 * z, win[1] + 5 * z], [win[0] + 2 * z, win[1]], [win[0], win[1] - 2 * z], [win[0] - 2 * z, win[1]]], lit ? '#ffd27a' : C('#5d4f73'));
-      if (lit) glowAt(win[0], win[1] + 2 * z, 16 * z, z);
-      g.strokeStyle = C('#f2c24e'); g.lineWidth = Math.max(0.8, 2 * z); g.lineCap = 'round';                // langer goldener Zopf
-      g.beginPath(); g.moveTo(win[0] + 1.6 * z, win[1] + 4 * z); g.bezierCurveTo(cx + 9 * z, cy - 30 * z, cx + 3 * z, cy - 14 * z, cx + 9 * z, cy - 1 * z); g.stroke();
-      for (let k = 0; k < 7; k++) { const t = k / 7, x = cx + (2 + 7 * t) * z, y = top + (8 + 34 * t) * z; circle(x + Math.sin(k * 1.7) * 1.2 * z, y, 0.7 * z, C('#ffe08a')); }
-      for (const [dx, c] of [[6, PINK], [8, '#ffffff'], [9, LILA]]) circle(cx + dx * z, cy - (2 + dx) * z, 1 * z, C(c));
-      poly([[cx - R * 1.35, top], [cx + R * 1.35, top], [cx, top - 16 * z]], C('#7b5ea7')); poly([[cx, top], [cx + R * 1.35, top], [cx, top - 16 * z]], C('#664b8f'));
-      sdLine('#6b4f3a', 0.6, z, [[cx, top - 16 * z], [cx, top - 21 * z]]); poly([[cx, top - 21 * z], [cx + 4 * z, top - 20 * z], [cx, top - 19 * z]], C('#ffd23f'));
-    }, true],
+    ['Turm mit Zopf ✦', (cx, cy, z) => zopfturm(cx, cy, z), true],         // ganzes Feld, selten
     // Neu (Basar-Durchsicht: „komplett broken“, Entwurf A gewählt 28.10.2026): vier Ballon-Laternen in verschiedenen Höhen, wiegen sich sanft
     // (bewegt: ANIM_ITEMS), am Boden nur ein warmer Schein
     ['Himmelslaternen', (cx, cy, z, now = 0) => {
@@ -499,15 +656,7 @@ SD_WAREN.EISZAUBER = (() => {
       ellipse(cx + 8 * z, cy - 1 * z, 3.2 * z, 1.6 * z, C('#e8d0a8'));                                  // Palette
       for (const [dx, c] of [[-1, '#e8546f'], [0.4, '#58b3e8'], [1.6, '#ffd23f']]) circle(cx + (8 + dx) * z, cy - 1.4 * z, 0.6 * z, C(c));
     }],
-    ['Laternenboot', (cx, cy, z) => {                                       // kleine Deko am Ufer (steht auf Gras)
-      const lit = sdLit();
-      ellipse(cx, cy + 1 * z, 12 * z, 3.4 * z, C('#6fc6e0'));
-      poly([[cx - 10 * z, cy - 3 * z], [cx + 10 * z, cy - 3 * z], [cx + 7 * z, cy + 1 * z], [cx - 7 * z, cy + 1 * z]], C('#8a5a3c'));
-      poly([[cx - 10 * z, cy - 3 * z], [cx + 10 * z, cy - 3 * z], [cx + 9 * z, cy - 4.4 * z], [cx - 9 * z, cy - 4.4 * z]], C('#a8794e'));
-      sdLine('#6b4f3a', 0.7, z, [[cx + 6 * z, cy - 4 * z], [cx + 6 * z, cy - 13 * z], [cx + 8 * z, cy - 13 * z]]);
-      skyLantern(cx + 8 * z, cy - 9 * z, 1.3, z, lit);
-      for (const [dx, dy] of [[-6, -16], [-1, -21]]) skyLantern(cx + dx * z, cy + dy * z, 1.5, z, lit);
-    }],
+    ['Laternenboot', (cx, cy, z, now = 0) => laternenboot(cx, cy, z, now)],   // Laternen wiegen sich, Boot schaukelt, Wellen (ANIM_ITEMS)
     ['Blumenschaukel', (cx, cy, z) => {
       sdShadow(cx, cy, 8, z);
       sdLine('#6e4a3a', 2, z, [[cx - 8 * z, cy], [cx - 8 * z, cy - 24 * z]]);
@@ -952,7 +1101,7 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
 // bewegt (Basar-Durchsicht 27./28.10.2026): Himmelslaternen wiegen sich, Kanu schaukelt, auf dem Teich fahren Bewohner Schlittschuh;
 // in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js vergleicht die Liste)
 { // bewegte Basar-Stücke live zeichnen; ANIM_ITEMS bleibt in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js)
-  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen']);
+  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen', 'sd_laternenboot']);
   ANIM_ITEMS.clear();
   for (const id of Object.keys(ITEMS)) if (all.delete(id)) ANIM_ITEMS.add(id);
   for (const id of all) ANIM_ITEMS.add(id);

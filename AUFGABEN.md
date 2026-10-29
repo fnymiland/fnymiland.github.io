@@ -2885,6 +2885,13 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
           sich, Funkeln; Herzchen-Laube als Gartenlaube mit Bank, Gitter, Herzbögen, Rosen, Lichterkette. Pfau/Teich/Brunnen in ANIM_ITEMS.
           Je Ding: Pfau 110 → 401, Koi-Teich 62 → 711, Sternbrunnen 40 → 254, Herzchen-Laube 37 → 659 (gewollt: viel reicher gezeichnet;
           gleichfarbige Teile je ein Pfad).
+    - [x] 6e4 (Paket 6 Turm, Entwürfe tools/basar-entwurf-p6.js, gewählt: Turm B, Laternenboot B): Turm mit Zopf runder Steinturm, gut die
+          Hälfte höher (Spitze passt aufs Feld), Steinreihen als Bögen um den Turm (vorher gerade Striche: „Ebenen prüfen“), Fugen versetzt,
+          Kammer auf Kragsteinen mit Bogenfenster, Läden, Blumenkasten, Holzbalkon rundum, Kegeldach mit Schindeln, geflochtener Zopf bis auf die
+          Wiese, Rosenranke. Laternenboot: Ruderboot (Planken, Bänke, Ruder) in kleinem Teich mit Schilf, schaukelt, sieben Ballon-Laternen
+          schweben darüber und wiegen sich (ANIM_ITEMS), nachts kleiner Schein je Laterne (balloonLantern glow). Je Ding: Turm 91 → 828
+          (Bildchen, nicht bewegt; Bögen als Ellipsenbögen statt Punkte, vorher 1426), Laternenboot 37 → 552. Nebenbei: Basar-Test „Gekauftes
+          bleibt im Laden stehen“ hing am echten Datum (Käufe scheiterten, grün nur durch Zufall), jetzt mit fester Uhrzeit.
     - [x] 6e3 (Paket 5 Eiszauber, Entwürfe tools/basar-entwurf-p5.js, gewählt: Schneekugel A, Pavillon A, Brunnen B, Eisbank A2): eingebaut sind Schneemann
           (schattierte Kugeln, Schal um den Hals mit Knoten und Fransen, Zylinder mit Stechpalme), Schlitten (räumlich, Kufen mit Schnecken,
           Geschenke als Päckchen), Rentier (Knie, Hufe, Halskragen, Halsband mit Glöckchen, Geweih mit Enden), Schneekugel (Häuschen, Schnee

@@ -318,6 +318,13 @@ describe('Basar-Durchsicht: umgebaut (Nutzer 28.10.2026)', () => {
     expect(n('sd_eisbank', false)).toBe(0);
     expect(n('sd_eisbank', true)).toBe(0);
   });
+  it('Turm: Laternenboot bewegt sich, Turm mit Zopf nicht; beide zeichnen sich bei Tag und Nacht und leuchten nur nachts', () => {
+    expect(game("ANIM_ITEMS.has('sd_laternenboot')")).toBe(true);
+    expect(game("ANIM_ITEMS.has('sd_zopfturm')")).toBe(false);
+    const n = (b, lit, now) => game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
+      try { drawObject('${b}', 400, 300, 2, ${now}, 4, 4, 1, { b: '${b}', rot: 0, slot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`);
+    for (const b of ['sd_zopfturm', 'sd_laternenboot']) for (const now of [0, 1234, 98765]) { expect(n(b, false, now)).toBe(0); expect(n(b, true, now)).toBeGreaterThan(0); }
+  });
   it('Zwergenhäuschen (Pilzhaus): Fenster leuchten nur nachts', () => {
     const n = lit => game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
       try { drawObject('sd_zwergenhaus', 400, 300, 2, 1e6, 4, 4, 1, { b: 'sd_zwergenhaus', rot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`);
@@ -464,10 +471,12 @@ describe('Basar „mehr special“ (161h, Nutzer 18.10.2026)', () => {
     game("setTool('look')");
   });
   it('Gekauftes bleibt im Laden stehen: Tagesware bis morgen, das Seltene bis Montag (kein Nachrücken)', () => {
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 9, 19, 12, 0, 0));   // Kaufen geht nur mit dem heutigen Angebot (sonst hing es am echten Datum)
+    onTestFinished(() => vi.useRealTimers());
     game(fresh + '; state.sdOffers = null');
     const mon = 20261019, tue = 20261020, mon2 = 20261026;
     const o1 = game(`basarOffers(${mon}).map(s => s.id)`), rare = o1[3];
-    game(`sdBuyItem('${o1[0]}'); sdBuyItem('${rare}')`);
+    expect(game(`[sdBuyItem('${o1[0]}'), sdBuyItem('${rare}')]`)).toEqual([true, true]);
     expect(game(`basarOffers(${mon}).map(s => s.id)`)).toEqual(o1);
     const o2 = game(`basarOffers(${tue}).map(s => s.id)`);
     expect(o2[3]).toBe(rare);                                                       // gleiche Woche: das (gekaufte) Seltene bleibt
