@@ -37,6 +37,25 @@ describe('Nachtlicht', () => {
     expect(game('drawNight()')).toBe(2);
   });
 
+  it('blaues Licht: hinter dem Schein liegt ein weicher runder Fleck, kein Quadrat, und er liegt vor den warmen Flächen (AUFGABEN 6e2)', () => {
+    // Vorher: blaues Farbquadrat hinter dem weichen Loch – im warmen Schein einer Nachbarlaterne sah man seine geraden Kanten
+    for (const warm of [false, true]) {
+      const seq = game(`(() => {
+        const q = (x, y) => [[x, y], [x + 4, y], [x + 4, y - 6], [x, y - 6]];
+        const lights = [{ q: q(22, 50), r: 12 }, { q: q(40, 50), r: 12, tint: 'blue' }, { q: q(58, 50), r: 12 }, { q: q(200, 50), r: 12 }];
+        const seq = [];
+        nightLights(lights, [], [], ${warm}, { win: () => seq.push('win'), pre: () => seq.push('pre'), square: (x, y, s, f) => seq.push('sq ' + f),
+          disc: (x, y, rr, f) => seq.push('disc ' + f), soft: (x, y, rr, f) => seq.push('soft ' + f), pic: () => seq.push('pic') });
+        return seq;
+      })()`);
+      expect(seq.filter(s => s.includes('140,215,255') && !s.startsWith('soft'))).toEqual([]);
+      expect(seq.indexOf('soft rgb(140,215,255)')).toBeGreaterThan(-1);
+      expect(seq.indexOf('soft rgb(140,215,255)')).toBeLessThan(seq.findIndex(x => x.includes('255,205,100')));
+      expect(seq.filter(x => x === 'soft rgb(255,205,100)').length).toBe(2);           // die warmen Nachbarn (18 Punkte daneben) ebenfalls weich,
+      expect(seq.filter(x => x === 'sq rgb(255,205,100)').length).toBe(1);             // das ferne Licht bleibt ein Quadrat wie bisher
+    }
+  });
+
   it('tagsüber und in Vorschaubildern passiert nichts', () => {
     const ops = record();
     game('g = ctx; night = 0; glows.length = 0');

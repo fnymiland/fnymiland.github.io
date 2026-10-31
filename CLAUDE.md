@@ -853,6 +853,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     eigenes Lesen). Die Löcher füllt drawNight mit **einer** warmen Fläche (`nightWarm`); blaues Licht (Kristall, Brunnen, Apotheke) hat ein
     Lichtbild als kleiner fester Fleck (`BLUE_SPOT`, gestanzt wird dann auch nur so groß, `punchGlow`); Bildchen nahe Blau bekommen ihre
     Scheiben und ihren warmen Schein vorher wie live (`nightPanes`), sonst würden sie blau. Halb durchsichtige Geister nie mit Löschbild.
+    Hinter blauem Licht liegt in der Lichtschicht ein **weicher** Fleck (`E.soft`, `glowImage`, `BLUE_SOFT`) vor den warmen Flächen, und warmer
+    Schein, der ihn berührt, ist ebenfalls weich – nie Farbquadrate verschiedener Farbe nebeneinander, deren Kanten sieht man im weichen
+    Loch des Nachbarn (AUFGABEN 6e2: blaues Quadrat im Schein einer Laterne).
     In der Dämmerung bleibt es Licht für Licht (Block 112).
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt

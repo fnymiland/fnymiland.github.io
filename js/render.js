@@ -901,6 +901,7 @@ const nightPics = [], nightPanes = [], nightSeen = new Set()
 let nightSeq = 0;                                              // Kennung je Nachtbild für nightSeen (160c C7, L10)   // Lichtbilder (Blau) und Scheiben je Bild für drawNight (große Gebäude: je Streifen einmal)
 let nightWarm = false;                                         // Löcher aus Nachtbildern: drawNight legt EINE warme Fläche dahinter
 const BLUE_SPOT = 0.5;                                         // blaues Licht (Kristall, Brunnen) bei voller Nacht nur halb so groß
+const BLUE_SOFT = 1.6;                                         // weicher blauer Fleck hinter dem Loch: etwas größer als das Loch, damit die Mitte voll blau ist
 function nightOf(e) {
   if (!e.paint || SPRITE_PAINT || e.crop) return null;                  // noch nicht zugeschnitten: nächstes Bild (Zuschneiden am Bildanfang)
   if (!spriteNoBudget && spriteOver()) { SPRITE_STATS.nmiss++; return null; }   // diesmal noch Licht für Licht
@@ -937,11 +938,10 @@ function paintNight(e) {
     // 3) Lichtbild nur für blaues Licht (Kristall, Brunnen, Apotheke): fester kleiner Fleck; eigene warme Scheine und Scheiben darüber
     if (B) {
       g = B[1]; g.setTransform(DPR, 0, 0, DPR, 0, 0);
-      g.fillStyle = 'rgb(140,215,255)';
-      for (const { q, r, tint } of lights) if (tint === 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2; circle(gx, gy, r * BLUE_SPOT, 'rgb(140,215,255)'); }
-      g.fillStyle = 'rgb(255,205,100)';
-      for (const { q, r, tint } of lights) if (tint !== 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2; g.fillRect(gx - r, gy - r, r * 2, r * 2); }
+      g.fillStyle = 'rgb(255,205,100)';                                    // erst warmer Schein und Scheiben, dann Blau weich darüber (6e2: sonst Kante)
+      for (const { q, r, tint } of lights) if (tint !== 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, rr = r * BLUE_SOFT; g.drawImage(glowImage(false), gx - rr, gy - rr, 2 * rr, 2 * rr); }
       for (const { q, tint } of lights) if (tint !== 'blue') poly(q, '#ffd873');
+      for (const { q, r, tint } of lights) if (tint === 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, rr = r * BLUE_SPOT * BLUE_SOFT; g.drawImage(glowImage(true), gx - rr, gy - rr, 2 * rr, 2 * rr); }
     }
   } finally { g = prev; glowCells = cells; glows.length = n0; SPRITE_PAINT = false; GLOW_SINK = sink; GLOW_ATLAS = atlas; afterMovers.length = am; night = nv; }
   freeCanvas(K[0]);
@@ -965,7 +965,7 @@ function warmPre(n) {
   try {
     g.setTransform(DPR, 0, 0, DPR, 0, 0);
     g.fillStyle = 'rgb(255,205,100)';
-    for (const [u, v, rr] of n.halos) g.fillRect(u - rr, v - rr, 2 * rr, 2 * rr);
+    for (const [u, v, rr] of n.halos) { const R = rr * BLUE_SOFT; g.drawImage(glowImage(false), u - R, v - R, 2 * R, 2 * R); }   // nur neben Blau: weich (6e2)
     for (const q of n.panes) poly(q, '#ffd873');
   } finally { g = prev; }
   return (n.pre = c);
@@ -1659,7 +1659,7 @@ function drawNight() {
     pre: (c, x, y, w, h) => g.drawImage(c, x, y, w, h),
     pic: (c, x, y, w, h) => g.drawImage(c, x, y, w, h),
     square: sq,
-    disc: (x, y, r, f) => { circle(x, y, r, f); fill = null; },   // circle setzt fillStyle selbst (vorher wurde danach warmer Schein blau)
+    soft: (x, y, r, f) => g.drawImage(glowImage(f === 'rgb(140,215,255)'), x - r, y - r, 2 * r, 2 * r),
   });
   if (nightWarm) { g.fillStyle = 'rgb(255,205,100)'; g.fillRect(0, 0, W, H); }   // übrige Löcher kommen nur noch aus warmen Nachtbildern
   g.fillStyle = '#2a3f66';                                                        // Sicherheitsnetz: nie durchsichtig
@@ -1677,7 +1677,7 @@ function nightDedup(list) {
 }
 // Die Lichtschicht der Nacht (hinter dem Bild, scheint durch die gestanzten Löcher) – für 2D (drawNight) und die Grafikkarte
 // (gl.js, Block 144) dieselbe Reihenfolge: Fensterscheiben, warme Scheiben neben Blau, weicher Schein, Lichtbilder der Bildchen.
-// E: { win(q), pre(c, x, y, w, h), square(x, y, size, farbe), disc(x, y, r, farbe), pic(c, x, y, w, h) } in Bildschirmpunkten
+// E: { win(q), pre(c, x, y, w, h), square(x, y, size, farbe), soft(x, y, r, farbe) (weicher Fleck), pic(c, x, y, w, h) } in Bildschirmpunkten
 function nightLights(lights, pics, panes, warm, E) {
   for (const { q, tint } of lights) if (tint !== 'blue') E.win(q);                // Fenster zuerst, ganz hell
   // Nachtbilder (Block 124): ihre Löcher füllt sonst erst die warme Fläche ganz am Ende – liegt blaues Licht in der Nähe, käme das
@@ -1694,12 +1694,16 @@ function nightLights(lights, pics, panes, warm, E) {
       for (const [n, x, y, w, h] of panes) if (hit(x, y, w, h)) { const pre = warmPre(n); if (pre) E.pre(pre, x, y, w, h); }   // erst Scheiben, dann Schein (wie live)
     }
   }
-  for (const { q, r, tint } of lights) {                                          // dann der weiche Schein
-    const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, f = tint === 'blue' ? 'rgb(140,215,255)' : 'rgb(255,205,100)';
-    // mit Nachtbildern: blaues Licht als kleiner fester Fleck (gestanzt wird dann auch nur so groß, punchGlow) – ein blaues Quadrat
-    // träfe die Fensterlöcher der Nachbarn
-    if (warm && tint === 'blue') E.disc(gx, gy, r * BLUE_SPOT, f);
-    else E.square(gx - r, gy - r, r * 2, f);
+  // dann der weiche Schein. Blaues Licht (AUFGABEN 6e2): ein weicher runder Fleck statt eines Quadrats und VOR den warmen Flächen –
+  // vorher lag ein blaues Quadrat hinter dem Loch, und im warmen Schein einer Nachbarlaterne sah man seine geraden Kanten (umgekehrt
+  // schnitt ein warmes Quadrat davor eine Kante in den blauen Schein). Mit Nachtbildern wird nur so groß gestanzt (BLUE_SPOT, punchGlow)
+  // Warmer Schein, der einen blauen Fleck berührt, ebenso weich (sonst läge die Kante seines Quadrats im blauen Loch); sonst wie bisher als Quadrat
+  const soft = [];
+  for (const { q, r, tint } of lights) if (tint === 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, R = (warm ? r * BLUE_SPOT : r) * BLUE_SOFT; E.soft(gx, gy, R, 'rgb(140,215,255)'); soft.push([gx, gy, R]); }
+  for (const { q, r, tint } of lights) if (tint !== 'blue') {
+    const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
+    if (soft.length && soft.some(([bx, by, R]) => Math.abs(gx - bx) < r + R && Math.abs(gy - by) < r + R)) E.soft(gx, gy, r * BLUE_SOFT, 'rgb(255,205,100)');
+    else E.square(gx - r, gy - r, r * 2, 'rgb(255,205,100)');
   }
   for (const [c, x, y, w, h] of pics) E.pic(c, x, y, w, h);                     // Lichtbilder der Bildchen (volle Nacht, Block 124)
 }

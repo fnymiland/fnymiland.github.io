@@ -64,11 +64,11 @@ describe('WebGL weit weg (Block 144)', () => {
       const pic = document.createElement('canvas'); pic.width = pic.height = 8;
       const seq = [];
       nightLights(lights, [[pic, 0, 0, 8, 8]], [], true, { win: () => seq.push('win'), pre: () => seq.push('pre'), square: (x, y, s, f) => seq.push('sq ' + f),
-        disc: (x, y, rr, f) => seq.push('disc ' + f), pic: () => seq.push('pic') });
+        disc: (x, y, rr, f) => seq.push('disc ' + f), soft: (x, y, rr, f) => seq.push('soft ' + f), pic: () => seq.push('pic') });
       const G = glNightRecs(lights, [[pic, 0, 0, 8, 8]], [], true);
       return { seq, ph: G.ph, n: G.recs.length };
     })()`);
-    expect(r.seq).toEqual(['win', 'win', 'sq rgb(255,205,100)', 'disc rgb(140,215,255)', 'sq rgb(255,205,100)', 'pic']);
+    expect(r.seq).toEqual(['win', 'win', 'soft rgb(140,215,255)', 'sq rgb(255,205,100)', 'sq rgb(255,205,100)', 'pic']);   // Blau weich vor den warmen Flächen (6e2)
     expect(r.ph).toEqual([0, 2, 2, 5, 6]);                                             // Phasen: Fenster, Scheiben, Schein, Lichtbilder
     expect(r.n).toBe(6);
   });

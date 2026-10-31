@@ -2919,6 +2919,10 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
           Je Ding: Schneemann 49 → 167, Schlitten 59 → 250, Rentier 43 → 131, Schneekugel 34 → 137, Pavillon 86 → 370, Brunnen 46 → 417.
           29.10.: Iglu (Kuppel aus Blöcken, Eingangsröhre schattiert statt durchscheinend, Nutzer: „scheint da der Hintergrund durch?“, nachts
           warme Tür) und Eisbank A2 (schlicht: Lehne, Sitz, zwei Füße, Schnee; Lehne etwas niedriger, Nutzer: „too much“). Iglu 22 → 279, Eisbank 42 → 105.
-    - [ ] 6e2 Blauer Schein (glowQuad 'blue') zeigt nachts im Spiel eine eckige Kante (Zauberspiegel, vorher auch Sternbrunnen): Ursache suchen.
+    - [x] 6e2 Blauer Schein (glowQuad 'blue') zeigt nachts im Spiel eine eckige Kante (Zauberspiegel, vorher auch Sternbrunnen). Ursache: Die
+          Lichtschicht hinter den gestanzten Löchern legte je Licht ein Farbquadrat; ein blaues Quadrat lag im weichen Schein einer warmen
+          Nachbarlaterne (nachgestellt: Eiskristall-Laterne zwischen zwei Laternen), umgekehrt die Kante eines warmen Quadrats im blauen Schein.
+          Jetzt: blaues Licht als weicher Fleck (`E.soft`, `BLUE_SOFT` 1,6 × Loch) vor den warmen Flächen, warmer Schein in Berührung mit Blau
+          ebenfalls weich, sonst unverändert Quadrat; ebenso im Lichtbild der Bildchen und in `warmPre`; 2D und GL (nightLights).
 - [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).

@@ -484,7 +484,7 @@ function glNightRecs(lights, pics, panes, warm) {
       P[0].push({ src: c, sx: 0, sy: 0, sw: 4, sh: 4, m: { a: (p1[0] - p0[0]) * D, b: (p1[1] - p0[1]) * D, c: (p3[0] - p0[0]) * D, d: (p3[1] - p0[1]) * D, e: p0[0] * D, f: p0[1] * D }, alpha: 1, clip: GL_NOCLIP, nearest: false }); },
     pre: (c, x, y, w, h) => rect(1, c, x, y, w, h),
     square: (x, y, sz, f) => rect(2, glSolid(f), x, y, sz, sz),
-    disc: (x, y, r, f) => rect(2, glSolid(f, true), x - r, y - r, 2 * r, 2 * r),
+    soft: (x, y, r, f) => rect(2, glowImage(f === 'rgb(140,215,255)'), x - r, y - r, 2 * r, 2 * r),   // weicher Schein neben Blau (6e2)
     pic: (c, x, y, w, h) => rect(3, c, x, y, w, h),
   });
   const recs = [], ph = [];
