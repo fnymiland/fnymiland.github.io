@@ -459,9 +459,10 @@ SD_WAREN.EISZAUBER = (() => {
   // Seitenband zwischen zwei vorderen Halbbögen (unten y0/r0, oben y1/r1) als ein Pfad aus Ellipsenbögen
   const band = (cx, y0, r0, y1, r1) => { g.beginPath(); g.ellipse(cx, y0, r0, r0 / 2, 0, Math.PI, 0, true); g.ellipse(cx, y1, r1, r1 / 2, 0, 0, Math.PI); g.closePath(); };
   const halfArc = (cx, y, r, t0 = 0, t1 = Math.PI) => { g.moveTo(cx + r * Math.cos(t0), y + r / 2 * Math.sin(t0)); g.ellipse(cx, y, r, r / 2, 0, t0, t1); };
-  const cyl = (cx, cy, r0, r1, h0, h1, z, light, mid, dark) => {
+  const cyl = (cx, cy, r0, r1, h0, h1, z, light, mid, dark, top) => {                                             // top: Deckel in dieser Farbe
     const gr = g.createLinearGradient(cx - r0 * z, 0, cx + r0 * z, 0); gr.addColorStop(0, C(light)); gr.addColorStop(0.45, C(mid)); gr.addColorStop(1, C(dark));
     band(cx, cy - h0 * z, r0 * z, cy - h1 * z, r1 * z); g.fillStyle = gr; g.fill();
+    if (top) ellipse(cx, cy - h1 * z, r1 * z, r1 / 2 * z, C(top));
   };
   const topDisc = (cx, cy, r, h, z, col) => ellipse(cx, cy - h * z, r * z, r / 2 * z, C(col));
   const rAt = (r0, r1, h0, h1, h) => r0 + (r1 - r0) * (h - h0) / (h1 - h0);
@@ -628,6 +629,180 @@ SD_WAREN.EISZAUBER = (() => {
     for (const l of lan.slice().sort((p, q) => p.w - q.w)) balloonLantern(l.x, l.y, l.w, z, lit, 0.45);
   };
 
+  // Märchen, erste Hälfte (Basar-Durchsicht 31.10.2026, Entwürfe tools/basar-entwurf-p7.js, Nutzer: Bank C1, Pavillon A, Glasschuh A
+  // „sehr kurz, spitz“, Brunnen A „schau mal, wo das Wasser herkommt“ → aus dem Maul)
+  // Blumenkranz-Bank: die Parkbank aus dem Bank-Menü (drawBench, Holz) in halber Größe, Blütengirlande über der Lehne, eine zweite hängt
+  // davor durch, Blütenbogen über der Bank mit Bändern an den Enden, zwei Schmetterlinge
+  const kranzbank = (cx, cy, z) => {
+    const zz = z * 0.5, K = kit(cx, cy, zz, 0), P = K.P;
+    drawBench(cx, cy, zz, { b: 'bank', col: 0, form: 0, rot: 0 }, TW / 2 * zz, TH / 2 * zz);
+    const leafAt = (p, k, r) => circle(p[0] + (k % 2 ? 0.3 : -0.3) * z, p[1], r * z, C(k % 3 ? '#6fb04a' : '#559a3e'));
+    const top = Array.from({ length: 17 }, (_, i) => { const b = -0.49 + i / 16 * 0.98; return P(-0.1, b, 12 + Math.sin(i / 16 * Math.PI) * 1.2); });
+    top.forEach((p, k) => leafAt(p, k, 0.85));
+    top.forEach((p, i) => { if (i % 2 === 0) rose(p[0], p[1] - 0.4 * z, 0.75 * z, [PINK, '#ffffff', LILA, '#ffd23f', ROSE][i / 2 % 5]); });
+    const swag = Array.from({ length: 15 }, (_, i) => { const u = i / 14, b = -0.42 + u * 0.84; return P(-0.06, b, 11.6 - Math.sin(u * Math.PI) * 2.6); });
+    swag.forEach((p, k) => circle(p[0] + (k % 2 ? 0.25 : -0.25) * z, p[1], 0.6 * z, C(k % 3 ? '#6fb04a' : '#559a3e')));
+    swag.forEach((p, i) => { if (i % 3 === 1) rose(p[0], p[1] + 0.2 * z, 0.6 * z, [ROSE, '#ffffff', PINK, LILA, '#ffd23f'][i % 5]); });
+    for (const b of [-0.49, 0.49]) for (let k = 0; k < 3; k++) { const p = P(-0.1, b, 10.6 - k * 1.6); circle(p[0] + (k % 2 ? 0.5 : -0.5) * z, p[1], 0.8 * z, C('#5aa84f')); if (k === 1) rose(p[0], p[1], 0.7 * z, PINK); }   // Ranken an den Enden
+    for (const [a, b, c] of [[0.05, -0.2, PINK], [0.1, 0.15, '#ffffff'], [0.02, 0.3, LILA]]) { const p = P(a, b, 6.1); ellipse(p[0], p[1], 0.7 * z, 0.4 * z, C(c)); }   // Blüten auf dem Sitz
+    const arch = Array.from({ length: 25 }, (_, i) => { const b = -0.49 + i / 24 * 0.98; return P(-0.1, b, 12 + 10 * Math.sqrt(Math.max(0, 1 - (b / 0.49) ** 2))); });   // Blütenbogen
+    arch.forEach((p, k) => leafAt(p, k, 0.95)); arch.forEach((p, i) => { if (i % 2 === 1) rose(p[0], p[1] - 0.3 * z, 0.8 * z, [PINK, '#ffffff', LILA, '#ffd23f', ROSE][(i >> 1) % 5]); });
+    const ribbon = (p, d) => { for (const [o, c] of [[0, ROSE], [0.9, PINK]]) { g.strokeStyle = C(c); g.lineWidth = Math.max(0.4, 0.45 * z); g.lineCap = 'round'; g.beginPath(); g.moveTo(...p);
+      g.bezierCurveTo(p[0] + d * (1.5 + o) * z, p[1] + 2.5 * z, p[0] - d * 0.6 * z, p[1] + 5 * z, p[0] + d * (1 + o) * z, p[1] + (7 + o) * z); g.stroke(); }
+      for (const s of [-1, 1]) poly([p, [p[0] + s * 1.3 * z, p[1] - 0.8 * z], [p[0] + s * 1.3 * z, p[1] + 0.8 * z]], C(ROSE)); circle(p[0], p[1], 0.45 * z, C('#c93a58')); };
+    ribbon(P(-0.1, -0.47, 13.5), -1); ribbon(P(-0.1, 0.47, 13.5), 1);
+    for (const [b, h, ph] of [[-0.3, 20, 0], [0.32, 17, 2]]) { const p = P(-0.04, b, h);                         // zwei Schmetterlinge
+      for (const s of [-1, 1]) { ellipse(p[0] + s * 0.8 * z, p[1] - 0.3 * z, 0.8 * z, 0.6 * z, C(ph ? '#ffd23f' : LILA)); ellipse(p[0] + s * 0.6 * z, p[1] + 0.4 * z, 0.5 * z, 0.4 * z, C(ph ? '#f6b23a' : '#9b6fe0')); }
+      sdLine('#4a3a30', 0.25, z, [[p[0], p[1] - 0.7 * z], [p[0], p[1] + 0.7 * z]]); }
+  };
+  // Sonnenpavillon: rund und offen, Stufe, Boden mit Sonnenmosaik, sechs weiße Säulen (vorn mit Ranken), Lämpchen unter der Traufe,
+  // goldene Kuppel mit Rippen und Kugelkante; obendrauf dreht sich langsam eine Sonne, die nachts leuchtet (ANIM_ITEMS)
+  const sun = (x, y, r, z, now, lit) => {
+    const rot = now / 9000;
+    for (let k = 0; k < 12; k++) { const a = rot + k / 12 * TAU, l = k % 2 ? 1.5 : 1.85;
+      poly([[x + Math.cos(a - 0.13) * r, y + Math.sin(a - 0.13) * r], [x + Math.cos(a) * r * l, y + Math.sin(a) * r * l], [x + Math.cos(a + 0.13) * r, y + Math.sin(a + 0.13) * r]], C(k % 2 ? '#ffcf4a' : GOLD)); }
+    const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r); gr.addColorStop(0, '#fff6c0'); gr.addColorStop(1, lit ? '#ffc23a' : C('#f0b43a'));
+    g.beginPath(); g.arc(x, y, r, 0, TAU); g.fillStyle = gr; g.fill(); g.strokeStyle = C(GOLD_D); g.lineWidth = Math.max(0.4, 0.3 * z); g.stroke();
+    if (lit) glowAt(x, y, r * 7, z);
+  };
+  const sonnenpavillon = (cx, cy, z, now = 0) => {
+    const lit = sdLit(), R = 14, HC = 17, N = 6;
+    sdShadow(cx, cy, 20, z);
+    cyl(cx, cy, R + 2.2, R + 2.2, 0, 1.1, z, '#f1e8d8', '#e3d6bf', '#c4b293', '#efe4d0');                          // Stufe
+    cyl(cx, cy, R + 0.8, R + 0.8, 1.1, 2.4, z, '#f8f1e4', '#ece0ca', '#cdbb9c', '#fbf5ea');                         // Boden
+    const fy = cy - 2.4 * z;
+    g.save(); g.beginPath(); g.ellipse(cx, fy, (R + 0.8) * z, (R + 0.8) / 2 * z, 0, 0, TAU); g.clip();               // Sonnenmosaik im Boden
+    for (let k = 0; k < 16; k++) { const a = k / 16 * TAU, a2 = a + TAU / 32; poly([[cx, fy], [cx + Math.cos(a) * 12 * z, fy + Math.sin(a) * 6 * z], [cx + Math.cos(a2) * 12 * z, fy + Math.sin(a2) * 6 * z]], C(k % 2 ? '#f6dc8e' : '#f2c96a')); }
+    g.restore(); ellipse(cx, fy, 3.4 * z, 1.7 * z, C('#e9a23b')); ellipse(cx, fy, 2.2 * z, 1.1 * z, C('#ffd56a'));
+    const col = t => { const x = cx + Math.cos(t) * (R - 0.6) * z, y = fy + Math.sin(t) * (R - 0.6) / 2 * z, r = 0.95 * z;
+      const gr = g.createLinearGradient(x - r, 0, x + r, 0); gr.addColorStop(0, C('#ffffff')); gr.addColorStop(1, C('#d9cdb7'));
+      g.fillStyle = gr; g.fillRect(x - r, y - HC * z, 2 * r, HC * z); ellipse(x, y, r * 1.4, r * 0.6, C('#e6dccb'));
+      poly([[x - r * 1.5, y - HC * z], [x + r * 1.5, y - HC * z], [x + r * 1.5, y - (HC - 1) * z], [x - r * 1.5, y - (HC - 1) * z]], C('#efe5d2'));   // Kapitell
+      return [x, y]; };
+    const ts = Array.from({ length: N }, (_, k) => (k + 0.5) / N * TAU);
+    ts.filter(t => Math.sin(t) < 0).forEach(col);                                                                // hintere Säulen
+    for (const [x, y] of ts.filter(t => Math.sin(t) >= 0).map(col)) {                                            // vordere Säulen mit Ranken
+      g.strokeStyle = C('#5a9a3c'); g.lineWidth = Math.max(0.4, 0.35 * z); g.beginPath();
+      for (let i = 0; i <= 20; i++) { const u = i / 20, px = x + Math.sin(u * 14) * 1 * z, py = y - u * (HC - 1.5) * z; i ? g.lineTo(px, py) : g.moveTo(px, py); } g.stroke();
+      for (let i = 1; i < 10; i++) { const u = i / 10, px = x + Math.sin(u * 14) * 1 * z; circle(px + (i % 2 ? 0.7 : -0.7) * z, y - u * (HC - 1.5) * z, 0.6 * z, C('#6fb04a')); if (i % 3 === 0) rose(px, y - u * (HC - 1.5) * z, 0.55 * z, [PINK, '#ffffff', '#ffd23f'][i / 3 % 3]); } }
+    const EY = cy - (2.4 + HC) * z, ER = R + 2.6, H = 13;                                                         // Traufe, Kuppel
+    const gr = g.createLinearGradient(cx - ER * z, 0, cx + ER * z, 0); gr.addColorStop(0, C('#ffd56a')); gr.addColorStop(0.45, C('#f2b23e')); gr.addColorStop(1, C('#c98424'));
+    g.beginPath(); g.ellipse(cx, EY, ER * z, H * z, 0, Math.PI, 0); g.ellipse(cx, EY, ER * z, ER / 2 * z, 0, 0, Math.PI); g.closePath(); g.fillStyle = gr; g.fill();
+    g.strokeStyle = 'rgba(150,90,20,0.45)'; g.lineWidth = Math.max(0.4, 0.35 * z); g.beginPath();                // Rippen (Meridiane der Kuppel)
+    for (let j = 1; j < 8; j++) { const t = j / 8 * Math.PI; for (let i = 0; i <= 10; i++) { const f = i / 10 * Math.PI / 2, px = cx + ER * z * Math.cos(t) * Math.cos(f), py = EY + ER / 2 * z * Math.sin(t) * Math.cos(f) - H * z * Math.sin(f); i ? g.lineTo(px, py) : g.moveTo(px, py); } }
+    g.stroke();
+    ellipse(cx - ER * 0.35 * z, EY - H * 0.6 * z, ER * 0.22 * z, H * 0.16 * z, 'rgba(255,255,255,0.35)');
+    for (let k = 0; k < 16; k++) { const t = k / 16 * Math.PI; circle(cx + Math.cos(t) * ER * z, EY + Math.sin(t) * ER / 2 * z + 0.9 * z, 1 * z, C(k % 2 ? '#fff3d6' : '#f6dc8e')); }   // Kugelkante
+    sdLine('#c9962a', 0.6, z, [[cx, EY - H * z], [cx, EY - (H + 3) * z]]);
+    sun(cx, EY - (H + 6.5) * z, 3 * z, z, now, lit);
+    for (let k = 0; k < 7; k++) { const t = 0.12 * Math.PI + k / 6 * 0.76 * Math.PI, x = cx + Math.cos(t) * (R - 1) * z, y = EY + Math.sin(t) * (R - 1) / 2 * z + 2.4 * z;   // Lämpchen
+      sdLine('#8a5a3c', 0.2, z, [[x, y - 2.4 * z], [x, y - 1 * z]]); ellipse(x, y, 0.9 * z, 1.1 * z, lit ? '#ffe39a' : C('#ffcf6a')); if (lit) glowAt(x, y, 6 * z, z); }
+  };
+  // Glasschuh (Nutzer: „Schuh nicht erkennbar“ → wie ein Absatzschuh-Symbol, Spitze „sehr kurz, spitz“): hohe Fersenkappe, Öffnung mit
+  // sichtbarem Inneren, kurze spitze Zehenkappe, schlanker Absatz; Glas hellblau mit Glanz; steht auf rotem Samtkissen auf einer Steinsäule
+  const shoe = (x, y, s, z, lit) => {                                                                            // x, y = Mitte unten
+    const u = s * z, Q = (a, b) => [x + a * u, y - b * u], edge = lit ? 'rgba(150,205,240,1)' : 'rgba(95,165,210,0.95)';
+    poly([Q(-4.05, 3.9), Q(-3.1, 3.5), Q(-3.15, 0.05), Q(-3.5, 0.05)], lit ? 'rgba(205,238,255,1)' : 'rgba(170,218,242,1)');   // Absatz
+    g.strokeStyle = edge; g.lineWidth = Math.max(0.3, 0.22 * z); g.stroke();
+    g.beginPath(); g.moveTo(...Q(-4.1, 6.8)); g.bezierCurveTo(...Q(-4.6, 5.6), ...Q(-4.4, 4.2), ...Q(-3.9, 3.7));    // Fersenkappe
+    g.bezierCurveTo(...Q(-2.4, 3.3), ...Q(-0.8, 0.6), ...Q(1.2, 0.25));                                            // Sohle mit Gewölbe
+    g.bezierCurveTo(...Q(2.16, 0.05), ...Q(3.24, 0.15), ...Q(3.84, 0.8));                                          // Ballen bis Spitze
+    g.bezierCurveTo(...Q(3.24, 1.3), ...Q(2.64, 2.0), ...Q(2.04, 2.2));                                            // Zehenkappe
+    g.bezierCurveTo(...Q(1.38, 2.2), ...Q(0.8, 2.0), ...Q(0.2, 2.2));                                              // Rist
+    g.bezierCurveTo(...Q(-1.6, 2.9), ...Q(-3.0, 4.6), ...Q(-4.1, 6.8)); g.closePath();                            // vordere Kante der Öffnung
+    const gr = g.createLinearGradient(...Q(-4, 6), ...Q(4.5, 0)); gr.addColorStop(0, lit ? 'rgba(235,250,255,0.97)' : 'rgba(222,245,255,0.95)');
+    gr.addColorStop(0.55, lit ? 'rgba(190,232,255,0.92)' : 'rgba(170,222,246,0.92)'); gr.addColorStop(1, lit ? 'rgba(220,246,255,0.97)' : 'rgba(198,236,252,0.95)');
+    g.fillStyle = gr; g.fill(); g.strokeStyle = edge; g.lineWidth = Math.max(0.3, 0.25 * z); g.stroke();
+    g.beginPath(); g.moveTo(...Q(0.2, 2.2)); g.bezierCurveTo(...Q(-1.6, 2.9), ...Q(-3.0, 4.6), ...Q(-4.1, 6.8));     // Inneres in der Öffnung
+    g.bezierCurveTo(...Q(-3.2, 6.6), ...Q(-1.6, 4.6), ...Q(0.2, 2.2)); g.closePath(); g.fillStyle = lit ? 'rgba(120,175,215,0.55)' : 'rgba(95,155,200,0.5)'; g.fill();
+    g.beginPath(); g.moveTo(...Q(0.1, 2.35)); g.bezierCurveTo(...Q(-1.4, 3.0), ...Q(-2.6, 4.2), ...Q(-3.5, 5.6)); g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = Math.max(0.3, 0.35 * z); g.stroke();   // Innensohle
+    g.strokeStyle = 'rgba(255,255,255,0.95)'; g.lineCap = 'round'; g.lineWidth = Math.max(0.4, 0.4 * z);           // Glanz
+    g.beginPath(); g.moveTo(...Q(1.98, 1.85)); g.quadraticCurveTo(...Q(2.7, 1.65), ...Q(3.36, 1.0)); g.stroke();
+    g.lineWidth = Math.max(0.3, 0.3 * z); g.beginPath(); g.moveTo(...Q(-3.95, 6.1)); g.quadraticCurveTo(...Q(-4.2, 5.1), ...Q(-3.8, 4.2)); g.stroke();
+    g.beginPath(); g.moveTo(...Q(-1.4, 2.3)); g.quadraticCurveTo(...Q(-0.4, 1.3), ...Q(1.0, 0.9)); g.strokeStyle = 'rgba(255,255,255,0.6)'; g.stroke();
+    circle(...Q(1.1, 2.05), 0.38 * u, lit ? '#ffffff' : C('#eaf8ff'));                                          // kleiner Kristall auf dem Rist
+    for (const [a, b, r] of [[3.84, 1.8, 0.8], [-4.6, 7.1, 0.7]]) { const p = Q(a, b), q = 0.55 * r * u;          // Funkeln
+      poly([[p[0], p[1] - q * 1.6], [p[0] + q * 0.3, p[1] - q * 0.3], [p[0] + q * 1.6, p[1]], [p[0] + q * 0.3, p[1] + q * 0.3], [p[0], p[1] + q * 1.6], [p[0] - q * 0.3, p[1] + q * 0.3], [p[0] - q * 1.6, p[1]], [p[0] - q * 0.3, p[1] - q * 0.3]], '#ffffff'); }
+  };
+  const cushion = (x, y, z) => {                                                                                  // x, y = Kissen-Unterseite Mitte
+    const w = 5.6 * z, d = 2.6 * z, h = 2 * z, top = [[x - w, y - h], [x, y - h - d], [x + w, y - h], [x, y - h + d]];
+    g.beginPath(); g.moveTo(x - w, y - h); g.quadraticCurveTo(x - w * 1.05, y + 0.3 * z, x - w * 0.2, y + d * 0.9); g.quadraticCurveTo(x, y + d * 1.1, x + w * 0.2, y + d * 0.9);
+    g.quadraticCurveTo(x + w * 1.05, y + 0.3 * z, x + w, y - h); g.lineTo(x, y - h + d); g.closePath(); g.fillStyle = C('#a8304f'); g.fill();
+    g.beginPath(); g.moveTo(...top[0]); g.quadraticCurveTo(x - w * 0.5, y - h - d * 1.25, ...top[1]); g.quadraticCurveTo(x + w * 0.5, y - h - d * 1.25, ...top[2]);
+    g.quadraticCurveTo(x + w * 0.5, y - h + d * 1.25, ...top[3]); g.quadraticCurveTo(x - w * 0.5, y - h + d * 1.25, ...top[0]); g.closePath();
+    const gr = g.createRadialGradient(x - w * 0.3, y - h - d * 0.4, 0, x, y - h, w); gr.addColorStop(0, C('#e86a8a')); gr.addColorStop(1, C('#c23c5e')); g.fillStyle = gr; g.fill();
+    g.strokeStyle = C(GOLD); g.lineWidth = Math.max(0.4, 0.4 * z); g.stroke();
+    for (const p of [top[0], top[2], top[3]]) { sdLine(GOLD_D, 0.3, z, [p, [p[0], p[1] + 1.6 * z]]); poly([[p[0] - 0.6 * z, p[1] + 1.4 * z], [p[0] + 0.6 * z, p[1] + 1.4 * z], [p[0] + 0.8 * z, p[1] + 3 * z], [p[0] - 0.8 * z, p[1] + 3 * z]], C(GOLD)); circle(p[0], p[1] + 1.3 * z, 0.5 * z, C(GOLD_D)); }   // Quasten
+    return [x + 0.4 * z, y - h - 0.4 * z];
+  };
+  const glasschuh = (cx, cy, z) => {
+    const lit = sdLit();
+    sdShadow(cx, cy, 7, z);
+    cyl(cx, cy, 4.6, 4.6, 0, 1.4, z, '#e6ddce', '#d6cab6', '#b3a48a', '#ece4d6');                                // Säule: Fuß, Schaft mit Rillen, Platte
+    cyl(cx, cy, 3, 2.7, 1.4, 8.6, z, '#f4eee3', '#e4dacb', '#bfb19a');
+    for (const t of [0.25, 0.42, 0.58, 0.75]) sdLine('rgba(160,140,110,0.5)', 0.25, z, [[cx + Math.cos(t * Math.PI) * 2.9 * z, cy - 1.4 * z + Math.sin(t * Math.PI) * 1.45 * z], [cx + Math.cos(t * Math.PI) * 2.6 * z, cy - 8.6 * z + Math.sin(t * Math.PI) * 1.3 * z]]);
+    cyl(cx, cy, 4.2, 4.2, 8.6, 9.8, z, '#f2ebdf', '#e2d8c8', '#bfb19a', '#f8f3ea');
+    const s = cushion(cx, cy - 8.8 * z, z);
+    shoe(s[0] - 0.2 * z, s[1] + 0.9 * z, 0.95, z, lit);
+    if (lit) glowAt(s[0], s[1] - 3 * z, 12 * z, z);
+  };
+  // Froschkönig-Brunnen: rundes Steinbecken mit Fugen, Wasser mit Wellenringen, Seerosen, Frosch mit Krone auf einer Säule in der Mitte
+  // (blinzelt), speit aus dem offenen Maul einen Wasserbogen ins Becken; goldene Kugel auf dem Rand, Schilf und Blumen am Fuß (ANIM_ITEMS)
+  const frog = (x, y, s, z, now) => {                                                                             // x, y = Sitzfläche Mitte
+    const u = s * z;
+    ellipse(x, y + 0.2 * u, 3.6 * u, 1.2 * u, 'rgba(30,60,30,0.25)');
+    for (const d of [-1, 1]) ellipse(x + d * 2.6 * u, y - 0.9 * u, 1.6 * u, 1.1 * u, C('#4f9a48'));               // Hinterbeine
+    const gr = g.createRadialGradient(x - 1 * u, y - 3.4 * u, 0.3 * u, x, y - 2.2 * u, 3.6 * u); gr.addColorStop(0, C('#8fd77a')); gr.addColorStop(1, C('#4a9a44'));
+    g.beginPath(); g.ellipse(x, y - 2.2 * u, 3.2 * u, 2.5 * u, 0, 0, TAU); g.fillStyle = gr; g.fill();
+    ellipse(x, y - 1.3 * u, 2.1 * u, 1.3 * u, C('#e9f2c8'));                                                      // heller Bauch
+    for (const d of [-1, 1]) { ellipse(x + d * 1.4 * u, y - 0.1 * u, 0.9 * u, 0.45 * u, C('#5fb35a')); for (const f of [-0.5, 0, 0.5]) circle(x + (d * 1.4 + f) * u, y + 0.2 * u, 0.25 * u, C('#5fb35a')); }
+    const blink = (now % 4200) < 160;
+    for (const d of [-1, 1]) { const ex = x + d * 1.5 * u, ey = y - 4.3 * u; circle(ex, ey, 1.05 * u, C('#5fb35a'));
+      if (blink) sdLine('#2f5a2a', 0.3, z * s, [[ex - 0.6 * u, ey], [ex + 0.6 * u, ey]]);
+      else { circle(ex, ey - 0.05 * u, 0.7 * u, '#ffffff'); circle(ex + d * 0.1 * u, ey, 0.38 * u, C('#2f3440')); circle(ex + d * 0.1 * u - 0.12 * u, ey - 0.15 * u, 0.12 * u, '#ffffff'); } }
+    ellipse(x, y - 2.55 * u, 0.75 * u, 0.5 * u, C('#2f5a2a')); ellipse(x, y - 2.45 * u, 0.45 * u, 0.25 * u, C('#e8798a'));   // Maul offen
+    for (const d of [-1, 1]) circle(x + d * 2.1 * u, y - 2.9 * u, 0.4 * u, 'rgba(255,140,150,0.45)');
+    const cy0 = y - 5.6 * u;                                                                                       // Krone zwischen den Augen
+    poly([[x - 1.1 * u, cy0 + 0.6 * u], [x + 1.1 * u, cy0 + 0.6 * u], [x + 1.25 * u, cy0 - 1 * u], [x + 0.6 * u, cy0 - 0.2 * u], [x, cy0 - 1.3 * u], [x - 0.6 * u, cy0 - 0.2 * u], [x - 1.25 * u, cy0 - 1 * u]], C(GOLD));
+    poly([[x - 1.1 * u, cy0 + 0.6 * u], [x + 1.1 * u, cy0 + 0.6 * u], [x + 1.1 * u, cy0 + 0.2 * u], [x - 1.1 * u, cy0 + 0.2 * u]], C(GOLD_D));
+    for (const [d, c] of [[0, ROSE], [-0.75, '#58b3e8'], [0.75, '#58b3e8']]) circle(x + d * u, cy0 + 0.4 * u, 0.2 * u, C(c));
+    for (const d of [-1.25, 0, 1.25]) circle(x + d * u, cy0 - (d ? 1 : 1.3) * u, 0.18 * u, C('#fff3a0'));
+  };
+  const lily = (x, y, r, z, flower) => { g.beginPath(); g.moveTo(x, y); g.ellipse(x, y, r * z, r * 0.5 * z, 0, 0.35, TAU - 0.05); g.closePath(); g.fillStyle = C('#4f9e4a'); g.fill();
+    if (flower) { for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; ellipse(x + Math.cos(a) * 0.7 * z, y - 0.5 * z + Math.sin(a) * 0.35 * z, 0.6 * z, 0.35 * z, C(k % 2 ? '#ffd0e0' : PINK)); } circle(x, y - 0.6 * z, 0.35 * z, C('#ffd23f')); } };
+  const froschbrunnen = (cx, cy, z, now = 0) => {
+    const lit = sdLit(), R = 11;
+    sdShadow(cx, cy, 13, z);
+    cyl(cx, cy, R, R, 0, 4.2, z, '#d9d2c4', '#c9c1b1', '#9f9684');                                                // Becken
+    g.strokeStyle = 'rgba(120,110,95,0.45)'; g.lineWidth = Math.max(0.3, 0.28 * z); g.beginPath();                // Steinfugen
+    halfArc(cx, cy - 2.1 * z, R * z, 0.05, Math.PI - 0.05);
+    for (let j = 0; j < 7; j++) { const t = (j + 0.5) / 7 * Math.PI, t2 = (j + 1) / 7 * Math.PI; for (const [tt, h0, h1] of [[t, 0, 2.1], [t2, 2.1, 4.2]]) { if (Math.sin(tt) < 0.25) continue;
+      g.moveTo(cx + Math.cos(tt) * R * z, cy - h0 * z + Math.sin(tt) * R / 2 * z); g.lineTo(cx + Math.cos(tt) * R * z, cy - h1 * z + Math.sin(tt) * R / 2 * z); } }
+    g.stroke();
+    ellipse(cx, cy - 4.2 * z, R * z, R / 2 * z, C('#e6dfd2'));                                                    // Rand oben
+    const W = R - 1.4, wy = cy - 3.6 * z;
+    const wg = g.createLinearGradient(0, wy - W / 2 * z, 0, wy + W / 2 * z); wg.addColorStop(0, lit ? '#2c4a6e' : C('#5ec2dd')); wg.addColorStop(1, lit ? '#3b6a8e' : C('#8fdcef'));
+    g.beginPath(); g.ellipse(cx, wy, W * z, W / 2 * z, 0, 0, TAU); g.fillStyle = wg; g.fill();
+    g.save(); g.beginPath(); g.ellipse(cx, wy, W * z, W / 2 * z, 0, 0, TAU); g.clip();                             // Wellenringe, wo der Strahl auftrifft
+    g.strokeStyle = 'rgba(255,255,255,0.6)'; g.lineWidth = Math.max(0.3, 0.3 * z);
+    for (let k = 0; k < 3; k++) { const p = ((now / 2200) + k / 3) % 1; g.globalAlpha = 1 - p; g.beginPath(); g.ellipse(cx + 5.5 * z, wy + 1.4 * z, (1 + p * W * 0.8) * z, (0.5 + p * W * 0.4) * z, 0, 0, TAU); g.stroke(); }
+    g.globalAlpha = 1; g.restore();
+    lily(cx - 6 * z, wy + 1.6 * z, 2, z, true); lily(cx + 2 * z, wy + 3.2 * z, 1.5, z, false); lily(cx - 3 * z, wy - 2.6 * z, 1.4, z, false);
+    cyl(cx, cy, 1.8, 1.5, 3.6, 10.5, z, '#e3dccf', '#d3cbbb', '#a99f8c');                                         // Säule
+    cyl(cx, cy, 2.6, 2.6, 10.5, 11.6, z, '#ece6da', '#ddd5c6', '#b3a994', '#efe9de');
+    const fy = cy - 11.6 * z;
+    frog(cx, fy, 0.95, z, now);
+    const my = fy - 2.55 * 0.95 * z, pts = Array.from({ length: 14 }, (_, i) => { const u = i / 13; return [cx + u * 6.5 * z, my - Math.sin(u * Math.PI * 0.6) * 1.2 * z + u * u * 11 * z]; });   // Strahl aus dem Maul
+    g.strokeStyle = lit ? 'rgba(170,215,240,0.55)' : 'rgba(200,240,252,0.75)'; g.lineWidth = Math.max(0.5, 0.7 * z); g.lineCap = 'round'; path(pts, false); g.stroke();
+    for (let k = 0; k < 7; k++) { const f = ((now / 900) + k / 7) % 1, i = Math.min(pts.length - 2, Math.floor(f * (pts.length - 1))), r = f * (pts.length - 1) - i;   // Tropfen laufen mit
+      circle(pts[i][0] + (pts[i + 1][0] - pts[i][0]) * r, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * r, 0.4 * z, '#ffffff'); }
+    const bx = cx + Math.cos(0.25) * R * z * 0.92, by = cy - 5.6 * z + Math.sin(0.25) * R / 2 * z;                // goldene Kugel auf dem Rand
+    const bg = g.createRadialGradient(bx - 0.5 * z, by - 0.6 * z, 0.1 * z, bx, by, 1.5 * z); bg.addColorStop(0, '#fff6c0'); bg.addColorStop(1, C(GOLD_D)); g.beginPath(); g.arc(bx, by, 1.5 * z, 0, TAU); g.fillStyle = bg; g.fill();
+    for (const t of [2.4, 2.75]) { const x = cx + Math.cos(t) * (R + 0.6) * z, y = cy + Math.sin(t) * (R + 0.6) / 2 * z;   // Schilf und Blumen am Fuß
+      for (const d of [-0.5, 0, 0.6]) sdLine('#5f8f3a', 0.4, z, [[x + d * z, y], [x + (d * 1.5) * z, y - (4.5 + d) * z]]); }
+    for (const [t, c] of [[0.7, PINK], [0.95, '#ffffff'], [1.2, LILA]]) rose(cx + Math.cos(t) * (R + 0.4) * z, cy + Math.sin(t) * (R + 0.4) / 2 * z + 0.6 * z, 0.75 * z, c);
+  };
+
   SD_WAREN.TURM = [
     ['Turm mit Zopf ✦', (cx, cy, z) => zopfturm(cx, cy, z), true],         // ganzes Feld, selten
     // Neu (Basar-Durchsicht: „komplett broken“, Entwurf A gewählt 28.10.2026): vier Ballon-Laternen in verschiedenen Höhen, wiegen sich sanft
@@ -691,13 +866,7 @@ SD_WAREN.EISZAUBER = (() => {
         { for (let k = 0; k < 3; k++) circle(cx + (dx + (k - 1) * 0.8) * z, cy + (dy - 1.5 - (k & 1)) * z, r * 0.6 * z, C(c)); }
       sdLine('#a8794e', 0.6, z, [[cx + 8 * z, cy - 1 * z], [cx + 8 * z, cy - 7 * z]]); poly([[cx + 6 * z, cy - 7 * z], [cx + 10 * z, cy - 7 * z], [cx + 10 * z, cy - 9.4 * z], [cx + 6 * z, cy - 9.4 * z]], C('#f3e2c2'));   // Schildchen
     }],
-    ['Blumenkranz-Bank', (cx, cy, z) => {
-      sdShadow(cx, cy, 9, z);
-      poly([[cx - 8 * z, cy - 4 * z], [cx + 8 * z, cy - 4 * z], [cx + 8 * z, cy - 5.6 * z], [cx - 8 * z, cy - 5.6 * z]], C('#c69a5e'));
-      for (const dx of [-7, 7]) sdLine('#8a5a3c', 1, z, [[cx + dx * z, cy - 4 * z], [cx + dx * z, cy]]);
-      poly([[cx - 8 * z, cy - 6 * z], [cx + 8 * z, cy - 6 * z], [cx + 8 * z, cy - 12 * z], [cx - 8 * z, cy - 12 * z]], C('#d8b27a'));
-      for (let k = 0; k <= 12; k++) { const x = cx + (-8 + k * 16 / 12) * z, y = cy - (12.6 - Math.sin(k / 12 * Math.PI) * 1.4) * z; circle(x, y, 1.2 * z, C('#6fb04a')); if (k % 2 === 0) rose(x, y - 0.4 * z, 1 * z, [PINK, '#ffffff', LILA, '#ffd23f'][k / 2 % 4]); }
-    }],
+    ['Blumenkranz-Bank', (cx, cy, z) => kranzbank(cx, cy, z)],
     ['Sonnenblumen', (cx, cy, z) => {
       sdShadow(cx, cy, 7, z);
       for (const [dx, h] of [[-4, 16], [0, 20], [4, 14]]) {
@@ -727,19 +896,7 @@ SD_WAREN.EISZAUBER = (() => {
       poly([[cx - 2 * z, cy - 12 * z], [cx + 2 * z, cy - 12 * z], [cx + 2 * z, cy - 13.4 * z], [cx - 2 * z, cy - 13.4 * z]], C('#c9962a'));
       for (const [dx, dy] of [[-1, -7], [1, -9], [0, -10.6], [1.4, -6.6], [-1.4, -9.6]]) { circle(cx + dx * z, cy + dy * z, 0.55 * z, lit ? '#fff7a0' : C('#d8e86a')); if (lit) glowAt(cx + dx * z, cy + dy * z, 5 * z, z); }
     }],
-    ['Sonnenpavillon ✦', (cx, cy, z) => {                                   // ganzes Feld, selten
-      const lit = sdLit();
-      sdShadow(cx, cy, 18, z);
-      ellipse(cx, cy, 16 * z, 7.6 * z, C('#f3ecdf')); ellipse(cx, cy - 1.4 * z, 14 * z, 6.6 * z, C('#fff8ee'));
-      for (let k = 0; k < 6; k++) { const a = Math.PI * 0.05 + k / 5 * Math.PI * 0.9, x = cx + Math.cos(a) * 13 * z, y = cy - 1.4 * z + Math.sin(a) * 6 * z;
-        poly([[x - 0.8 * z, y], [x + 0.8 * z, y], [x + 0.8 * z, y - 15 * z], [x - 0.8 * z, y - 15 * z]], C('#e9d8b4')); sdLine('#6fb04a', 0.8, z, [[x, y - 2 * z], [x, y - 13 * z]], [x + 1.6 * z, y - 7 * z]); }
-      const top = cy - 16 * z;
-      poly([[cx - 16 * z, top + 2 * z], [cx, top + 8 * z], [cx + 16 * z, top + 2 * z], [cx, top - 9 * z]], C('#e9a23b')); poly([[cx, top + 8 * z], [cx + 16 * z, top + 2 * z], [cx, top - 9 * z]], C('#d4892a'));
-      for (let k = 0; k < 5; k++) skyLantern(cx + (-10 + k * 5) * z, top + 6 * z + Math.sin(k / 4 * Math.PI) * 2 * z, 0.9, z, lit);
-      const S = [cx, top - 14 * z];
-      circle(S[0], S[1], 3.4 * z, C(GOLD)); for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; poly([[S[0] + Math.cos(a - 0.12) * 3.6 * z, S[1] + Math.sin(a - 0.12) * 3.6 * z], [S[0] + Math.cos(a) * 6 * z, S[1] + Math.sin(a) * 6 * z], [S[0] + Math.cos(a + 0.12) * 3.6 * z, S[1] + Math.sin(a + 0.12) * 3.6 * z]], C(GOLD)); }
-      if (lit) glowAt(S[0], S[1], 26 * z, z);
-    }, true],
+    ['Sonnenpavillon ✦', (cx, cy, z, now = 0) => sonnenpavillon(cx, cy, z, now), true],   // ganzes Feld, selten; Sonne dreht sich (ANIM_ITEMS)
   ];
 
   // Pilzhaus (Basar-Durchsicht 28.10.2026 „Zwergenhäuschen wie einen Pilz“, Entwurf C in tools/basar-entwurf-p3.js): dicker Stiel als Haus mit
@@ -804,28 +961,8 @@ SD_WAREN.EISZAUBER = (() => {
       ellipse(cx + 3 * z, cy - 26 * z, 2.4 * z, 1.2 * z, C('#5fb35a'));
       sdStarDraw([cx, cy - 31 * z], 2.2 * z, GOLD, GOLD_D);
     }, true],
-    ['Glasschuh auf Kissen', (cx, cy, z) => {
-      const lit = sdLit();
-      sdShadow(cx, cy, 7, z);
-      box(cx, cy, 4 * z, 2 * z, 7 * z, '#f3ecdf', null, 0);
-      ellipse(cx, cy - 8 * z, 6.4 * z, 2.6 * z, C('#d64f7a')); ellipse(cx, cy - 8.8 * z, 5.6 * z, 2 * z, C('#ec6f97'));
-      for (const s of [-1, 1]) circle(cx + s * 6 * z, cy - 8 * z, 0.9 * z, C(GOLD));
-      g.beginPath(); g.moveTo(cx - 4 * z, cy - 9.6 * z); g.quadraticCurveTo(cx - 4 * z, cy - 13 * z, cx, cy - 12.6 * z); g.lineTo(cx + 3 * z, cy - 13.4 * z); g.lineTo(cx + 4 * z, cy - 9.6 * z); g.closePath();
-      g.fillStyle = lit ? 'rgba(220,245,255,0.95)' : 'rgba(200,236,252,0.85)'; g.fill();
-      sdLine('#ffffff', 0.4, z, [[cx - 3 * z, cy - 11.6 * z], [cx - 1 * z, cy - 12.4 * z]]);
-      sdLine('#cfeefc', 0.9, z, [[cx + 3.6 * z, cy - 9.8 * z], [cx + 3.6 * z, cy - 13.6 * z]]);
-      if (lit) glowAt(cx, cy - 11 * z, 12 * z, z, 'blue');
-    }],
-    ['Froschkönig-Brunnen', (cx, cy, z) => {
-      sdShadow(cx, cy, 11, z);
-      ellipse(cx, cy, 11 * z, 5 * z, C('#c9c1b1')); ellipse(cx, cy - 0.6 * z, 9 * z, 3.8 * z, C('#74d0e6'));
-      poly([[cx - 2 * z, cy - 1 * z], [cx + 2 * z, cy - 1 * z], [cx + 1.4 * z, cy - 7 * z], [cx - 1.4 * z, cy - 7 * z]], C('#d9d2c4'));
-      ellipse(cx, cy - 10 * z, 4 * z, 3.2 * z, C('#5fb35a'));                                             // Frosch
-      for (const s of [-1, 1]) { circle(cx + s * 2 * z, cy - 13 * z, 1.5 * z, C('#5fb35a')); circle(cx + s * 2 * z, cy - 13.2 * z, 0.7 * z, C('#ffffff')); circle(cx + s * 2 * z, cy - 13.2 * z, 0.35 * z, C('#2f3440')); }
-      poly([[cx - 2.4 * z, cy - 14.6 * z], [cx + 2.4 * z, cy - 14.6 * z], [cx + 2.2 * z, cy - 17 * z], [cx + 1 * z, cy - 15.6 * z], [cx, cy - 17.4 * z], [cx - 1 * z, cy - 15.6 * z], [cx - 2.2 * z, cy - 17 * z]], C(GOLD));   // Krönchen
-      circle(cx + 6 * z, cy - 1 * z, 1.6 * z, C(GOLD)); circle(cx + 5.6 * z, cy - 1.4 * z, 0.6 * z, C('#fff3a0'));   // goldene Kugel
-      for (const s of [-1, 1]) { g.strokeStyle = 'rgba(184,236,246,0.9)'; g.lineWidth = Math.max(0.5, 0.7 * z); g.beginPath(); g.moveTo(cx + s * 1 * z, cy - 9 * z); g.quadraticCurveTo(cx + s * 5 * z, cy - 11 * z, cx + s * 6.5 * z, cy - 2 * z); g.stroke(); }
-    }],
+    ['Glasschuh auf Kissen', (cx, cy, z) => glasschuh(cx, cy, z)],
+    ['Froschkönig-Brunnen', (cx, cy, z, now = 0) => froschbrunnen(cx, cy, z, now)],   // Wasser, Wellen, Frosch blinzelt (ANIM_ITEMS)
     // nur Rosenhecke (Basar-Durchsicht 28.10.2026: Spinnrad weg), dafür breiter und voller, Rosen in zwei Rottönen und Weiß
     ['Rosenhecke', (cx, cy, z) => {
       sdShadow(cx, cy, 13, z);
@@ -1104,7 +1241,7 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
 // bewegt (Basar-Durchsicht 27./28.10.2026): Himmelslaternen wiegen sich, Kanu schaukelt, auf dem Teich fahren Bewohner Schlittschuh;
 // in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js vergleicht die Liste)
 { // bewegte Basar-Stücke live zeichnen; ANIM_ITEMS bleibt in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js)
-  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen', 'sd_laternenboot']);
+  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen', 'sd_laternenboot', 'sd_sonnenpavillon', 'sd_froschbrunnen']);
   ANIM_ITEMS.clear();
   for (const id of Object.keys(ITEMS)) if (all.delete(id)) ANIM_ITEMS.add(id);
   for (const id of all) ANIM_ITEMS.add(id);

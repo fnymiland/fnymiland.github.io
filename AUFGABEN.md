@@ -2885,6 +2885,12 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
           sich, Funkeln; Herzchen-Laube als Gartenlaube mit Bank, Gitter, Herzbögen, Rosen, Lichterkette. Pfau/Teich/Brunnen in ANIM_ITEMS.
           Je Ding: Pfau 110 → 401, Koi-Teich 62 → 711, Sternbrunnen 40 → 254, Herzchen-Laube 37 → 659 (gewollt: viel reicher gezeichnet;
           gleichfarbige Teile je ein Pfad).
+    - [ ] 6e5 (Paket 7 Märchen, erste Hälfte, Entwürfe tools/basar-entwurf-p7.js): Blumenkranz-Bank C1 (Nutzer: „nimm doch die Standardbank,
+          mach sie Holz und knall da Blüten drüber“, dann „zu wenig special“ → Parkbank aus dem Bank-Menü in Holz, halbe Größe, Blütengirlande,
+          Blütenbogen mit Bändern, Schmetterlinge); Sonnenpavillon A (rund, offen, Sonnenmosaik, Säulen mit Ranken, goldene Kuppel, Sonne dreht
+          sich); Glasschuh A (Absatzschuh-Form, Spitze „sehr kurz, spitz“ nach 2×10 Varianten, auf Samtkissen auf Steinsäule); Froschkönig-Brunnen A
+          (Steinbecken, Frosch mit Krone auf Säule speit aus dem offenen Maul, Wellenringe, Seerosen). Pavillon/Brunnen in ANIM_ITEMS.
+          Je Ding: Bank 72 → 342, Pavillon 148 → 489, Glasschuh 36 → 121, Brunnen 43 → 208. Offen: Glühwürmchen-Glas (A Baumstumpf / B Haken) wartet auf Wahl.
     - [x] 6e4 (Paket 6 Turm, Entwürfe tools/basar-entwurf-p6.js, gewählt: Turm B, Laternenboot B): Turm mit Zopf runder Steinturm, gut die
           Hälfte höher (Spitze passt aufs Feld), Steinreihen als Bögen um den Turm (vorher gerade Striche: „Ebenen prüfen“), Fugen versetzt,
           Kammer auf Kragsteinen mit Bogenfenster, Läden, Blumenkasten, Holzbalkon rundum (Geländer auch hinten, Nutzer: „muss bis rum gehen“), Kegeldach mit Schindeln, geflochtener Zopf bis auf die
