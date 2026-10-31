@@ -2885,12 +2885,12 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
           sich, Funkeln; Herzchen-Laube als Gartenlaube mit Bank, Gitter, Herzbögen, Rosen, Lichterkette. Pfau/Teich/Brunnen in ANIM_ITEMS.
           Je Ding: Pfau 110 → 401, Koi-Teich 62 → 711, Sternbrunnen 40 → 254, Herzchen-Laube 37 → 659 (gewollt: viel reicher gezeichnet;
           gleichfarbige Teile je ein Pfad).
-    - [ ] 6e6 (Paket 8 Märchen, zweite Hälfte, Entwürfe tools/basar-entwurf-p8.js, gewählt: Spiegel A, Einhorn A, Tanzpavillon B): Zauberspiegel als
+    - [x] 6e6 (Paket 8 Märchen, zweite Hälfte, Entwürfe tools/basar-entwurf-p8.js, gewählt: Spiegel A, Einhorn A, Tanzpavillon B): Zauberspiegel als
           Standspiegel im goldenen Schnörkelrahmen, Zauberwirbel und wandernder Schimmer im Glas, Funkeln, nachts lila Glas und warmer Schein (kein
           blauer mehr, 6e2); Einhorn neu (seitlich, Beine als weiche Formen mit Knie/Sprunggelenk hinter dem Körper, gedrehtes Horn, Regenbogenmähne
           und -schweif wehen); Tanzpavillon mit Parkett und Rosette, acht Säulen mit Bändern, rosa Glockendach mit goldenen Rippen, Kronleuchter,
           Rosen an den Stoffbögen. Spiegel/Einhorn in ANIM_ITEMS. Je Ding: Spiegel 44 → 219, Einhorn 58 → 231, Tanzpavillon 90 → 502 (Parkett: dunkle Rauten in einem Pfad, nur im Boden; vorher 1861).
-          Offen: Krönchen-Laterne (A Pfosten / B Arm) wartet auf Wahl.
+          Krönchen-Laterne A (Laterne in Kronenform auf schlankem Pfosten mit Schnörkelfuß, leuchtet nachts warm), 21 → 97.
     - [x] 6e5 (Paket 7 Märchen, erste Hälfte, Entwürfe tools/basar-entwurf-p7.js): Blumenkranz-Bank C1 (Nutzer: „nimm doch die Standardbank,
           mach sie Holz und knall da Blüten drüber“, dann „zu wenig special“ → Parkbank aus dem Bank-Menü in Holz, halbe Größe, Blütengirlande,
           Blütenbogen mit Bändern, Schmetterlinge); Sonnenpavillon A (rund, offen, Sonnenmosaik, Säulen mit Ranken, goldene Kuppel, Sonne dreht

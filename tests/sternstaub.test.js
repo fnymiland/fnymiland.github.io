@@ -333,14 +333,16 @@ describe('Basar-Durchsicht: umgebaut (Nutzer 28.10.2026)', () => {
     for (const b of ['sd_kranzbank', 'sd_sonnenpavillon', 'sd_glasschuh', 'sd_froschbrunnen', 'sd_gluehglas']) for (const now of [0, 1234, 98765]) { expect(n(b, false, now)).toBe(0); n(b, true, now); }
     expect(n('sd_sonnenpavillon', true, 0)).toBeGreaterThan(0);
   });
-  it('Märchen: Zauberspiegel und Einhorn bewegen sich, Tanzpavillon nicht; alle zeichnen sich bei Tag und Nacht, kein blauer Schein', () => {
+  it('Märchen: Zauberspiegel und Einhorn bewegen sich, Tanzpavillon und Krönchen-Laterne nicht; alle zeichnen sich bei Tag und Nacht, kein blauer Schein', () => {
     expect(game("['sd_zauberspiegel', 'sd_einhorn'].every(b => ANIM_ITEMS.has(b))")).toBe(true);
     expect(game("ANIM_ITEMS.has('sd_tanzpavillon')")).toBe(false);
     const n = (b, lit, now) => game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0, blau = 0; glowQuad = (...a) => { k++; if (a[2] === 'blue') blau++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
       try { drawObject('${b}', 400, 300, 2, ${now}, 4, 4, 1, { b: '${b}', rot: 0, slot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return [k, blau]; })()`);
-    for (const b of ['sd_zauberspiegel', 'sd_einhorn', 'sd_tanzpavillon']) for (const now of [0, 1234, 98765]) { expect(n(b, false, now)[0]).toBe(0); expect(n(b, true, now)[1]).toBe(0); }
+    for (const b of ['sd_zauberspiegel', 'sd_einhorn', 'sd_tanzpavillon', 'sd_kroenchenlaterne']) for (const now of [0, 1234, 98765]) { expect(n(b, false, now)[0]).toBe(0); expect(n(b, true, now)[1]).toBe(0); }
     expect(n('sd_zauberspiegel', true, 0)[0]).toBeGreaterThan(0);
     expect(n('sd_tanzpavillon', true, 0)[0]).toBeGreaterThan(0);
+    expect(n('sd_kroenchenlaterne', true, 0)[0]).toBeGreaterThan(0);
+    expect(game("ANIM_ITEMS.has('sd_kroenchenlaterne')")).toBe(false);
   });
   it('Zwergenhäuschen (Pilzhaus): Fenster leuchten nur nachts', () => {
     const n = lit => game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};

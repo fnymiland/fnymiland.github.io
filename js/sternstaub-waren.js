@@ -981,6 +981,37 @@ SD_WAREN.EISZAUBER = (() => {
   };
 
 
+  // Krönchen-Laterne (Entwurf A, Nutzer 31.10.2026): Laterne in Kronenform (Glaskörper mit Sprossen, Reif mit Steinen, Zacken mit Perlen,
+  // Kugel und Stern) auf einem schlanken Pfosten mit Schnörkelfuß, Blumen am Fuß; leuchtet nachts warm
+  const crownLamp = (x, y, z, lit) => {                                                                            // x, y = Unterkante der Laterne
+    const W = 2.6 * z, H = 4.6 * z;
+    poly([[x - W * 0.55, y], [x + W * 0.55, y], [x + W * 0.5, y + 1 * z], [x - W * 0.5, y + 1 * z]], C(GOLD_D)); circle(x, y + 1.5 * z, 0.5 * z, C(GOLD));   // Boden mit Zapfen
+    const gg = g.createLinearGradient(x - W, 0, x + W, 0); gg.addColorStop(0, lit ? '#fff4c8' : C('#fff8ea')); gg.addColorStop(1, lit ? '#ffcf6a' : C('#e9dfd0'));
+    path([[x - W * 0.55, y], [x + W * 0.55, y], [x + W, y - H], [x - W, y - H]]); g.fillStyle = gg; g.fill();
+    if (lit) { ellipse(x, y - H * 0.45, W * 0.35, H * 0.3, '#fff7c0'); }
+    g.strokeStyle = C(GOLD_D); g.lineWidth = Math.max(0.3, 0.3 * z); g.beginPath(); for (const f of [-0.33, 0.33]) { g.moveTo(x + f * W * 0.55 * 2, y); g.lineTo(x + f * W * 2, y - H); } g.stroke();   // Sprossen
+    const ry = y - H;                                                                                                // Kronenreif mit Steinen
+    poly([[x - W * 1.08, ry], [x + W * 1.08, ry], [x + W * 1.08, ry - 1.4 * z], [x - W * 1.08, ry - 1.4 * z]], C(GOLD));
+    for (const [d, c] of [[-0.66, '#7fc8ff'], [0, ROSE], [0.66, '#8fe0a0']]) ellipse(x + d * W, ry - 0.7 * z, 0.45 * z, 0.5 * z, C(c));
+    const pts = []; for (let k = 0; k <= 4; k++) { const px = x - W * 1.08 + k * W * 0.54; pts.push([px, ry - (k % 2 ? 2 : 3.4) * z]); }   // Zacken
+    poly([[x - W * 1.08, ry - 1.4 * z], ...pts.map((p, k) => k % 2 ? [p[0], ry - 2.1 * z] : p), [x + W * 1.08, ry - 1.4 * z]], C(GOLD));
+    for (const [k, p] of pts.entries()) if (k % 2 === 0) circle(p[0], p[1] - 0.3 * z, 0.45 * z, C('#fff3d6'));
+    circle(x, ry - 4.4 * z, 0.75 * z, C(GOLD)); star4(x, ry - 5.6 * z, 0.7 * z, C('#fff3a0'));                     // Kugel, Stern
+    if (lit) glowAt(x, y - H * 0.5, 20 * z, z);
+  };
+  const kroenchenlaterne = (cx, cy, z) => {
+    const lit = sdLit();
+    sdShadow(cx, cy, 4, z);
+    poly([[cx - 2.2 * z, cy], [cx + 2.2 * z, cy], [cx + 1.4 * z, cy - 1.6 * z], [cx - 1.4 * z, cy - 1.6 * z]], C('#5a4a6e'));   // Fuß
+    for (const s of [-1, 1]) { g.strokeStyle = C('#5a4a6e'); g.lineWidth = Math.max(0.4, 0.45 * z); g.beginPath(); g.moveTo(cx + s * 0.4 * z, cy - 2 * z); g.bezierCurveTo(cx + s * 2.6 * z, cy - 3 * z, cx + s * 2.6 * z, cy - 5.4 * z, cx + s * 0.6 * z, cy - 5 * z); g.stroke(); }
+    const gr = g.createLinearGradient(cx - 0.6 * z, 0, cx + 0.6 * z, 0); gr.addColorStop(0, C('#8a78a8')); gr.addColorStop(1, C('#4a3c5e'));
+    g.fillStyle = gr; g.fillRect(cx - 0.55 * z, cy - 19 * z, 1.1 * z, 18 * z);                                    // Pfosten
+    for (const h of [6, 12]) ellipse(cx, cy - h * z, 0.9 * z, 0.4 * z, C(GOLD_D));
+    poly([[cx - 1.8 * z, cy - 19 * z], [cx + 1.8 * z, cy - 19 * z], [cx + 1.2 * z, cy - 20 * z], [cx - 1.2 * z, cy - 20 * z]], C('#5a4a6e'));
+    crownLamp(cx, cy - 21.4 * z, z, lit);
+    for (const [dx, c] of [[-2.6, PINK], [2.2, '#ffffff'], [-1, LILA]]) { sdLine('#5f9e3a', 0.3, z, [[cx + dx * z, cy + 0.6 * z], [cx + dx * z, cy - 1.8 * z]]); rose(cx + dx * z, cy - 2 * z, 0.7 * z, c); }
+  };
+
   SD_WAREN.TURM = [
     ['Turm mit Zopf ✦', (cx, cy, z) => zopfturm(cx, cy, z), true],         // ganzes Feld, selten
     // Neu (Basar-Durchsicht: „komplett broken“, Entwurf A gewählt 28.10.2026): vier Ballon-Laternen in verschiedenen Höhen, wiegen sich sanft
@@ -1182,15 +1213,7 @@ SD_WAREN.EISZAUBER = (() => {
       for (let i = 1; i < 12; i++) { const s = -1 + i / 6, p = P(s * LA, LB, laubeHump(s) - 0.9);                          // Lichterkette
         circle(p[0], p[1], 0.45 * z, lit ? '#ffe9a0' : C('#fff2c8')); if (lit) glowAt(p[0], p[1], 6 * z, z); }
     }],
-    ['Krönchen-Laterne', (cx, cy, z) => {
-      const lit = sdLit();
-      sdShadow(cx, cy, 4, z);
-      sdLine('#e8d0e8', 1.6, z, [[cx, cy], [cx, cy - 17 * z]]);
-      ellipse(cx, cy - 20 * z, 2.8 * z, 3.4 * z, lit ? '#ffe9b0' : C('#fff0f6'));
-      if (lit) glowAt(cx, cy - 20 * z, 22 * z, z);
-      poly([[cx - 3.4 * z, cy - 23 * z], [cx + 3.4 * z, cy - 23 * z], [cx + 3.2 * z, cy - 26.4 * z], [cx + 1.6 * z, cy - 24.6 * z], [cx, cy - 27.2 * z], [cx - 1.6 * z, cy - 24.6 * z], [cx - 3.2 * z, cy - 26.4 * z]], C(GOLD));
-      for (const dx of [-3.2, 0, 3.2]) circle(cx + dx * z, cy - (dx ? 26.6 : 27.4) * z, 0.5 * z, C(PINK));
-    }],
+    ['Krönchen-Laterne', (cx, cy, z) => kroenchenlaterne(cx, cy, z)],
     ['Tanzpavillon ✦', (cx, cy, z) => tanzpavillon(cx, cy, z), true],         // ganzes Feld, selten
   ];
 })();
