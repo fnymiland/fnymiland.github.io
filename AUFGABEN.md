@@ -2885,10 +2885,10 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
           sich, Funkeln; Herzchen-Laube als Gartenlaube mit Bank, Gitter, Herzbögen, Rosen, Lichterkette. Pfau/Teich/Brunnen in ANIM_ITEMS.
           Je Ding: Pfau 110 → 401, Koi-Teich 62 → 711, Sternbrunnen 40 → 254, Herzchen-Laube 37 → 659 (gewollt: viel reicher gezeichnet;
           gleichfarbige Teile je ein Pfad).
-    - [ ] 6e7 (Paket 9 Inselleben, Entwürfe tools/basar-entwurf-p9.js, gewählt: Hängematte A, Picknick A; Fossil „komplett raus“ → SD_NICHT_MEHR):
+    - [x] 6e7 (Paket 9 Inselleben, Entwürfe tools/basar-entwurf-p9.js, gewählt: Hängematte A, Picknick A; Fossil „komplett raus“ → SD_NICHT_MEHR):
           Hängematte bunt gestreift zwischen zwei Palmen auf Sand, schaukelt (ANIM_ITEMS); Picknickdecke rot-weiß kariert mit Weidenkorb, Melone,
           Äpfeln, Bechern, Limonade. Je Ding: Hängematte 49 → 587 (Wedel je Farbe ein Pfad, Stamm eine Form; vorher 1033), Picknick 48 → 206.
-          Offen: Strandkorb (erster Entwurf „wtf ist das denn?“, neu: Kasten mit gewölbter Haube und runder Öffnung; blau-weiß oder rot-weiß?).
+          Strandkorb: drei Entwürfe (zuletzt nach Fotos von Wikipedia/Commons) gefielen nicht → Nutzer: „nimm das raus, wir lassen es“ → SD_NICHT_MEHR.
     - [x] 6e6 (Paket 8 Märchen, zweite Hälfte, Entwürfe tools/basar-entwurf-p8.js, gewählt: Spiegel A, Einhorn A, Tanzpavillon B): Zauberspiegel als
           Standspiegel im goldenen Schnörkelrahmen, Zauberwirbel und wandernder Schimmer im Glas, Funkeln, nachts lila Glas und warmer Schein (kein
           blauer mehr, 6e2); Einhorn neu (seitlich, Beine als weiche Formen mit Knie/Sprunggelenk hinter dem Körper, gedrehtes Horn, Regenbogenmähne

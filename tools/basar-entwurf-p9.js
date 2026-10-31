@@ -227,6 +227,54 @@
   };
   window.ENTW_NEU_KORB = { blau: strandkorb2('#3f7fc6'), rot: strandkorb2('#d9434f') };
 
+  // Strandkorb nach Foto-Vorbild (Nutzer: „guck dir mal einen echten als Referenz an“): Holzkasten unten mit zwei Fußkasten-Schüben,
+  // darauf der Korb: Seitenteil mit typischem Profil (hinten gerade, oben runde Haube, vorn an der Haube herunter bis zur Armlehne),
+  // Haube und obere Seitenteile mit gestreiftem Stoff bespannt, unten Geflecht; innen gestreifte Rückwand, Sitzpolster, Armlehnen mit Tischchen
+  const strandkorb3 = (col) => (cx, cy, z) => {
+    const K = kit(cx, cy, z, 0), P = K.P, A0 = -0.12, A1 = 0.1, B = 0.16, HS = 6, HR = 10.5, HH = 15.5, RH = 4, AF = A0 + 0.13, AE = A0 + 0.112;
+    sand(cx, cy, 14, z);
+    const trim = shade(col, -0.25), wood = '#c99a62', woodD = '#a77a46', wick = '#efdcb4', wickL = '#b89a66';
+    const arc = Array.from({ length: 13 }, (_, i) => { const t = i / 12 * Math.PI; return [A0 + 0.065 - 0.065 * Math.cos(t), HH + RH * Math.sin(t)]; });   // Haubenbogen (a, h)
+    const prof = [[A0, 0], [A0, HH], ...arc.slice(1), [AF - 0.004, 13], [AE, HR], [A1, HR], [A1, 0]];                // Seitenprofil
+    const at = (b, pts) => pts.map(([a, h]) => P(a, b, h));
+    const stripesIn = (clipPts, a0, a1, n, c1, c2, b) => { g.save(); path(clipPts); g.clip();
+      for (let i = 0; i < n; i++) { const u0 = a0 + (a1 - a0) * i / n, u1 = a0 + (a1 - a0) * (i + 1) / n; poly([P(u0, b, -1), P(u1, b, -1), P(u1, b, 25), P(u0, b, 25)], C(i % 2 ? c2 : c1)); } g.restore(); };
+    const farP = at(-B, prof);                                                                                         // fernes Seitenteil innen
+    stripesIn(farP, A0, A1, 6, shade(col, -0.2), '#d9dbe2', -B);
+    path(at(-B, [[AF - 0.004, HH], [AF - 0.004, 13], [AE, HR], [A1, HR]]), false); g.strokeStyle = C(trim); g.lineWidth = Math.max(0.5, 0.6 * z); g.lineJoin = 'round'; g.stroke();   // Vorderkante fern
+    box3(K, A0, A1, -B, B, 0, HS, C('#d9ad74'), C(wood), C(woodD));                                                  // Bock (Holzkasten)
+    for (const [b0, b1] of [[-B + 0.015, -0.01], [0.01, B - 0.015]]) { const q = [P(A1 + 0.002, b0, 1), P(A1 + 0.002, b1, 1), P(A1 + 0.002, b1, 4.8), P(A1 + 0.002, b0, 4.8)];   // Fußkästen
+      poly(q, C('#d9ad74')); path(q); g.strokeStyle = C(woodD); g.lineWidth = Math.max(0.3, 0.3 * z); g.stroke(); const m = P(A1 + 0.003, (b0 + b1) / 2, 3.6); ellipse(m[0], m[1], 0.8 * z, 0.3 * z, C('#6b4a2a')); }
+    { g.save(); path([P(A0 + 0.004, -B, HS), P(A0 + 0.004, B, HS), P(A0 + 0.004, B, HH), P(A0 + 0.004, -B, HH)]); g.clip();     // Rückwand innen: Streifen senkrecht
+      for (let i = 0; i < 7; i++) { const b0 = -B + i * 2 * B / 7, b1 = b0 + 2 * B / 7; poly([P(A0 + 0.004, b0, HS), P(A0 + 0.004, b1, HS), P(A0 + 0.004, b1, HH + RH), P(A0 + 0.004, b0, HH + RH)], C(i % 2 ? '#ffffff' : col)); }
+      const sh = g.createLinearGradient(0, P(A0, 0, HH + 2)[1], 0, P(A0, 0, HS + 3)[1]); sh.addColorStop(0, 'rgba(30,30,50,0.4)'); sh.addColorStop(1, 'rgba(30,30,50,0)');
+      g.fillStyle = sh; g.fillRect(cx - 30 * z, cy - 40 * z, 60 * z, 60 * z); g.restore(); }
+    box3(K, A0 + 0.005, A1 - 0.005, -B + 0.005, B - 0.005, HS, HS + 1.3, C(shade(col, 0.25)), C(shade(col, -0.1)), C(col));   // Sitzpolster
+    sdLine('rgba(255,255,255,0.8)', 0.3, z, [P(A1 - 0.005, -B + 0.005, HS + 1.3), P(A1 - 0.005, B - 0.005, HS + 1.3)]);
+    box3(K, AE - 0.01, A1 + 0.02, -B - 0.006, -B + 0.024, HR, HR + 0.8, C(wick), C(trim), C(trim));                 // ferne Armlehne
+    for (let i = 0; i < 8; i++) { const b0 = -B + i * 2 * B / 8, b1 = b0 + 2 * B / 8;                                    // Haube außen: Stoffbahnen über den Bogen (hinten zuerst)
+      for (let k = 0; k < arc.length - 1; k++) { const [a0, h0] = arc[k], [a1, h1] = arc[k + 1], lum = 0.5 + 0.5 * Math.sin((k + 0.5) / (arc.length - 1) * Math.PI) - 0.25 * ((k + 0.5) / (arc.length - 1));   // Flächenstück, oben heller
+        poly([P(a0, b0, h0), P(a1, b0, h1), P(a1, b1, h1), P(a0, b1, h0)], C(shade(i % 2 ? '#ffffff' : col, -0.18 * (1 - lum)))); } }
+    const shH = g.createLinearGradient(...P(AF, 0, HH), ...P(A0 + 0.05, 0, HH + RH)); shH.addColorStop(0, 'rgba(0,0,0,0.12)'); shH.addColorStop(1, 'rgba(0,0,0,0)');
+    path([...arc.map(([a, h]) => P(a, -B, h)), ...arc.slice().reverse().map(([a, h]) => P(a, B, h))]); g.fillStyle = shH; g.fill();
+    g.strokeStyle = C(trim); g.lineWidth = Math.max(0.5, 0.7 * z); g.lineCap = 'round'; g.beginPath(); g.moveTo(...P(AF, -B, HH)); g.lineTo(...P(AF, B, HH)); g.stroke();   // Haubenkante vorn
+    const nearP = at(B, prof);                                                                                         // nahes Seitenteil außen
+    g.save(); path(nearP); g.clip();
+    for (let i = 0; i < 6; i++) { const a0 = A0 + (A1 - A0) * i / 6, a1 = a0 + (A1 - A0) / 6; poly([P(a0, B, HR), P(a1, B, HR), P(a1, B, 25), P(a0, B, 25)], C(i % 2 ? '#e9ecf2' : shade(col, -0.08))); }   // oben Stoff
+    poly([P(A0, B, 0), P(A1, B, 0), P(A1, B, HR), P(A0, B, HR)], C(wick));                                           // unten Geflecht
+    g.strokeStyle = C(wickL); g.lineWidth = Math.max(0.3, 0.22 * z); g.beginPath();
+    for (let h = 0.9; h < HR; h += 0.9) { g.moveTo(...P(A0, B, h)); g.lineTo(...P(A1, B, h)); }
+    for (let k = 1; k < 8; k++) { const a = A0 + (A1 - A0) * k / 8; g.moveTo(...P(a, B, 0)); g.lineTo(...P(a, B, HR)); } g.stroke();
+    g.restore();
+    path(nearP); g.strokeStyle = C(trim); g.lineWidth = Math.max(0.5, 0.65 * z); g.lineJoin = 'round'; g.stroke();   // Rahmen
+    sdLine(trim, 0.65, z, [P(A0, B, HR), P(A1, B, HR)]);
+    box3(K, AE - 0.01, A1 + 0.02, B - 0.024, B + 0.006, HR, HR + 0.8, C(wick), C(trim), C(trim));                   // nahe Armlehne
+    box3(K, A1 - 0.02, A1 + 0.05, B - 0.07, B - 0.024, HR + 0.6, HR + 1.0, C('#f4e6c8'), C(woodD), C(wood));        // Klapptischchen
+    const fp = P(A0 + 0.065, 0.08, HH + RH - 0.3); sdLine('#7d5236', 0.3, z, [fp, [fp[0], fp[1] - 5 * z]]);          // Wimpel
+    poly([[fp[0], fp[1] - 5 * z], [fp[0] + 3 * z, fp[1] - 4.3 * z], [fp[0], fp[1] - 3.6 * z]], C(col));
+  };
+  window.ENTW_KORB3 = { blau: strandkorb3('#3f7fc6'), rot: strandkorb3('#d9434f') };
+
   const alt = (name) => (cx, cy, z, now) => SD_WAREN.INSEL.find(e => e[0] === name)[1](cx, cy, z, now || 0);
   window.ENTW_P9 = {
     'Hängematte: bisher': alt('Hängematte'),
@@ -243,5 +291,7 @@
     'Strandkorb B: rot-weiß, Sandburg': strandkorb('rot'),
     'Strandkorb neu, blau-weiß': (cx, cy, z) => ENTW_NEU_KORB.blau(cx, cy, z),
     'Strandkorb neu, rot-weiß': (cx, cy, z) => ENTW_NEU_KORB.rot(cx, cy, z),
+    'Strandkorb nach Foto, blau-weiß': (cx, cy, z) => ENTW_KORB3.blau(cx, cy, z),
+    'Strandkorb nach Foto, rot-weiß': (cx, cy, z) => ENTW_KORB3.rot(cx, cy, z),
   };
 })();

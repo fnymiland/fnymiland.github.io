@@ -360,7 +360,7 @@ describe('Basar-Durchsicht: umgebaut (Nutzer 28.10.2026)', () => {
 });
 
 describe('Nicht mehr im Verkauf (Basar-Durchsicht, Nutzer 27.10.2026)', () => {
-  const WEG = ['sd_pagode', 'sd_leseecke', 'sd_wandbild', 'sd_apfelbaum', 'sd_glockenbaum', 'sd_huehnerhaus', 'sd_fossil'];
+  const WEG = ['sd_pagode', 'sd_leseecke', 'sd_wandbild', 'sd_apfelbaum', 'sd_glockenbaum', 'sd_huehnerhaus', 'sd_fossil', 'sd_strandkorb'];
   it('nie im Angebot, Katalog, Kauf oder Ausprobieren; zählt nicht zu „n von allen“', () => {
     game(`state.sdItems = new Set(); state.sdShown = new Set(${JSON.stringify(WEG)}); state.stardust = 1e6; state.sdOffers = { day: sdDay(), week: sdWeek(sdDay()), ids: ['sd_leseecke', 'sd_ahorn', 'sd_weide'], rare: 'sd_pagode' }`);
     const offered = new Set();
@@ -372,7 +372,7 @@ describe('Nicht mehr im Verkauf (Basar-Durchsicht, Nutzer 27.10.2026)', () => {
     for (const id of WEG) expect(game(`sdBuyItem('${id}', true) || sdBuyItem('${id}')`), id).toBe(false);
     game("sdTryStart('sd_leseecke')"); expect(game('sdTry')).toBe(null);
     const [, all] = game("sdSmlgCount('Inselleben')");
-    expect(all).toBe(game("SD_SHOP.filter(s => sdSammlung(s.id) === 'Inselleben').length") - 3);   // Glockenbaum, Hühnerhaus und Fossil
+    expect(all).toBe(game("SD_SHOP.filter(s => sdSammlung(s.id) === 'Inselleben').length") - 4);   // Glockenbaum, Hühnerhaus, Fossil und Strandkorb
   });
   it('wer sie gekauft hat, behält sie: baubar, im Baumenü und im Sammelbuch', () => {
     game(`state.sdItems = new Set(['sd_pagode', 'sd_glockenbaum'])`);
