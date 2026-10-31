@@ -267,7 +267,7 @@ const SD_SHOP = [];
 const sdShopItem = id => SD_SHOP.find(s => s.id === id);
 // Nicht mehr im Verkauf (Basar-Durchsicht, Nutzer 27.10.2026): Wer sie gekauft hat, behält sie (Insel, Baumenü, Sammelbuch);
 // Angebot, Katalog, Kaufen, Ausprobieren und die Zählung „n von allen“ kennen nur, was es noch gibt
-const SD_NICHT_MEHR = new Set(['sd_pagode', 'sd_leseecke', 'sd_wandbild', 'sd_apfelbaum', 'sd_glockenbaum', 'sd_huehnerhaus']);
+const SD_NICHT_MEHR = new Set(['sd_pagode', 'sd_leseecke', 'sd_wandbild', 'sd_apfelbaum', 'sd_glockenbaum', 'sd_huehnerhaus', 'sd_fossil']);   // Fossil: Nutzer 31.10.2026 „komplett raus“
 const sdForSale = s => !!s && !SD_NICHT_MEHR.has(s.id);
 // Kalenderwoche ab Montag (Tageszahl seit 1970, der 1.1.1970 war ein Donnerstag) und Tage bis zum Wechsel
 const sdFuture = (day, today = sdDay()) => sdDayNum(day) > sdDayNum(today) + 1;   // falsche Uhr auf einem Gerät: übermorgen und später gilt nicht (Prüfung 19.10.)

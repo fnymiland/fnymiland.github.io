@@ -1221,6 +1221,84 @@ SD_WAREN.EISZAUBER = (() => {
 SD_WAREN.INSEL = (() => {
   const glowAt = (x, y, r, z, tint) => { const q = 0.35 * z; glowQuad([[x - q, y + q], [x + q, y + q], [x + q, y - q], [x - q, y - q]], r, tint); };
   const plank = (x0, y0, x1, y1, h, col, z) => poly([[x0, y0], [x1, y1], [x1, y1 - h * z], [x0, y0 - h * z]], C(col));
+  // Neu gezeichnet (Basar-Durchsicht 31.10.2026, Entwürfe tools/basar-entwurf-p9.js, Nutzer: Hängematte A, Picknick A; Fossil raus)
+  const TAU = Math.PI * 2;
+  const ROSE = '#e8546f';
+  const path = (pts, close = true) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); if (close) g.closePath(); };
+  const box3 = (K, a0, a1, b0, b1, h0, h1, top, fa, fb) => { const P = K.P;
+    poly([P(a1, b0, h0), P(a1, b1, h0), P(a1, b1, h1), P(a1, b0, h1)], fa);
+    poly([P(a0, b1, h0), P(a1, b1, h0), P(a1, b1, h1), P(a0, b1, h1)], fb);
+    poly([P(a0, b0, h1), P(a1, b0, h1), P(a1, b1, h1), P(a0, b1, h1)], top); };  const sand = (cx, cy, rx, z) => { ellipse(cx, cy + 0.6 * z, rx * z, rx * 0.44 * z, C('#e2c98f')); ellipse(cx - 0.5 * z, cy + 0.2 * z, rx * 0.9 * z, rx * 0.38 * z, C('#f0dcaa'));
+    for (let k = 0; k < 6; k++) { const a = k * 2.1, d = 0.3 + (k % 3) * 0.2; circle(cx + Math.cos(a) * rx * d * z, cy + Math.sin(a) * rx * 0.36 * d * z, 0.25 * z, C('#d6bd84')); } };
+  // Palme: Stamm aus Ringen, leicht gebogen, Wedel mit Fiederblättchen, Kokosnüsse
+  const palm = (x, y, z, lean, H = 24) => {
+    const top = [x + lean * z, y - H * z];
+    const tp = t => [x + lean * z * t * t, y - H * z * t], tw = t => (1.5 - t * 0.5) * z, ts = Array.from({ length: 10 }, (_, i) => i / 9);   // Stamm: eine Form, Ringe in einem Pfad
+    poly([...ts.map(t => [tp(t)[0] - tw(t), tp(t)[1]]), ...ts.slice().reverse().map(t => [tp(t)[0] + tw(t), tp(t)[1]])], C('#97714a'));
+    g.strokeStyle = C('#6e5030'); g.lineWidth = Math.max(0.3, 0.25 * z); g.beginPath();
+    for (const t of ts.slice(1)) { const p = tp(t); g.moveTo(p[0] - tw(t), p[1] + 0.3 * z); g.lineTo(p[0] + tw(t), p[1] - 0.1 * z); } g.stroke();
+    const fronds = [[3.6, 11, '#3f8a3e'], [2.6, 10, '#4f9e4a'], [0.4, 10, '#4f9e4a'], [-0.5, 11, '#3f8a3e'], [1.6, 8, '#5db556'], [4.6, 8.5, '#5db556'], [-1.5, 8, '#5db556']];
+    g.lineCap = 'round'; g.lineWidth = Math.max(0.5, 0.55 * z);
+    for (const col of ['#3f8a3e', '#4f9e4a', '#5db556']) { g.strokeStyle = C(col); g.beginPath();                    // Wedel je Farbe ein Pfad (Leistung)
+      for (const [a, l] of fronds.filter(f => f[2] === col)) {
+        const dir = [Math.cos(a), Math.sin(a) * 0.55 - 0.35], end = [top[0] + dir[0] * l * z, top[1] + (dir[1] * l + l * 0.42) * z], mid = [top[0] + dir[0] * l * 0.55 * z, top[1] + (dir[1] * l * 0.55 - 2.2) * z];
+        g.moveTo(...top); g.quadraticCurveTo(...mid, ...end);
+        for (let k = 1; k <= 5; k++) { const u = k / 6, px = (1 - u) * (1 - u) * top[0] + 2 * (1 - u) * u * mid[0] + u * u * end[0], py = (1 - u) * (1 - u) * top[1] + 2 * (1 - u) * u * mid[1] + u * u * end[1], ll = (1 - u * 0.6) * 2.6 * z;
+          for (const s of [-1, 1]) { g.moveTo(px, py); g.lineTo(px + (-dir[1] * s * 0.6 + dir[0] * 0.5) * ll, py + (dir[0] * s * 0.6 + 0.9) * ll); } } }
+      g.stroke(); }
+    for (const [dx, dy] of [[-0.8, 1], [0.7, 1.2], [0, 1.9]]) circle(top[0] + dx * z, top[1] + dy * z, 0.9 * z, C('#6b4a2a'));   // Kokosnüsse
+    return top;
+  };
+  // Hängematte (Entwurf A): bunt gestreifter Stoff (kit, längs b), quer gewölbt, Seile fächern zu den Palmen, Kissen; schaukelt sanft (ANIM_ITEMS)
+  const hammock = (K, z, B0, HE, cols, now) => {
+    const P = K.P, L = 0.27, S = 4.2, W = 0.075, sw = Math.sin(now / 1400) * 0.012;
+    const hc = b => HE - S * (1 - (b / L) ** 2), bs = Array.from({ length: 11 }, (_, i) => -L + i / 10 * 2 * L);
+    const strip = (a0, a1, col) => { const h = a => (a / W) ** 2 * 1.4; poly([...bs.map(b => P(a0 + sw * (1 - (b / L) ** 2), b, hc(b) + h(a0))), ...bs.slice().reverse().map(b => P(a1 + sw * (1 - (b / L) ** 2), b, hc(b) + h(a1)))], C(col)); };
+    const n = cols.length; for (let i = 0; i < n; i++) strip(-W + i * 2 * W / n, -W + (i + 1) * 2 * W / n, cols[i]);
+    sdLine('#ffffff', 0.25, z, bs.map(b => P(W + sw * (1 - (b / L) ** 2), b, hc(b) + 1.4)));
+    for (const s of [-1, 1]) { const e = P(0, s * B0, HE + 2); for (const a of [-W, -W / 2, 0, W / 2, W]) sdLine('#d9c7a3', 0.25, z, [P(a, s * L, HE + (a / W) ** 2 * 1.4), e]); }   // Seile
+    const pl = P(0.01 + sw, -L + 0.06, hc(-L + 0.06) + 1.3); ellipse(pl[0], pl[1], 2.4 * z, 1.2 * z, C('#ffffff')); ellipse(pl[0] - 0.3 * z, pl[1] - 0.3 * z, 1.8 * z, 0.7 * z, C('#f3f3f3'));   // Kissen
+  };
+  const haengematte = (cx, cy, z, now = 0) => {
+    const K = kit(cx, cy, z, 0), P = K.P;
+    sand(cx, cy, 16, z);
+    const t1 = palm(...P(0, -0.42, 0), z, -2.2), t2 = P(0, 0.42, 0);
+    hammock(K, z, 0.42, 11, ['#ff8a5c', '#ffd23f', '#5fc6d6', '#ff8a5c', '#ffd23f'], now);
+    palm(...t2, z, 2.4, 22);
+    for (const [a, b] of [[0.2, -0.1], [0.18, 0.05]]) { const p = P(a, b, 0); ellipse(p[0], p[1], 1.4 * z, 0.7 * z, C('#f4a6b6')); }   // Muscheln
+  };
+  // Picknickdecke (Entwurf A): rot-weiß karierte Decke, Ecke umgeschlagen; Weidenkorb mit halb offenem Deckel und Baguette, Teller mit Melone,
+  // Äpfel, Becher, Flasche Limonade
+  const picknick = (cx, cy, z) => {
+    const K = kit(cx, cy, z, 0), P = K.P, D = 0.27, col = '#e8546f';
+    const quad = (a0, a1, b0, b1, h = 0.15) => [P(a0, b0, h), P(a1, b0, h), P(a1, b1, h), P(a0, b1, h)];
+    poly([P(-D, -D, 0), P(D, -D, 0), P(D - 0.06, D, 0), P(D, D, 0), P(-D, D, 0)].map(p => [p[0], p[1] + 0.3 * z]), 'rgba(40,60,20,0.18)');
+    poly(quad(-D, D, -D, D), C('#ffffff'));
+    g.save(); path(quad(-D, D, -D, D)); g.clip(); g.globalAlpha = 0.55;                                              // Karomuster: Streifen in beide Richtungen
+    for (let i = 0; i < 8; i++) { const a0 = -D + i * 2 * D / 8; if (i % 2) continue; poly(quad(a0, a0 + 2 * D / 8, -D, D), C(col)); poly(quad(-D, D, a0, a0 + 2 * D / 8), C(col)); }
+    g.globalAlpha = 1; g.restore();
+    poly([P(D, D - 0.12, 0.15), P(D, D, 0.15), P(D - 0.12, D, 0.15)], C('#f6f1ea'));                                // umgeschlagene Ecke
+    poly([P(D - 0.12, D, 0.2), P(D, D - 0.12, 0.2), P(D - 0.09, D - 0.09, 0.4)], C(shade(col, -0.05)));
+    const w = '#d9a35c', wd = '#b5803e';                                                                             // Weidenkorb
+    box3(K, -0.18, -0.03, -0.17, 0.02, 0, 4.4, C('#e8bd78'), C(wd), C(w));
+    g.strokeStyle = C('#9a6a34'); g.lineWidth = Math.max(0.3, 0.22 * z); g.beginPath();
+    for (const h of [1.1, 2.2, 3.3]) { g.moveTo(...P(-0.03, -0.17, h)); g.lineTo(...P(-0.03, 0.02, h)); g.lineTo(...P(-0.18, 0.02, h)); }
+    for (let k = 1; k < 5; k++) { const b = -0.17 + k * 0.038; g.moveTo(...P(-0.03, b, 0)); g.lineTo(...P(-0.03, b, 4.4)); } g.stroke();
+    poly([P(-0.18, -0.17, 4.4), P(-0.105, -0.17, 4.4), P(-0.105, 0.02, 4.4), P(-0.18, 0.02, 4.4)], C('#c99050'));     // Deckel (halb offen)
+    poly([P(-0.105, -0.17, 4.4), P(-0.03, -0.17, 6.6), P(-0.03, 0.02, 6.6), P(-0.105, 0.02, 4.4)], C('#e0b06a'));
+    g.strokeStyle = C('#8a5a3c'); g.lineWidth = Math.max(0.4, 0.45 * z); g.beginPath(); g.moveTo(...P(-0.105, -0.15, 4.4)); g.quadraticCurveTo(...P(-0.105, -0.075, 11), ...P(-0.105, 0, 4.4)); g.stroke();   // Henkel
+    const bg0 = P(-0.12, -0.04, 4), bg1 = P(-0.06, -0.12, 9); g.strokeStyle = C('#d99a4e'); g.lineWidth = 1.4 * z; g.beginPath(); g.moveTo(...bg0); g.lineTo(...bg1); g.stroke();   // Baguette
+    g.strokeStyle = C('#f2c98a'); g.lineWidth = Math.max(0.3, 0.25 * z); for (let k = 1; k < 4; k++) { const u = k / 4, p = [bg0[0] + (bg1[0] - bg0[0]) * u, bg0[1] + (bg1[1] - bg0[1]) * u]; g.beginPath(); g.moveTo(p[0] - 0.5 * z, p[1] + 0.2 * z); g.lineTo(p[0] + 0.3 * z, p[1] - 0.4 * z); g.stroke(); }
+    const pl = P(0.12, -0.06, 0.2); ellipse(pl[0], pl[1], 3.2 * z, 1.6 * z, C('#ffffff')); ellipse(pl[0], pl[1] - 0.1 * z, 2.5 * z, 1.15 * z, C('#eef2f5'));   // Teller mit Melone
+    for (const [dx, s] of [[-1, 1], [1.1, -1]]) { const x = pl[0] + dx * z, y = pl[1] - 0.4 * z; g.beginPath(); g.moveTo(x - 1.4 * z, y); g.arc(x, y, 1.4 * z, Math.PI, 0); g.closePath(); g.fillStyle = C('#3f8a3e'); g.fill();
+      g.beginPath(); g.moveTo(x - 1.15 * z, y); g.arc(x, y, 1.15 * z, Math.PI, 0); g.closePath(); g.fillStyle = C('#ff5c6c'); g.fill(); for (const k of [-0.5, 0, 0.5]) circle(x + k * z, y - 0.5 * z, 0.12 * z, C('#2a2a2a')); }
+    for (const [a, b, c] of [[0.05, 0.14, '#d6303a'], [0.09, 0.19, '#7cc34a'], [0.0, 0.2, '#d6303a']]) { const p = P(a, b, 0.2); circle(p[0], p[1] - 1 * z, 1.1 * z, C(c)); circle(p[0] - 0.35 * z, p[1] - 1.35 * z, 0.35 * z, 'rgba(255,255,255,0.6)'); sdLine('#6b4a2a', 0.2, z, [[p[0], p[1] - 2 * z], [p[0] + 0.2 * z, p[1] - 2.6 * z]]); }   // Äpfel
+    for (const [a, b] of [[0.18, 0.06], [0.21, 0.12]]) { const p = P(a, b, 0.2); poly([[p[0] - 0.9 * z, p[1]], [p[0] + 0.9 * z, p[1]], [p[0] + 1.05 * z, p[1] - 2.2 * z], [p[0] - 1.05 * z, p[1] - 2.2 * z]], C(col)); ellipse(p[0], p[1] - 2.2 * z, 1.05 * z, 0.4 * z, C('#ffffff')); }   // Becher
+    const bt = P(-0.05, 0.16, 0.2); poly([[bt[0] - 0.9 * z, bt[1]], [bt[0] + 0.9 * z, bt[1]], [bt[0] + 0.9 * z, bt[1] - 4 * z], [bt[0] + 0.4 * z, bt[1] - 5 * z], [bt[0] + 0.4 * z, bt[1] - 6.2 * z], [bt[0] - 0.4 * z, bt[1] - 6.2 * z], [bt[0] - 0.4 * z, bt[1] - 5 * z], [bt[0] - 0.9 * z, bt[1] - 4 * z]], 'rgba(255,225,120,0.85)');   // Flasche
+    poly([[bt[0] - 0.9 * z, bt[1] - 1.6 * z], [bt[0] + 0.9 * z, bt[1] - 1.6 * z], [bt[0] + 0.9 * z, bt[1] - 2.8 * z], [bt[0] - 0.9 * z, bt[1] - 2.8 * z]], C('#ffffff')); poly([[bt[0] - 0.45 * z, bt[1] - 6.2 * z], [bt[0] + 0.45 * z, bt[1] - 6.2 * z], [bt[0] + 0.45 * z, bt[1] - 6.8 * z], [bt[0] - 0.45 * z, bt[1] - 6.8 * z]], C(ROSE));
+    sdLine('rgba(255,255,255,0.8)', 0.25, z, [[bt[0] - 0.55 * z, bt[1] - 0.5 * z], [bt[0] - 0.55 * z, bt[1] - 3.6 * z]]);
+  };
+
   return [
     ['Lagerfeuer', (cx, cy, z, now) => {
       const lit = sdLit();
@@ -1232,20 +1310,8 @@ SD_WAREN.INSEL = (() => {
       if (lit) glowAt(cx, cy - 4 * z, 30 * z, z);
       for (const s of [-1, 1]) { poly([[cx + s * 10 * z, cy - 1 * z], [cx + s * 14 * z, cy + 1 * z], [cx + s * 14 * z, cy - 1.5 * z], [cx + s * 10 * z, cy - 3.5 * z]], C('#8a5a3c')); }   // Baumstämme zum Sitzen
     }],
-    ['Hängematte', (cx, cy, z) => {
-      sdShadow(cx, cy, 12, z);
-      for (const s of [-1, 1]) { sdTrunk(cx + s * 11 * z, cy, z, 18, 1.4, '#7a5a3a'); sdBlob(cx + s * 11 * z, cy, z, [[0, -20, 5], [-3, -18, 3.4], [3, -18, 3.4]], '#4f9e4a', '#74c25e'); }
-      g.beginPath(); g.moveTo(cx - 10 * z, cy - 12 * z); g.quadraticCurveTo(cx, cy - 2 * z, cx + 10 * z, cy - 12 * z); g.quadraticCurveTo(cx, cy - 6 * z, cx - 10 * z, cy - 12 * z); g.closePath();
-      g.fillStyle = C('#e86f8f'); g.fill();
-      for (const t of [0.3, 0.5, 0.7]) { const x = cx + (-10 + 20 * t) * z, y = cy - (12 - 10 * 4 * t * (1 - t) * 0.9) * z; sdLine('#fff3e0', 0.6, z, [[x - 0.6 * z, y - 1 * z], [x + 0.6 * z, y + 1 * z]]); }
-    }],
-    ['Picknickdecke', (cx, cy, z) => {
-      poly([[cx - 11 * z, cy], [cx, cy - 5.5 * z], [cx + 11 * z, cy], [cx, cy + 5.5 * z]], C('#e8546f'));
-      for (let k = -2; k <= 2; k++) { sdLine('#fff3f3', 0.9, z, [[cx + (k * 2.2 - 5.5) * z, cy + (k * 1.1 + 2.75) * z], [cx + (k * 2.2 + 5.5) * z, cy + (k * 1.1 - 2.75) * z]]); sdLine('#fff3f3', 0.9, z, [[cx + (k * 2.2 - 5.5) * z, cy - (k * 1.1 + 2.75) * z], [cx + (k * 2.2 + 5.5) * z, cy - (k * 1.1 - 2.75) * z]]); }
-      poly([[cx - 4 * z, cy - 1 * z], [cx + 1 * z, cy - 1 * z], [cx + 1 * z, cy - 5 * z], [cx - 4 * z, cy - 5 * z]], C('#c69a5e'));   // Korb
-      g.strokeStyle = C('#8a5a3c'); g.lineWidth = Math.max(0.5, 0.7 * z); g.beginPath(); g.ellipse(cx - 1.5 * z, cy - 5 * z, 2.4 * z, 2.4 * z, 0, Math.PI, 0); g.stroke();
-      for (const [dx, dy, c] of [[4, -1, '#d6303a'], [5.6, 0.4, '#ffd23f'], [3, 1, '#5fb35a']]) circle(cx + dx * z, cy + dy * z, 1.2 * z, C(c));
-    }],
+    ['Hängematte', (cx, cy, z, now = 0) => haengematte(cx, cy, z, now)],   // schaukelt (ANIM_ITEMS)
+    ['Picknickdecke', (cx, cy, z) => picknick(cx, cy, z)],
     ['Briefkasten', (cx, cy, z) => {
       sdShadow(cx, cy, 5, z);
       sdLine('#8a5a3c', 1.4, z, [[cx, cy], [cx, cy - 10 * z]]);
@@ -1405,7 +1471,7 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
 // bewegt (Basar-Durchsicht 27./28.10.2026): Himmelslaternen wiegen sich, Kanu schaukelt, auf dem Teich fahren Bewohner Schlittschuh;
 // in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js vergleicht die Liste)
 { // bewegte Basar-Stücke live zeichnen; ANIM_ITEMS bleibt in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js)
-  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen', 'sd_laternenboot', 'sd_sonnenpavillon', 'sd_froschbrunnen', 'sd_gluehglas', 'sd_zauberspiegel', 'sd_einhorn']);
+  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen', 'sd_laternenboot', 'sd_sonnenpavillon', 'sd_froschbrunnen', 'sd_gluehglas', 'sd_zauberspiegel', 'sd_einhorn', 'sd_haengematte']);
   ANIM_ITEMS.clear();
   for (const id of Object.keys(ITEMS)) if (all.delete(id)) ANIM_ITEMS.add(id);
   for (const id of all) ANIM_ITEMS.add(id);

@@ -344,6 +344,13 @@ describe('Basar-Durchsicht: umgebaut (Nutzer 28.10.2026)', () => {
     expect(n('sd_kroenchenlaterne', true, 0)[0]).toBeGreaterThan(0);
     expect(game("ANIM_ITEMS.has('sd_kroenchenlaterne')")).toBe(false);
   });
+  it('Inselleben: Hängematte schaukelt, Picknickdecke steht still; beide zeichnen sich bei Tag und Nacht ohne Schein', () => {
+    expect(game("ANIM_ITEMS.has('sd_haengematte')")).toBe(true);
+    expect(game("ANIM_ITEMS.has('sd_picknick')")).toBe(false);
+    for (const b of ['sd_haengematte', 'sd_picknick']) for (const now of [0, 1234, 98765]) for (const lit of [false, true])
+      expect(game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
+        try { drawObject('${b}', 400, 300, 2, ${now}, 4, 4, 1, { b: '${b}', rot: 0, slot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`)).toBe(0);
+  });
   it('Zwergenhäuschen (Pilzhaus): Fenster leuchten nur nachts', () => {
     const n = lit => game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
       try { drawObject('sd_zwergenhaus', 400, 300, 2, 1e6, 4, 4, 1, { b: 'sd_zwergenhaus', rot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`);
@@ -353,7 +360,7 @@ describe('Basar-Durchsicht: umgebaut (Nutzer 28.10.2026)', () => {
 });
 
 describe('Nicht mehr im Verkauf (Basar-Durchsicht, Nutzer 27.10.2026)', () => {
-  const WEG = ['sd_pagode', 'sd_leseecke', 'sd_wandbild', 'sd_apfelbaum', 'sd_glockenbaum', 'sd_huehnerhaus'];
+  const WEG = ['sd_pagode', 'sd_leseecke', 'sd_wandbild', 'sd_apfelbaum', 'sd_glockenbaum', 'sd_huehnerhaus', 'sd_fossil'];
   it('nie im Angebot, Katalog, Kauf oder Ausprobieren; zählt nicht zu „n von allen“', () => {
     game(`state.sdItems = new Set(); state.sdShown = new Set(${JSON.stringify(WEG)}); state.stardust = 1e6; state.sdOffers = { day: sdDay(), week: sdWeek(sdDay()), ids: ['sd_leseecke', 'sd_ahorn', 'sd_weide'], rare: 'sd_pagode' }`);
     const offered = new Set();
@@ -365,7 +372,7 @@ describe('Nicht mehr im Verkauf (Basar-Durchsicht, Nutzer 27.10.2026)', () => {
     for (const id of WEG) expect(game(`sdBuyItem('${id}', true) || sdBuyItem('${id}')`), id).toBe(false);
     game("sdTryStart('sd_leseecke')"); expect(game('sdTry')).toBe(null);
     const [, all] = game("sdSmlgCount('Inselleben')");
-    expect(all).toBe(game("SD_SHOP.filter(s => sdSammlung(s.id) === 'Inselleben').length") - 2);   // Glockenbaum und Hühnerhaus
+    expect(all).toBe(game("SD_SHOP.filter(s => sdSammlung(s.id) === 'Inselleben').length") - 3);   // Glockenbaum, Hühnerhaus und Fossil
   });
   it('wer sie gekauft hat, behält sie: baubar, im Baumenü und im Sammelbuch', () => {
     game(`state.sdItems = new Set(['sd_pagode', 'sd_glockenbaum'])`);
