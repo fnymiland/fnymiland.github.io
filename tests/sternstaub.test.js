@@ -325,12 +325,12 @@ describe('Basar-Durchsicht: umgebaut (Nutzer 28.10.2026)', () => {
       try { drawObject('${b}', 400, 300, 2, ${now}, 4, 4, 1, { b: '${b}', rot: 0, slot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`);
     for (const b of ['sd_zopfturm', 'sd_laternenboot']) for (const now of [0, 1234, 98765]) { expect(n(b, false, now)).toBe(0); expect(n(b, true, now)).toBeGreaterThan(0); }
   });
-  it('Märchen: Sonnenpavillon und Froschkönig-Brunnen bewegen sich, Blumenkranz-Bank und Glasschuh nicht; alle zeichnen sich bei Tag und Nacht', () => {
-    expect(game("['sd_sonnenpavillon', 'sd_froschbrunnen'].every(b => ANIM_ITEMS.has(b))")).toBe(true);
+  it('Märchen: Sonnenpavillon, Froschkönig-Brunnen und Glühwürmchen-Glas bewegen sich, Blumenkranz-Bank und Glasschuh nicht; alle zeichnen sich bei Tag und Nacht', () => {
+    expect(game("['sd_sonnenpavillon', 'sd_froschbrunnen', 'sd_gluehglas'].every(b => ANIM_ITEMS.has(b))")).toBe(true);
     expect(game("['sd_kranzbank', 'sd_glasschuh'].some(b => ANIM_ITEMS.has(b))")).toBe(false);
     const n = (b, lit, now) => game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
       try { drawObject('${b}', 400, 300, 2, ${now}, 4, 4, 1, { b: '${b}', rot: 0, slot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`);
-    for (const b of ['sd_kranzbank', 'sd_sonnenpavillon', 'sd_glasschuh', 'sd_froschbrunnen']) for (const now of [0, 1234, 98765]) { expect(n(b, false, now)).toBe(0); n(b, true, now); }
+    for (const b of ['sd_kranzbank', 'sd_sonnenpavillon', 'sd_glasschuh', 'sd_froschbrunnen', 'sd_gluehglas']) for (const now of [0, 1234, 98765]) { expect(n(b, false, now)).toBe(0); n(b, true, now); }
     expect(n('sd_sonnenpavillon', true, 0)).toBeGreaterThan(0);
   });
   it('Zwergenhäuschen (Pilzhaus): Fenster leuchten nur nachts', () => {

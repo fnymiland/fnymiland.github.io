@@ -803,6 +803,36 @@ SD_WAREN.EISZAUBER = (() => {
     for (const [t, c] of [[0.7, PINK], [0.95, '#ffffff'], [1.2, LILA]]) rose(cx + Math.cos(t) * (R + 0.4) * z, cy + Math.sin(t) * (R + 0.4) / 2 * z + 0.6 * z, 0.75 * z, c);
   };
 
+  // Glühwürmchen-Glas (Entwurf A, Nutzer 31.10.2026): Einmachglas mit Golddeckel und Drahtbügel auf einem Baumstumpf mit Jahresringen, Moos
+  // und zwei Pilzchen; die Glühwürmchen schwirren im Glas und blinken, nachts leuchten sie (ANIM_ITEMS)
+  const gluehglas = (cx, cy, z, now = 0) => {
+    const lit = sdLit();
+    sdShadow(cx, cy, 7, z);
+    cyl(cx, cy, 5.2, 4.6, 0, 6, z, '#a87a52', '#8a5a3c', '#6a4430');                                             // Baumstumpf mit Rinde und Jahresringen
+    for (const t of [0.3, 0.55, 0.8]) sdLine('#6a4430', 0.3, z, [[cx + Math.cos(t * Math.PI) * 4.9 * z, cy + Math.sin(t * Math.PI) * 2.45 * z - 0.4 * z], [cx + Math.cos(t * Math.PI) * 4.6 * z, cy - 5.6 * z + Math.sin(t * Math.PI) * 2.3 * z]]);
+    ellipse(cx, cy - 6 * z, 4.6 * z, 2.3 * z, C('#d9b07a')); g.strokeStyle = C('#b88a58'); g.lineWidth = Math.max(0.3, 0.25 * z); g.beginPath();
+    for (const r of [1.2, 2.4, 3.6]) { g.moveTo(cx + r * z, cy - 6 * z); g.ellipse(cx, cy - 6 * z, r * z, r / 2 * z, 0, 0, TAU); } g.stroke();
+    for (const [dx, s] of [[-5, 1], [4.4, 0.8]]) { const x = cx + dx * z, y = cy + 1 * z;                       // zwei Pilzchen
+      poly([[x - 0.4 * s * z, y], [x + 0.4 * s * z, y], [x + 0.4 * s * z, y - 2 * s * z], [x - 0.4 * s * z, y - 2 * s * z]], C('#f3ecdf'));
+      ellipse(x, y - 2.2 * s * z, 1.6 * s * z, 0.9 * s * z, C('#e8546f')); circle(x - 0.5 * s * z, y - 2.6 * s * z, 0.3 * z, '#ffffff'); }
+    for (const [dx, dy] of [[-3.5, 1.6], [3, 2.2], [-1, 2.6]]) ellipse(cx + dx * z, cy + dy * z, 1.6 * z, 0.6 * z, C('#6fb04a'));   // Moos
+    const x = cx + 0.4 * z, y = cy - 6.6 * z, R = 3.2 * z, H = 7.6 * z;                                          // Glas: x, y = Boden Mitte
+    ellipse(x, y, R, R / 2, lit ? 'rgba(255,240,170,0.35)' : 'rgba(190,225,235,0.45)');
+    for (let k = 0; k < 7; k++) { const t = now / 1000, px = x + Math.sin(t * 0.8 + k * 1.7) * R * 0.62, py = y - H * 0.5 + Math.cos(t * 0.6 + k * 2.3) * H * 0.32;   // Glühwürmchen
+      const on = (Math.sin(t * 2.2 + k * 1.3) + 1) / 2; circle(px, py, (0.38 + on * 0.18) * z, lit ? `rgba(255,250,${Math.round(150 + on * 80)},${(0.6 + on * 0.4).toFixed(2)})` : C(on > 0.5 ? '#e6f07a' : '#c8d65a'));
+      if (lit && on > 0.6) glowAt(px, py, 4 * z, z); }
+    const gr = g.createLinearGradient(x - R, 0, x + R, 0); gr.addColorStop(0, lit ? 'rgba(255,245,200,0.35)' : 'rgba(225,245,250,0.55)'); gr.addColorStop(0.35, 'rgba(255,255,255,0.12)'); gr.addColorStop(1, lit ? 'rgba(255,235,170,0.3)' : 'rgba(170,215,230,0.5)');
+    g.beginPath(); g.ellipse(x, y, R, R / 2, 0, Math.PI, 0, true); g.lineTo(x + R, y - H + 1.2 * z); g.quadraticCurveTo(x + R, y - H, x + R * 0.7, y - H); g.lineTo(x - R * 0.7, y - H); g.quadraticCurveTo(x - R, y - H, x - R, y - H + 1.2 * z); g.closePath();
+    g.fillStyle = gr; g.fill(); g.strokeStyle = 'rgba(150,200,215,0.8)'; g.lineWidth = Math.max(0.4, 0.3 * z); g.stroke();
+    sdLine('rgba(255,255,255,0.85)', 0.45, z, [[x - R * 0.62, y - 1.4 * z], [x - R * 0.62, y - H + 1.8 * z]]);     // Glanz
+    sdLine('rgba(255,255,255,0.5)', 0.3, z, [[x - R * 0.35, y - 1 * z], [x - R * 0.35, y - 3 * z]]);
+    ellipse(x, y - H, R * 0.72, R * 0.3, C('#d9a93a')); poly([[x - R * 0.72, y - H], [x + R * 0.72, y - H], [x + R * 0.72, y - H - 1.3 * z], [x - R * 0.72, y - H - 1.3 * z]], C('#c9962a'));   // Deckel
+    ellipse(x, y - H - 1.3 * z, R * 0.72, R * 0.3, C('#f0c75a'));
+    for (const k of [-0.5, 0, 0.5]) sdLine('#a87a22', 0.2, z, [[x + k * R * 0.6, y - H], [x + k * R * 0.6, y - H - 1.3 * z]]);
+    g.strokeStyle = C('#7d6a55'); g.lineWidth = Math.max(0.4, 0.3 * z); g.beginPath(); g.moveTo(x - R * 0.75, y - H - 0.6 * z); g.quadraticCurveTo(x, y - H - 6.5 * z, x + R * 0.75, y - H - 0.6 * z); g.stroke();   // Drahtbügel
+    if (lit) glowAt(x, y - H * 0.5, 16 * z, z);
+  };
+
   SD_WAREN.TURM = [
     ['Turm mit Zopf ✦', (cx, cy, z) => zopfturm(cx, cy, z), true],         // ganzes Feld, selten
     // Neu (Basar-Durchsicht: „komplett broken“, Entwurf A gewählt 28.10.2026): vier Ballon-Laternen in verschiedenen Höhen, wiegen sich sanft
@@ -888,14 +918,7 @@ SD_WAREN.EISZAUBER = (() => {
       for (const [dx, c] of [[-6, PINK], [-3, '#ffffff'], [1, LILA], [5, ROSE]]) circle(cx + dx * z, cy - 2 * z, 0.8 * z, C(c));
       for (const dx of [-6, -1, 4]) skyLantern(cx + dx * z, cy - 11 * z, 0.7, z, false);
     }],
-    ['Glühwürmchen-Glas', (cx, cy, z, now) => {
-      const lit = sdLit();
-      sdShadow(cx, cy, 5, z);
-      poly([[cx - 4 * z, cy], [cx + 4 * z, cy], [cx + 3.6 * z, cy - 5 * z], [cx - 3.6 * z, cy - 5 * z]], C('#8a5a3c')); ellipse(cx, cy - 5 * z, 3.6 * z, 1.4 * z, C('#a8794e'));   // Baumstumpf
-      poly([[cx - 2.6 * z, cy - 5.4 * z], [cx + 2.6 * z, cy - 5.4 * z], [cx + 2.8 * z, cy - 12 * z], [cx - 2.8 * z, cy - 12 * z]], lit ? 'rgba(255,248,200,0.55)' : 'rgba(220,240,250,0.65)');
-      poly([[cx - 2 * z, cy - 12 * z], [cx + 2 * z, cy - 12 * z], [cx + 2 * z, cy - 13.4 * z], [cx - 2 * z, cy - 13.4 * z]], C('#c9962a'));
-      for (const [dx, dy] of [[-1, -7], [1, -9], [0, -10.6], [1.4, -6.6], [-1.4, -9.6]]) { circle(cx + dx * z, cy + dy * z, 0.55 * z, lit ? '#fff7a0' : C('#d8e86a')); if (lit) glowAt(cx + dx * z, cy + dy * z, 5 * z, z); }
-    }],
+    ['Glühwürmchen-Glas', (cx, cy, z, now = 0) => gluehglas(cx, cy, z, now)],   // Glühwürmchen schwirren (ANIM_ITEMS)
     ['Sonnenpavillon ✦', (cx, cy, z, now = 0) => sonnenpavillon(cx, cy, z, now), true],   // ganzes Feld, selten; Sonne dreht sich (ANIM_ITEMS)
   ];
 
@@ -1241,7 +1264,7 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
 // bewegt (Basar-Durchsicht 27./28.10.2026): Himmelslaternen wiegen sich, Kanu schaukelt, auf dem Teich fahren Bewohner Schlittschuh;
 // in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js vergleicht die Liste)
 { // bewegte Basar-Stücke live zeichnen; ANIM_ITEMS bleibt in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js)
-  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen', 'sd_laternenboot', 'sd_sonnenpavillon', 'sd_froschbrunnen']);
+  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen', 'sd_laternenboot', 'sd_sonnenpavillon', 'sd_froschbrunnen', 'sd_gluehglas']);
   ANIM_ITEMS.clear();
   for (const id of Object.keys(ITEMS)) if (all.delete(id)) ANIM_ITEMS.add(id);
   for (const id of all) ANIM_ITEMS.add(id);
