@@ -2862,7 +2862,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
   - [x] 5t Wolken: runde Knöpfe oben als Wölkchen mit zwölf Buckeln (Entwurf E, tools/wolkenknopf-entwurf.js) (v1335)
   - [x] 5u Nachts auch innen dunkler (Nutzer 26.10.2026: „der Rand wird dunkel, aber der Inhalt bleibt hell“ → „mit abdunkeln“, zweimal
         verstärkt, „jetzt passt es“): Fläche 22 % Abendfarbe, Inhalt bis 82 % Helligkeit (v1338)
-- [ ] 6 Basar-Durchsicht (Nutzer 27.10.2026, tools/basar-schau.html: 72 Stücke, 26 passt, 48 ändern). Wortlaut des Nutzers in Kurzform:
+- [x] 6 Basar-Durchsicht (Nutzer 27.10.2026, tools/basar-schau.html: 72 Stücke, 26 passt, 48 ändern). Wortlaut des Nutzers in Kurzform:
   - [x] 6a Aus dem Verkauf nehmen (`SD_NICHT_MEHR`, Gekauftes bleibt, v1342): 13 Pagode (es gibt die große Pagode), 35 Leseecke, 39 Wandgemälde, 46 Apfelbaum mit Bank, 61 Glockenbaum, 65 Hühnerhaus
   - [x] 6b Fehler (v1342, nachgebessert v1343 nach „Schal immer noch falsch, Laternen komisch“: Entwürfe tools/basar-entwurf-pl.js, gewählt beide A =
         Strickschal um den Hals mit Knoten und Fransen, Ballon-Laternen, alle fliegen; Lampions hängen am Seil, Flocken an Fäden vom Bogen,
@@ -2873,7 +2873,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
         längs; v1352: auf dem Schlittschuh-Teich fahren zwei Bewohner mit Mütze und Schal; Neuigkeiten „Sternenbasar aufgeräumt“): 8, 21, 31 als Durchgang (auf den Weg stellen, Bewohner laufen drunter durch, oder seitlich am Weg); 5 Nachtblumen und
         20 Eisblumen als Beet über ein ganzes Feld ohne Lücke; 63 Kanu nur aufs Wasser; 26 Schlittschuh-Teich: Bewohner fahren Schlittschuh (falls machbar)
   - [x] 6d Umbauen: 45 nur Rosenhecke (ohne Spinnrad); 47 Zwergenhäuschen als Pilz (Entwurf C: Fliegenpilz-Haus mit Kinderpilzen, Fenster leuchten nachts, je Ding 72 → 216); 9 Sonnenuhr (Entwurf B: größer, Blumenkreis, Schatten zeigt die Spielzeit, nachts keiner; CLOCK_SPRITES auch für kleine Deko, je Ding 53 → 168). Entwürfe tools/basar-entwurf-p3.js
-  - [ ] 6e Neu zeichnen/schöner: 6 Pfau („sieht scheiße aus“), 7 Katze, 11 Koi-Teich (Fische wirken tot), 12 Sternbrunnen („da geht mehr“),
+  - [x] 6e Neu zeichnen/schöner: 6 Pfau („sieht scheiße aus“), 7 Katze, 11 Koi-Teich (Fische wirken tot), 12 Sternbrunnen („da geht mehr“),
         14 Schneemann (Schal), 17 Schlitten (mehr 3D), 18 Rentier, 19 Iglu (mehr 3D), 22 Eisbank (nicht als Bank erkennbar), 25 Schneekugel
         (innen beweglich), 27 Eispalast-Pavillon (kein Pavillon), 28 Schneeflocken-Brunnen (Details, Bewegung), 29 Turm mit Zopf (höher, Details),
         33 Laternenboot (Laternen schweben sichtbar, mehr), 37 Blumenkranz-Bank (nicht als Bank erkennbar), 40 Glühwürmchen-Glas, 41 Sonnenpavillon
@@ -2885,6 +2885,9 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
           sich, Funkeln; Herzchen-Laube als Gartenlaube mit Bank, Gitter, Herzbögen, Rosen, Lichterkette. Pfau/Teich/Brunnen in ANIM_ITEMS.
           Je Ding: Pfau 110 → 401, Koi-Teich 62 → 711, Sternbrunnen 40 → 254, Herzchen-Laube 37 → 659 (gewollt: viel reicher gezeichnet;
           gleichfarbige Teile je ein Pfad).
+    - [x] 6e8 (Paket 10 Katze, Entwurf tools/basar-entwurf-p10.js, gewählt A): rot getigerte Katze schläft eingerollt auf rundem lila Samtkissen
+          mit Kordel und Quasten, Kopf auf den Pfoten, Augen zu, Schwanz um den Körper; atmet, kleine „z“ steigen auf (ANIM_ITEMS, SD_NEU.katze).
+          Je Ding 27 → 118. Damit ist die Basar-Durchsicht (Block 6) fertig.
     - [x] 6e7 (Paket 9 Inselleben, Entwürfe tools/basar-entwurf-p9.js, gewählt: Hängematte A, Picknick A; Fossil „komplett raus“ → SD_NICHT_MEHR):
           Hängematte bunt gestreift zwischen zwei Palmen auf Sand, schaukelt (ANIM_ITEMS); Picknickdecke rot-weiß kariert mit Weidenkorb, Melone,
           Äpfeln, Bechern, Limonade. Je Ding: Hängematte 49 → 587 (Wedel je Farbe ein Pfad, Stamm eine Form; vorher 1033), Picknick 48 → 206.

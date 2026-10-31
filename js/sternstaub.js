@@ -739,7 +739,50 @@ const SD_NEU = (() => {
     for (let k = 0; k < 5; k++) { const p = (now / 1300 + k * 0.23) % 1, a = k * 2.4, s = Math.sin(p * Math.PI) * 1.4;   // Funkeln um den Stern
       if (s > 0.1) { const px = cx + Math.cos(a) * (8 + p * 3) * z, py = sy - 7.4 * z + Math.sin(a) * (6 + p * 2) * z - p * 3 * z; twinkle(px, py, s, z, lit ? '#fff6c8' : 'rgba(255,255,255,0.95)'); if (lit) glowAt(px, py, 6 * z, z); } }
   };
-  return { pfau, koiteich, sternbrunnen };
+  // Katze auf Kissen (Basar-Durchsicht 31.10.2026, Entwurf A in tools/basar-entwurf-p10.js): rot getigert, schläft eingerollt auf rundem
+  // Samtkissen mit Kordel und Quasten, Kopf auf den Pfoten, Schwanz um den Körper; atmet, kleine „z“ steigen auf (ANIM_ITEMS)
+  const kFur = '#f0a24a', kFurD = '#d9822e', kFurL = '#ffc983', kWhite = '#fff8ee', kStripe = '#c96f22';
+  const katzKissen = (cx, cy, z, R = 8, col = '#9b6fe0') => {
+    const H = 2.6, top = cy - H * z;
+    ellipse(cx, cy, R * z, R / 2 * z, C(shade(col, -0.3)));
+    g.beginPath(); g.ellipse(cx, cy, R * z, R / 2 * z, 0, 0, Math.PI); g.lineTo(cx - R * z, top); g.ellipse(cx, top, R * z, R / 2 * z, 0, Math.PI, 0, true); g.closePath();
+    const sg = g.createLinearGradient(cx - R * z, 0, cx + R * z, 0); sg.addColorStop(0, C(shade(col, 0.05))); sg.addColorStop(1, C(shade(col, -0.25))); g.fillStyle = sg; g.fill();
+    const tg = g.createRadialGradient(cx - R * 0.3 * z, top - R * 0.2 * z, 0, cx, top, R * z); tg.addColorStop(0, C(shade(col, 0.3))); tg.addColorStop(1, C(col));
+    ellipse(cx, top - 0.4 * z, R * z, R / 2 * z, tg);
+    g.strokeStyle = C('#f5c84b'); g.lineWidth = Math.max(0.4, 0.45 * z); g.beginPath(); g.ellipse(cx, top - 0.2 * z, R * z, R / 2 * z, 0, 0, Math.PI); g.stroke();   // Kordel
+    for (const a of [0.15, 0.85]) { const x = cx + Math.cos(a * Math.PI) * R * z, y = top + Math.sin(a * Math.PI) * R / 2 * z;   // Quasten
+      sdLine('#c9962a', 0.3, z, [[x, y], [x, y + 1.6 * z]]); poly([[x - 0.6 * z, y + 1.4 * z], [x + 0.6 * z, y + 1.4 * z], [x + 0.8 * z, y + 3 * z], [x - 0.8 * z, y + 3 * z]], C('#f5c84b')); circle(x, y + 1.3 * z, 0.5 * z, C('#c9962a')); }
+    return top - 0.6 * z;
+  };
+  const katzSchlaeft = (cx, ty, z, now) => {
+    const br = 1 + Math.sin(now / 900) * 0.025;                                                                    // Atmen
+    const bx = cx - 0.6 * z, by = ty - 2.6 * z;
+    ellipse(cx, ty + 0.2 * z, 6.2 * z, 2.6 * z, 'rgba(60,30,60,0.22)');
+    g.strokeStyle = C(kFurD); g.lineWidth = 2.1 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(bx - 5 * z, by + 0.6 * z); g.quadraticCurveTo(bx - 4 * z, by + 3.6 * z, bx + 1.5 * z, by + 3 * z); g.stroke();   // Schwanz hinten
+    const gr = g.createRadialGradient(bx - 1.5 * z, by - 2 * z, 0.5 * z, bx, by, 6.5 * z); gr.addColorStop(0, C(kFurL)); gr.addColorStop(1, C(kFur));
+    g.beginPath(); g.ellipse(bx, by, 5.8 * z, 3.6 * z * br, -0.08, 0, TAU); g.fillStyle = gr; g.fill();          // Körper
+    g.strokeStyle = C(kStripe); g.lineWidth = Math.max(0.5, 0.55 * z); g.lineCap = 'round';                        // Streifen über den Rücken
+    for (const [dx, k] of [[-3.6, 0.7], [-2, 0.95], [-0.3, 1], [1.4, 0.9]]) { g.beginPath(); g.moveTo(bx + dx * z, by - 3.3 * z * k * br); g.quadraticCurveTo(bx + (dx + 0.9) * z, by - 1.5 * z * k, bx + (dx + 0.4) * z, by + 0.2 * z); g.stroke(); }
+    g.strokeStyle = C(kFur); g.lineWidth = 2.2 * z; g.beginPath(); g.moveTo(bx - 4.8 * z, by + 1.6 * z); g.quadraticCurveTo(bx - 2.5 * z, by + 4.4 * z, bx + 3 * z, by + 3.3 * z); g.stroke();   // Schwanz vorn um den Körper
+    g.strokeStyle = C(kStripe); g.lineWidth = Math.max(0.4, 0.5 * z); for (const u of [0.25, 0.5]) { const x = bx + (-4.8 + u * 7.8) * z, y = by + (1.6 + Math.sin(u * Math.PI) * 2.3) * z; g.beginPath(); g.moveTo(x - 0.4 * z, y - 1 * z); g.lineTo(x + 0.2 * z, y + 1 * z); g.stroke(); }
+    circle(bx + 3.2 * z, by + 3.2 * z, 1.15 * z, C(kWhite));                                                         // Schwanzspitze hell
+    const hx = bx + 3.8 * z, hy = by - 0.2 * z;                                                                       // Kopf
+    for (const d of [-1, 1]) ellipse(hx + d * 1.3 * z, hy + 2.6 * z, 1.4 * z, 0.8 * z, C(kWhite));                  // Pfoten unter dem Kopf
+    const hg = g.createRadialGradient(hx - 0.8 * z, hy - 1 * z, 0.3 * z, hx, hy, 3.2 * z); hg.addColorStop(0, C(kFurL)); hg.addColorStop(1, C(kFur));
+    g.beginPath(); g.ellipse(hx, hy, 3.1 * z, 2.6 * z, 0.1, 0, TAU); g.fillStyle = hg; g.fill();
+    for (const d of [-1, 1]) { poly([[hx + d * 1 * z, hy - 2 * z], [hx + d * 2.8 * z, hy - 1.6 * z], [hx + d * 2.4 * z, hy - 4.2 * z]], C(kFur)); poly([[hx + d * 1.4 * z, hy - 2 * z], [hx + d * 2.5 * z, hy - 1.9 * z], [hx + d * 2.3 * z, hy - 3.4 * z]], C('#ffb3c0')); }   // Ohren
+    g.strokeStyle = C(kStripe); g.lineWidth = Math.max(0.4, 0.45 * z); for (const d of [-0.6, 0, 0.6]) { g.beginPath(); g.moveTo(hx + d * z, hy - 2.4 * z); g.lineTo(hx + d * 0.8 * z, hy - 1.4 * z); g.stroke(); }   // Stirnstreifen
+    ellipse(hx, hy + 1 * z, 1.6 * z, 1.1 * z, C(kWhite));                                                           // Schnauze
+    g.strokeStyle = C('#5a3a2a'); g.lineWidth = Math.max(0.3, 0.32 * z); for (const d of [-1, 1]) { g.beginPath(); g.arc(hx + d * 1.2 * z, hy - 0.3 * z, 0.7 * z, 0.2 * Math.PI, 0.8 * Math.PI); g.stroke(); }   // Augen zu
+    poly([[hx - 0.35 * z, hy + 0.5 * z], [hx + 0.35 * z, hy + 0.5 * z], [hx, hy + 0.95 * z]], C('#e8798a'));        // Nase
+    g.strokeStyle = 'rgba(90,60,40,0.55)'; g.lineWidth = Math.max(0.2, 0.15 * z); for (const d of [-1, 1]) for (const k of [-0.3, 0.2]) { g.beginPath(); g.moveTo(hx + d * 1 * z, hy + 1.1 * z); g.lineTo(hx + d * 3.4 * z, hy + (1.1 + k * 2) * z); g.stroke(); }   // Schnurrhaare
+    const zt = (now / 2200) % 1;                                                                                      // Zzz steigt auf
+    g.font = `bold ${Math.round(2.2 * z)}px sans-serif`; g.textAlign = 'center';
+    for (const [k, s] of [[0, 1], [0.33, 0.8], [0.66, 0.65]]) { const p = (zt + k) % 1; g.globalAlpha = Math.min(1, p * 5, (1 - p) * 3); g.fillStyle = C('#8a78c8');
+      g.save(); g.translate(hx + (2 + p * 3) * z, hy - (4 + p * 7) * z); g.scale(s, s); g.fillText('z', 0, 0); g.restore(); } g.globalAlpha = 1;
+  };
+  const katze = (cx, cy, z, now = 0) => { sdShadow(cx, cy, 8, z); katzSchlaeft(cx, katzKissen(cx, cy, z, 8), z, now); };
+  return { pfau, koiteich, sternbrunnen, katze };
 })();
 const SD_ART = {
   sd_kirschbaum(cx, cy, z) {
@@ -791,16 +834,7 @@ const SD_ART = {
     }
   },
   sd_pfau(cx, cy, z, now) { SD_NEU.pfau(cx, cy, z, now); },
-  sd_katze(cx, cy, z) {
-    sdShadow(cx, cy, 7, z);
-    ellipse(cx, cy - 1.5 * z, 7 * z, 3.2 * z, C('#b48cff')); ellipse(cx, cy - 2.4 * z, 6 * z, 2.4 * z, C('#cdb0ff'));
-    ellipse(cx, cy - 5 * z, 4.6 * z, 3 * z, C('#f0a24a'));
-    circle(cx + 3.4 * z, cy - 7 * z, 2.6 * z, C('#f0a24a'));
-    poly([[cx + 2 * z, cy - 9 * z], [cx + 2.4 * z, cy - 11.4 * z], [cx + 3.4 * z, cy - 9.4 * z]], C('#e08a2e'));
-    poly([[cx + 4 * z, cy - 9.2 * z], [cx + 5.2 * z, cy - 11 * z], [cx + 5.4 * z, cy - 8.6 * z]], C('#e08a2e'));
-    sdLine('#e08a2e', 1.4, z, [[cx - 4 * z, cy - 4 * z], [cx - 2 * z, cy - 7.5 * z]], [cx - 6 * z, cy - 7 * z]);
-    for (const dx of [2.6, 4.2]) sdLine('#5a3a2a', 0.5, z, [[cx + (dx - 0.5) * z, cy - 7.2 * z], [cx + (dx + 0.5) * z, cy - 7.2 * z]]);
-  },
+  sd_katze(cx, cy, z, now) { SD_NEU.katze(cx, cy, z, now); },
   sd_lampions(cx, cy, z, now, x, y, t) {                               // Durchgang: zwei Pfosten, Leine, Lampions hängen daran
     const lit = sdLit(), { Q, back } = sdArch(cx, cy, z, t), H = 25;
     for (const sd of [-1, 1]) { const f = Q(sd); ellipse(f[0], f[1] + 0.4 * z, 2.4 * z, 1.1 * z, 'rgba(40,60,20,0.18)'); }

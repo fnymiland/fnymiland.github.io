@@ -1471,7 +1471,7 @@ for (const [list, smlg] of [[SD_WAREN.EISZAUBER, 'Eiszauber'], [SD_WAREN.TURM, '
 // bewegt (Basar-Durchsicht 27./28.10.2026): Himmelslaternen wiegen sich, Kanu schaukelt, auf dem Teich fahren Bewohner Schlittschuh;
 // in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js vergleicht die Liste)
 { // bewegte Basar-Stücke live zeichnen; ANIM_ITEMS bleibt in der Reihenfolge von ITEMS (tests/tempo-schritt3.test.js)
-  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen', 'sd_laternenboot', 'sd_sonnenpavillon', 'sd_froschbrunnen', 'sd_gluehglas', 'sd_zauberspiegel', 'sd_einhorn', 'sd_haengematte']);
+  const all = new Set([...ANIM_ITEMS, 'sd_pfau', 'sd_koiteich', 'sd_sternbrunnen', 'sd_eisteich', 'sd_himmelslaternen', 'sd_kanu', 'sd_schneekugel', 'sd_eispalast', 'sd_flockenbrunnen', 'sd_laternenboot', 'sd_sonnenpavillon', 'sd_froschbrunnen', 'sd_gluehglas', 'sd_zauberspiegel', 'sd_einhorn', 'sd_haengematte', 'sd_katze']);
   ANIM_ITEMS.clear();
   for (const id of Object.keys(ITEMS)) if (all.delete(id)) ANIM_ITEMS.add(id);
   for (const id of all) ANIM_ITEMS.add(id);

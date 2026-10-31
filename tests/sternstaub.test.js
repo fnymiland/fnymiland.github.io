@@ -351,6 +351,12 @@ describe('Basar-Durchsicht: umgebaut (Nutzer 28.10.2026)', () => {
       expect(game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
         try { drawObject('${b}', 400, 300, 2, ${now}, 4, 4, 1, { b: '${b}', rot: 0, slot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`)).toBe(0);
   });
+  it('Katze auf Kissen schläft und atmet (bewegt), zeichnet sich bei Tag und Nacht ohne Schein', () => {
+    expect(game("ANIM_ITEMS.has('sd_katze')")).toBe(true);
+    for (const now of [0, 1234, 98765]) for (const lit of [false, true])
+      expect(game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
+        try { drawObject('sd_katze', 400, 300, 2, ${now}, 4, 4, 1, { b: 'sd_katze', rot: 0, slot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`)).toBe(0);
+  });
   it('Zwergenhäuschen (Pilzhaus): Fenster leuchten nur nachts', () => {
     const n = lit => game(`(() => { const gs = glowQuad, sp = SPRITE_PAINT, nv = night; let k = 0; glowQuad = (...a) => { k++; return gs(...a); }; SPRITE_PAINT = true; night = ${lit ? 'NIGHT_MAX' : 0};
       try { drawObject('sd_zwergenhaus', 400, 300, 2, 1e6, 4, 4, 1, { b: 'sd_zwergenhaus', rot: 0 }); } finally { glowQuad = gs; SPRITE_PAINT = sp; night = nv; } return k; })()`);
